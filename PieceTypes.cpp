@@ -1,0 +1,1052 @@
+#include "PieceTypes.h"
+#include "ChessApplication.h"
+#include "Board.h"
+#include "SDL_image.h"
+#include "SDL.h"
+#include <cassert>
+#include <algorithm>//std::foreach
+
+Piece::Piece(Side const side, Vec2i const chessPos)
+    : m_pseudoLegals{}, m_legalMoves{}, m_side(side), m_chessPos(chessPos),
+      m_screenPos(ChessApp::chess2ScreenPos(chessPos)), m_attackedSquares{},
+      m_texture(nullptr), m_sourceRect{}, m_destRect{},
+      m_type(PieceType::INVALID), m_locationOfPiecePinningThis{-1, -1}
+{
+    static bool texturesHaveBeenInitialized = false;
+    if(!texturesHaveBeenInitialized)
+    {
+        initTextures();
+        texturesHaveBeenInitialized = true;
+    }
+}
+
+//just inits Piece::_destRect and Piece::_sourceRect for the ctors below
+void Piece::initRects()
+{
+    int textureWidth = 0, textureHeight = 0;
+    SDL_QueryTexture(m_texture, nullptr, nullptr, &textureWidth, &textureHeight);
+    m_sourceRect = {0, 0, textureWidth, textureHeight};
+    m_destRect =
+    {
+        static_cast<int>(m_screenPos.x - m_sourceRect.w * s_scale * 0.5f),
+        static_cast<int>(m_screenPos.y - m_sourceRect.h * s_scale * 0.5f), 
+        static_cast<int>(m_sourceRect.w * s_scale),
+        static_cast<int>(m_sourceRect.h * s_scale)
+    };
+}
+
+Pawn::Pawn(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
+{
+    using enum textureIndices;
+    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WPAWN : BPAWN)];
+    m_type = PieceType::PAWN;
+    initRects();
+}
+
+Knight::Knight(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
+{
+    using enum textureIndices;
+    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WKNIGHT : BKNIGHT)];
+    m_type = PieceType::KNIGHT;
+    initRects();
+}
+
+Rook::Rook(Side const side, Vec2i const chessPos) : Piece(side, chessPos),
+    m_hasMoved(true), m_koqs(KingOrQueenSide::NEITHER)
+{
+    using enum textureIndices;
+    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WROOK : BROOK)];
+    m_type = PieceType::ROOK;
+    initRects();
+}
+
+Bishop::Bishop(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
+{
+    using enum textureIndices;
+    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WBISHOP : BBISHOP)];
+    m_type = PieceType::BISHOP;
+    initRects();
+}
+
+Queen::Queen(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
+{
+    using enum textureIndices;
+    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WQUEEN: BQUEEN)];
+    m_type = PieceType::QUEEN;
+    initRects();
+}
+
+King::King(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
+{
+    using enum textureIndices;
+    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WKING : BKING)];
+    m_type = PieceType::KING;
+    initRects();
+
+    if(side == Side::WHITE) s_wKingPos = m_chessPos;
+    else s_bKingPos = m_chessPos;
+}
+
+void Piece::destoryTextures()
+{
+    for(SDL_Texture* t : s_textures) 
+        SDL_DestroyTexture(t);
+}
+
+Piece::~Piece()
+{
+    static bool haveTexturesBeenFreed = false;
+    if(!haveTexturesBeenFreed)
+    {
+        destoryTextures();
+        haveTexturesBeenFreed = true;
+    }
+}
+
+void Piece::draw() const 
+{
+    SDL_RenderCopy(ChessApp::getCurrentRenderer(), m_texture, &m_sourceRect, &m_destRect);
+}
+
+void Piece::drawPieceOnMouse() const
+{
+    int x = 0, y = 0;
+    SDL_GetMouseState(&x, &y);
+    SDL_Rect dest{x - m_destRect.w * 0.5f, y - m_destRect.w * 0.5f, m_destRect.w, m_destRect.h};
+    SDL_RenderCopy(ChessApp::getCurrentRenderer(), m_texture, &m_sourceRect, &dest);
+}
+
+//used by rooks & queens to slide a piece in all 4 orthogonal 
+//directions pushing back pseudo legal moves along the way
+void Piece::orthogonalSlide()
+{
+    auto const& b = ChessApp::getBoard();
+    using enum MoveInfo;
+
+    //slide orthogonally left then right then down then up (from whites perspective)
+    for(int i = 0; i < 4; ++i)
+    {
+        Vec2i offsetPos{m_chessPos};
+
+        if(i < 2)
+            offsetPos.x = i == 0 ? m_chessPos.x - 1 : m_chessPos.x + 1;
+        else//if i is 2 or 3
+            offsetPos.y = i == 2 ? m_chessPos.y - 1 : m_chessPos.y + 1;
+
+        //loops runs as long as the slide stays on the board
+        //or the break occures below because the loop ran into a piece
+        for( ; ChessApp::inRange(offsetPos); )
+        {
+            Piece const *const piece = b.getPieceAt(offsetPos);
+
+            if(!piece)//if there isnt a piece add it to the vector
+            {
+                m_pseudoLegals.emplace_back(offsetPos, NORMAL);
+                m_attackedSquares.push_back(offsetPos);
+            }
+            else//if there is a piece here
+            {
+                //if the piece we ran into is the oposite color then add it to the vector
+                if(m_side != piece->m_side)
+                {
+                    m_pseudoLegals.emplace_back(offsetPos, getType(piece) == PieceType::ROOK ?
+                        ROOK_CAPTURE : NORMAL);
+
+                    m_attackedSquares.push_back(offsetPos);
+
+                    if(piece->m_type != PieceType::KING) 
+                        break;//stop sliding
+                }
+                else//if the piece is the same color as *slidingPiece
+                {
+                    m_attackedSquares.push_back(offsetPos);
+                    break;//stop sliding
+                }
+            }
+
+            //slide left or right or down or up depending on i 
+            //(0 == left; 1 == right; 2 == down; 3 == up)
+            if(i < 2)
+                offsetPos.x = i == 0 ? offsetPos.x - 1 : offsetPos.x + 1;
+            else//if i is 2 or 3
+                offsetPos.y = i == 2 ? offsetPos.y - 1 : offsetPos.y + 1;
+        }
+    }
+}
+
+//used by queens & bishops
+void Piece::diagonalSlide()
+{
+    auto const& b = ChessApp::getBoard();
+    using enum MoveInfo;
+
+    //slide diagonally bottom left then bottom right 
+    //then top right then top left (from whites perspective)
+    for(int i = 0; i < 4; ++i)
+    {
+        Vec2i offsetPos{m_chessPos};
+
+        offsetPos.y = (i < 2) ? offsetPos.y - 1 : offsetPos.y + 1;
+        offsetPos.x = (i == 0 || i == 3) ? offsetPos.x - 1 : offsetPos.x + 1;
+
+        //loops runs as long as the diagonal slide stays on the board
+        //or the break occures below because the slide ran into a piece
+        for( ; ChessApp::inRange(offsetPos); )
+        {
+            Piece const *const piece = b.getPieceAt(offsetPos);
+
+            if(!piece)//if there isnt a piece at offsetIndex add it to the vector
+            {
+                m_pseudoLegals.emplace_back(offsetPos, NORMAL);
+                m_attackedSquares.push_back(offsetPos);
+            }
+            else//if there is a piece at offsetIndex
+            {
+                //if the piece we ran into is the oposite color then add it to the vector
+                if(m_side != piece->m_side)
+                {
+                    m_pseudoLegals.emplace_back(offsetPos, getType(piece) == PieceType::ROOK ?
+                        ROOK_CAPTURE : NORMAL);
+
+                    m_attackedSquares.push_back(offsetPos);
+
+                    if(piece->m_type != PieceType::KING)
+                        break;//stop sliding
+                }
+                else//if the piece is the same color as *slidingPiece
+                {
+                    m_attackedSquares.push_back(offsetPos);
+                    break;//stop sliding
+                }
+            }
+
+            if(i < 2)
+            {
+                --offsetPos.y;
+                offsetPos.x = i == 0 ? offsetPos.x - 1 : offsetPos.x + 1;
+            }
+            else//if i is 2 or 3
+            {
+                ++offsetPos.y;
+                offsetPos.x = i == 2 ? offsetPos.x + 1 : offsetPos.x - 1;
+            }
+        }
+    }
+}
+
+//calculate the pseudo legal moves for a pawn and store then in Piece::m_pseudoLegals
+void Pawn::updatePseudoLegalAndAttacked()
+{
+    m_pseudoLegals.clear();
+    m_attackedSquares.clear();
+    auto const& b = ChessApp::getBoard();
+    int const yDirection = m_side == Side::WHITE ? 1 : -1;
+    Vec2i const oneInFront{m_chessPos.x, m_chessPos.y + yDirection};
+    using enum MoveInfo;
+
+    //check the spot right in front of the pawn
+    if(!b.getPieceAt(oneInFront))
+    {
+        m_pseudoLegals.emplace_back
+        (
+            oneInFront, oneInFront.y == 7 || oneInFront.y == 0 
+                ? PROMOTION : NORMAL
+        );
+
+        //we know there isnt a piece in front of the pawn
+        //lets also check if it hasnt moved yet and if so 
+        //then also check if the pawn can perform a double push
+        Vec2i const twoInFront{oneInFront.x, oneInFront.y + yDirection};
+        if(ChessApp::inRange(twoInFront) && !b.getPieceAt(twoInFront))
+        {          
+            if(m_chessPos.y == 1 && m_side == Side::WHITE)
+                m_pseudoLegals.emplace_back(twoInFront, DOUBLE_PUSH);
+            else if(m_chessPos.y == 6 && m_side == Side::BLACK)
+                m_pseudoLegals.emplace_back(twoInFront, DOUBLE_PUSH);
+        }
+    }
+
+    auto const checkAttackingSquare = [this, &b](Vec2i squareToCheck)
+    {
+        if(ChessApp::inRange(squareToCheck))
+        {
+            Piece const *const piece = b.getPieceAt(squareToCheck);
+            if(piece)//if there is a piece at squareToCheck
+            {
+                if(piece->getSide() != m_side)//if piece is of the oposite color to *this
+                {   
+                    bool const isPromotion = squareToCheck.y == 7 || squareToCheck.y == 0;
+                    bool const isRookCapture = getType(piece) == PieceType::ROOK;
+                    if(isPromotion)
+                    {
+                        m_pseudoLegals.emplace_back(squareToCheck, isRookCapture ? 
+                            ROOK_CAPTURE_AND_PROMOTION : PROMOTION);
+                    }
+                    else//if squareToCheck is a capture but not a promotion
+                    {
+                        //the only rook capture we care about is one where the rook 
+                        //hasnt moved yet. If the capture here is a rook, then the rook has
+                        //already moved and so we can just emplace a NORMAL moveInfo enum instead
+                        m_pseudoLegals.emplace_back(squareToCheck, NORMAL);
+                    }
+                }
+            }
+            else//if there is not a piece at squareToCheck
+            {
+                //if the attacking square is the en passant target square
+                if(squareToCheck == b.getEnPassantIndex())
+                    m_pseudoLegals.emplace_back(squareToCheck, ENPASSANT);
+            }
+
+            m_attackedSquares.push_back(squareToCheck);
+        }
+    };
+
+    //next im going to check if the pawn is attacking anything 
+    //(see if there is an enemy piece to the top left or the top right of the pawn)
+    Vec2i const topLeft{oneInFront.x - 1, oneInFront.y};
+    Vec2i const topRight{oneInFront.x + 1, oneInFront.y};
+    checkAttackingSquare(topLeft);
+    checkAttackingSquare(topRight);
+}
+
+//calculate the pseudo legal moves for a knight and store then in Piece::m_pseudoLegals
+void Knight::updatePseudoLegalAndAttacked()
+{
+    auto const& b = ChessApp::getBoard();
+    m_pseudoLegals.clear();
+    m_attackedSquares.clear();
+    Vec2i offsetPos{m_chessPos};
+    using enum MoveInfo;
+    
+    auto potentialPushBack = [&b, this](Vec2i offsetPos)
+    {
+        if(ChessApp::inRange(offsetPos))
+        {
+            Piece const *const piece = b.getPieceAt(offsetPos);
+            if(!piece)
+            {
+                m_attackedSquares.push_back(offsetPos);
+                m_pseudoLegals.emplace_back(offsetPos, NORMAL);
+            }
+            else if(m_side != piece->getSide())
+            {
+                //if there is a piece here and its the oposite color of the knight
+                m_attackedSquares.push_back(offsetPos);
+                m_pseudoLegals.emplace_back(offsetPos, getType(piece) == PieceType::ROOK ?
+                    ROOK_CAPTURE : NORMAL);
+            }
+            else//if the piece is the same color as the knight
+            {
+                m_attackedSquares.push_back(offsetPos);
+            }
+        }
+    };
+
+    //check all 8 possible chess positions in this order
+    //(N is for knight. the letter K is reserved for the king)
+    //(this is from whites perspective)    
+    //                 |_|8|_|7|_|                    
+    //                 |1|_|_|_|6|                    
+    //                 |_|_|N|_|_|                    
+    //                 |2|_|_|_|5|                    
+    //                 |_|3|_|4|_|                                
+
+    offsetPos.x = m_chessPos.x - 2; offsetPos.y = m_chessPos.y + 1;
+    potentialPushBack(offsetPos);//left two up one from knight
+    
+    offsetPos.y -= 2;
+    potentialPushBack(offsetPos);//left two down one from knight
+    
+    ++offsetPos.x; --offsetPos.y;
+    potentialPushBack(offsetPos);//left one and down two from knight
+
+    offsetPos.x += 2;
+    potentialPushBack(offsetPos);//right one and down two from kngith
+
+    ++offsetPos.x; ++offsetPos.y;
+    potentialPushBack(offsetPos);//right two and down one from knight
+
+    offsetPos.y += 2;
+    potentialPushBack(offsetPos);//right two and up one from kngiht
+
+    --offsetPos.x; ++offsetPos.y;
+    potentialPushBack(offsetPos);//right one and up two from knight
+
+    offsetPos.x -= 2;
+    potentialPushBack(offsetPos);//left one and up two from knight
+}
+
+//calculate the pseudo legal moves for a rook and store then in Piece::m_pseudoLegals
+void Rook::updatePseudoLegalAndAttacked()
+{
+    m_pseudoLegals.clear();
+    m_attackedSquares.clear();
+    orthogonalSlide();//slide the piece in all 4 orthogonal directions
+    std::for_each(m_pseudoLegals.begin(), m_pseudoLegals.end(), 
+        [](auto& move){move.second = MoveInfo::ROOK_MOVE;});
+}
+
+//calculate the pseudo legal moves for a bishop and store then in Piece::m_pseudoLegals
+void Bishop::updatePseudoLegalAndAttacked()
+{
+    m_pseudoLegals.clear();
+    m_attackedSquares.clear();
+    diagonalSlide();
+}
+
+//calculate the pseudo legal moves for a queen and store then in Piece::m_pseudoLegals
+void Queen::updatePseudoLegalAndAttacked()
+{
+    m_pseudoLegals.clear();
+    m_attackedSquares.clear();
+    diagonalSlide();
+    orthogonalSlide();
+}
+
+//calculate the pseudo legal moves for a king and store then in Piece::m_pseudoLegals
+void King::updatePseudoLegalAndAttacked()
+{
+    auto const& b = ChessApp::getBoard();
+    bool const isWhite = (m_side == Side::WHITE);
+    m_attackedSquares.clear();
+    m_pseudoLegals.clear();
+
+    //(this is from whites perspective)  
+    //check all 8 possible chess positions in this order
+    //when the loop gets to position 2 and 7 it will also 
+    //check if the king can castle on that side 
+    //|3|5|8|                    
+    //|2|K|7|                   
+    //|1|4|6|                   
+
+    for(int offsetFile = m_chessPos.x - 1; offsetFile < m_chessPos.x + 2; ++offsetFile)
+    {
+        for(int offsetRank = m_chessPos.y - 1; offsetRank < m_chessPos.y + 2; ++offsetRank)
+        {
+            using enum MoveInfo;
+            Vec2i const offsetPosition{offsetFile, offsetRank};
+
+            if(!ChessApp::inRange(offsetPosition))
+                continue;
+
+            Piece const *const piece = b.getPieceAt(offsetPosition);
+
+            //when the loop gets the the position in between 4 and 5
+            //in the diagram above it will be on the same square as the king
+            //so continue to the next loop iteration
+            if(piece == this)
+                continue;                                     
+
+            if(!piece)//there isnt a piece at the offset position
+            {
+                m_pseudoLegals.emplace_back(offsetPosition, KING_MOVE);
+                m_attackedSquares.push_back(offsetPosition);
+
+                //check if the location for castling is available
+                Vec2i directionFromKing{offsetPosition - m_chessPos};
+                constexpr Vec2i left{-1, 0}, right{1, 0};
+                if(directionFromKing == left && 
+                   b.hasCastleRights(isWhite ? CastleRights::WLONG : CastleRights::BLONG))
+                {
+                    Vec2i const twoToLeft{offsetPosition + left};
+                    Vec2i const threeToLeft{offsetPosition + left * 2};
+                    if(!b.getPieceAt(twoToLeft) && !b.getPieceAt(threeToLeft))
+                        m_pseudoLegals.emplace_back(twoToLeft, CASTLE);
+                }
+                else if(directionFromKing == right &&
+                        b.hasCastleRights(isWhite ? CastleRights::WSHORT : CastleRights::BSHORT))
+                {
+                    Vec2i const twoToRight{offsetPosition + right};
+                    if(!b.getPieceAt(twoToRight))
+                        m_pseudoLegals.emplace_back(twoToRight, CASTLE);
+                }
+            }
+            else if(piece->getSide() != m_side)//there is a piece at offset pos of the oposite color
+            {
+                m_pseudoLegals.emplace_back(offsetPosition, KING_MOVE);
+                m_attackedSquares.push_back(offsetPosition);
+            }
+            else m_attackedSquares.push_back(offsetPosition);
+        }
+    }
+}
+
+//this function assumes Board::m_checkState is equal to SINGLE_CHECK.
+//called by the concrete implementations of virtual void updateLegalMoves()=0; (except for kings)
+bool Piece::doesNonKingMoveResolveCheck
+(Move const& moveToCheck, Vec2i const posOfCheckingPiece)
+{
+    using enum PieceType;
+    Board& b = ChessApp::getBoard();
+    auto const& [move, moveType] = moveToCheck;
+    Piece const *const checkingPiece = b.getPieceAt(posOfCheckingPiece);
+
+    //if we are in check and there is an en passant move
+    //available that means we are in check from a double pushed pawn.
+    if(moveType == MoveInfo::ENPASSANT)
+        return true;
+
+    //if a knight or a pawn is the piece checking the king
+    //then the only (non king) move that could resolve it is a capture of the piece
+    if(checkingPiece->m_type == KNIGHT || checkingPiece->m_type == PAWN)
+        return(move == checkingPiece->m_chessPos);
+
+    Vec2i const kingPos = b.getWhosTurnItIs() == Side::WHITE ?
+        King::getWhiteKingPos() : King::getBlackKingPos();
+
+    //direction from the king location to the piece putting it in check
+    Vec2i direction{posOfCheckingPiece - kingPos};
+    direction.x = direction.x == 0 ? 0 : direction.x/abs(direction.x);//extra checks for integer div by 0
+    direction.y = direction.y == 0 ? 0 : direction.y/abs(direction.y);
+
+    for(auto offsetPos{kingPos + direction}; ; offsetPos += direction)
+    {
+        if(move == offsetPos)
+            return true;
+
+        //we have reached the checking piece
+        if(b.getPieceAt(offsetPos) == checkingPiece)
+            break;
+    }
+
+    return false;
+}
+
+//called by Pawn::updateLegalMoves() to handle an edge case where an 
+//en passant capture would put *this' king into check when *this' king
+//is on the same rank (4th or 5th) as the pawns. When the capture occurs
+//there might be a rook or a queen waiting on the other side.
+//an example (on the 4th or 5th rank) where Q is an enemy queen, K is *this' king, 
+//P is *this, and D is the double pushed enemy pawn below...
+// |Q| |D|P| |K| | |  as you can see if this (P) took en passant then the double pushed pawn would be gone
+//and this (P) would be on the en passant square and the queen could take the king next move
+bool Pawn::doesEnPassantLeaveKingInCheck(Vec2i const enPassantMove) const
+{
+    Vec2i const kingPos
+    {
+        m_side == Side::WHITE ? King::getWhiteKingPos() : King::getBlackKingPos()
+    };
+
+    //just leave if the king isnt even on the same rank as the pawns
+    int const whichRank = m_side == Side::WHITE ? 4 : 3;
+    if(kingPos.y != whichRank)
+        return false;
+        
+    int xDirection = enPassantMove.x - kingPos.x;
+    xDirection /= xDirection;//either -1 or 1 in the direction of the pawns D and P
+    auto const& b = ChessApp::getBoard();
+
+    //start one square past the king in the x direction and continue until we reach
+    //either the panws D and P or something potentially in the way
+    Vec2i offsetPos{kingPos.x + xDirection, kingPos.y};
+    for(;; offsetPos.x += xDirection)
+    {
+        Piece const *const p = b.getPieceAt(offsetPos);
+
+        if(p)
+        {
+            //if there is something in between the king and the pawns 
+            if(offsetPos.x != m_chessPos.x && offsetPos.x != enPassantMove.x)
+            {
+                return false;
+            }
+            else break;//if the piece we reached was one of the pawns D or P       
+        }
+    }
+
+    //we have reached D or P. now step over the pawns and 
+    //continue along until a queen/rook is reached or the end of the board
+    offsetPos.x += xDirection*2;
+    for(; ChessApp::inRange(offsetPos); offsetPos.x += xDirection)
+    {
+        Piece *const p = b.getPieceAt(offsetPos);
+
+        //if we ran into a piece check if it is a queen or a rook
+        if(p)
+        {
+            using enum PieceType;
+            auto const type = getType(p);
+            return type == ROOK || type == QUEEN;
+        }
+    }
+
+    return false;
+}
+
+void Pawn::updateLegalMoves()
+{
+    m_legalMoves.clear();
+    using enum Board::CheckState;
+    auto const& b = ChessApp::getBoard();
+    auto const cs = b.getCheckState();
+
+    if(cs == DOUBLE_CHECK)
+        return;
+
+    if(isPiecePinned())
+    {
+        if(cs == SINGLE_CHECK)
+            return;
+
+        //see if any moves available to us are a 
+        //capture of the piece pinning us to our king
+        for(auto const& [move, moveType] : m_pseudoLegals)
+        {
+            //handle an edge case here where the move is an en passant capture
+            if(moveType == MoveInfo::ENPASSANT)
+            {  
+                Vec2i kingPos
+                {
+                    m_side == Side::WHITE ? King::getWhiteKingPos() : King::getBlackKingPos()
+                };
+
+                bool const diagonalPin = 
+                    areSquaresOnSameDiagonal(kingPos, m_locationOfPiecePinningThis);
+
+                if(diagonalPin && 
+                    areSquaresOnSameDiagonal(move, m_locationOfPiecePinningThis))
+                {
+                    m_legalMoves.emplace_back(move, moveType);
+                }
+
+                continue;
+            }
+            
+            if(move == m_locationOfPiecePinningThis)
+                m_legalMoves.emplace_back(move, moveType);
+        }
+    }
+    else//*this is not pinned to its king
+    {
+        if(cs == SINGLE_CHECK)
+        {
+            for(auto const& move : m_pseudoLegals)
+            {
+                if(doesNonKingMoveResolveCheck(move, b.getLocationOfCheckingPiece()))
+                    m_legalMoves.push_back(move);
+            }
+        }
+        else//if the check state is equal to NO_CHECK and we are not pinned
+        {
+            //dont do a search for the en passant move if 
+            //there isnt even an en passant target available
+            if(!b.isThereEnPassantAvailable())
+            {            
+                //at this point we dont need pseudoLegals until next chess move
+                //at which point we will push_back more moves into it again. 
+                //So we might as well do a move assignment instead of a copy assignment here
+                m_legalMoves = std::move(m_pseudoLegals);
+            }
+            else//if there was a pawn double push last move
+            {
+                for(auto const& [move, moveType] : m_pseudoLegals)
+                {
+                    //a special check if the en passant capture would leave the king in check
+                    //when the king is on the same rank as the pawns
+                    if(moveType == MoveInfo::ENPASSANT && doesEnPassantLeaveKingInCheck(move))
+                        continue;
+
+                    m_legalMoves.emplace_back(move, moveType);
+                }
+            }
+        }
+    }
+}
+
+void Knight::updateLegalMoves()
+{
+    using enum Board::CheckState;
+    auto const& b = ChessApp::getBoard();
+    auto const cs = b.getCheckState();
+    m_legalMoves.clear();
+
+    //if a knight is pinned to the king or the king is in 
+    //a double check then the knight will never have any legal moves
+    if(isPiecePinned() || cs == DOUBLE_CHECK)
+        return;
+
+    if(cs == SINGLE_CHECK)
+    {
+        for(auto const& move : m_pseudoLegals)
+        {
+            if(doesNonKingMoveResolveCheck(move, b.getLocationOfCheckingPiece()))
+                m_legalMoves.push_back(move);
+        }
+    }
+    else 
+    {
+        //at this point we dont need pseudoLegals until next chess move
+        //at which point we will push_back more moves into it again. 
+        //So we might as well do a move assignment instead of a copy assignment here
+        m_legalMoves = std::move(m_pseudoLegals);
+    }
+}
+
+void Rook::updateLegalMoves()
+{
+    using enum Board::CheckState;
+    auto const& b = ChessApp::getBoard();
+    auto const cs = b.getCheckState(); 
+    m_legalMoves.clear();
+
+    if(cs == DOUBLE_CHECK)
+        return;
+
+    if(isPiecePinned())
+    {
+        //if the king is in check and the rook is pinned there are no legal moves
+        if(cs == SINGLE_CHECK) 
+            return;
+
+        //if the rook is pinned and its on the same diagonal as the king then there wont be any legal moves
+        if(areSquaresOnSameDiagonal(m_locationOfPiecePinningThis, m_chessPos))
+            return;
+
+        Vec2i const direction2PinningPiece{m_locationOfPiecePinningThis - m_chessPos};
+
+        for(auto const& [move, moveType] : m_pseudoLegals)
+        {
+            Vec2i direction2Move{move - m_chessPos};
+
+            int intDotProduct = direction2Move.x * direction2PinningPiece.x +
+                                direction2Move.y * direction2PinningPiece.y;
+
+            if(intDotProduct != 0)
+                m_legalMoves.emplace_back(move, moveType);
+        }
+    }
+    else//if we are not pinned to the king of the same color
+    {
+        if(cs == SINGLE_CHECK)
+        {
+            for(auto const& move : m_pseudoLegals)
+            {
+                if(Piece::doesNonKingMoveResolveCheck(move, b.getLocationOfCheckingPiece()))
+                    m_legalMoves.push_back(move);
+            }
+        }
+        else m_legalMoves = m_pseudoLegals;//if check state == NO_CHECK
+    }
+}
+
+void Bishop::updateLegalMoves()
+{
+    m_legalMoves.clear();
+    using enum Board::CheckState;
+    auto const& b = ChessApp::getBoard();
+    auto const cs = b.getCheckState();
+    bool const isThisPinned = isPiecePinned();
+
+    if(cs == DOUBLE_CHECK)
+        return;
+
+    if(isThisPinned)
+    {
+        if(cs == SINGLE_CHECK)
+            return;
+
+        //if the bishop is positioned orthogonally to its king and 
+        //its pinned then it wont have any legal moves
+        if(areSquaresOnSameRankOrFile(m_locationOfPiecePinningThis, m_chessPos))
+            return;
+
+        Vec2i direction2pinnedPiece{m_locationOfPiecePinningThis - m_chessPos};
+
+        //filter through the pseudo legal moves so the only moves that make it 
+        //into the fully legal moves are the ones that are on on the same diagonal as the bishop 
+        //and the kingand the piece pinning the bisop to the king
+        for(auto const& [move, moveType] : m_pseudoLegals)
+        {
+            Vec2i direction2PsedoLegalMove{move - m_chessPos};
+            int intDotProduct = direction2pinnedPiece.x * direction2PsedoLegalMove.x +
+                                direction2pinnedPiece.y * direction2PsedoLegalMove.y;
+
+            //since all the vectors compared are orthogonal or parallel (because they are all bisop moves being 
+            //compared to other bishop moves) to each other the only results for their dot product will be 
+            //negative parallel, positive parallel or 0. therefore if the dot product is 
+            //not 0 then the pseudo legal move is on the same diagonal as the direction to the pinning piece
+            if(intDotProduct != 0)
+                m_legalMoves.emplace_back(move, moveType);
+        }
+    }
+    else//if we are not pinnined to the king
+    {
+        if(cs == SINGLE_CHECK)
+        {
+            for(auto const& move : m_pseudoLegals)
+            {
+                if(doesNonKingMoveResolveCheck(move, b.getLocationOfCheckingPiece()))
+                    m_legalMoves.push_back(move);                
+            }
+        }
+        else
+        {
+            //at this point we dont need pseudoLegals until next chess move
+            //at which point we will push_back more moves into it again. 
+            //So we might as well do a move assignment instead of a copy assignment here
+            m_legalMoves = std::move(m_pseudoLegals);
+        }
+    }
+}
+
+void Queen::updateLegalMoves()
+{
+    m_legalMoves.clear();
+    using enum Board::CheckState;
+    auto const& b = ChessApp::getBoard();
+    auto const cs = b.getCheckState();
+    bool isThisPinned = isPiecePinned();
+
+    if(cs == DOUBLE_CHECK)
+        return;
+
+    if(isThisPinned)
+    {
+        if(cs == SINGLE_CHECK) return;
+        
+        for(auto const& [move, moveType] : m_pseudoLegals)
+        {
+            bool const isMoveOnSameDiagonalAsThis = 
+                areSquaresOnSameDiagonal(move, m_chessPos);
+
+            bool const isThisOnSameDiagonalAsPinningPiece = 
+                areSquaresOnSameDiagonal(m_locationOfPiecePinningThis, m_chessPos);
+
+            if(isMoveOnSameDiagonalAsThis != isThisOnSameDiagonalAsPinningPiece) 
+                continue;
+
+            Vec2i const direction2Move{move - m_chessPos};
+            Vec2i const direction2PinningPiece{m_locationOfPiecePinningThis - m_chessPos};
+
+            int const intDotProduct = direction2Move.x * direction2PinningPiece.x +
+                                      direction2Move.y * direction2PinningPiece.y;
+
+            if(intDotProduct != 0)
+                m_legalMoves.emplace_back(move, moveType);
+        }
+    }
+    else
+    {
+        if(cs == SINGLE_CHECK)
+        {
+            for(auto const& move : m_pseudoLegals)
+            {
+                if(doesNonKingMoveResolveCheck(move, b.getLocationOfCheckingPiece()))
+                    m_legalMoves.push_back(move);
+            }
+        }
+        else
+        {
+            //at this point we dont need pseudoLegals until next chess move
+            //at which point we will push_back more moves into it again. 
+            //So we might as well do a move assignment instead of a copy assignment here
+            m_legalMoves = std::move(m_pseudoLegals);
+        }
+    }
+}
+
+void King::updateLegalMoves()
+{
+    auto const& b = ChessApp::getBoard();
+    m_legalMoves.clear();
+    bool const isWhite = m_side == Side::WHITE;
+
+    //get a vector of all the attacked squares by the opposite side
+    std::vector<Vec2i> const attackedSquares
+    {
+        b.getAttackedSquares(isWhite ? Side::BLACK : Side::WHITE)
+    };
+    auto const cend = attackedSquares.cend(), cbegin = attackedSquares.cbegin();
+
+    bool const hasShortCastleRights =
+        b.hasCastleRights(isWhite ? CastleRights::WSHORT : CastleRights::BSHORT);
+    bool const hasLongCastleRights  =
+        b.hasCastleRights(isWhite ? CastleRights::WLONG  : CastleRights::BLONG);
+
+    bool shouldEraseShortCastle = false, shouldEraseLongCastle = false;
+
+    //filter out the pseudo legal moves that are in the list of attacked squares
+    for(auto const& [move, moveType] : m_pseudoLegals)
+    {   
+        //direction is from whites perspective
+        Vec2i const king2Move{move - m_chessPos};
+        constexpr Vec2i left{-1, 0}, right{1, 0};
+
+        if(std::find(cbegin, cend, move) != cend)
+        {
+            if(king2Move == left && hasLongCastleRights) shouldEraseLongCastle = true;
+            else if(king2Move == right && hasShortCastleRights) shouldEraseShortCastle = true;
+        }
+        else m_legalMoves.emplace_back(move, moveType);
+    }
+
+    auto const eraseCastle = [this](bool const isLongCastle) -> void
+    {
+        auto const end = m_legalMoves.end(), begin = m_legalMoves.begin();
+        auto const castleMove = std::find_if(begin, end,
+        [this, isLongCastle](auto const& move) -> bool
+        {
+            Vec2i const castlePos{m_chessPos.x + (isLongCastle ? -2 : 2), m_chessPos.y};
+            return move.first == castlePos;
+        });
+
+        if(castleMove != end) m_legalMoves.erase(castleMove);
+    };
+
+    using enum Board::CheckState;
+    auto const cs = b.getCheckState();
+    if(shouldEraseShortCastle || cs == SINGLE_CHECK) eraseCastle(false);
+    if(shouldEraseLongCastle  || cs == SINGLE_CHECK) eraseCastle(true);
+}
+
+////used by the board to update only the king's 
+////legal moves when there is a double check on the king
+//void King::updateKingLegalMoves()
+//{
+//    Board& b = ChessApp::getBoard();
+//    bool whitesTurn = b.getWhosTurnItIs();
+//    Piece* const _this = b.getPieceAt(whitesTurn ? getWhiteKingPos() : getBlackKingPos()); 
+//    _this->updateLegalMoves();
+//}
+
+bool Piece::areSquaresOnSameDiagonal(Vec2i const pos0, Vec2i const pos1)
+{
+    int const xDistance = abs(pos0.x - pos1.x);
+    int const yDistance = abs(pos0.y - pos1.y);
+    return (yDistance == xDistance);
+}
+
+bool Piece::areSquaresOnSameRankOrFile(Vec2i const square0, Vec2i const square1)
+{
+    return (square0.x == square1.x || square0.y == square1.y);
+}
+
+//updates *this's internal m_squareOfPiecePinningThis variable to hold
+//the location of the square pinning *this. If no piece is pinning
+//*this to its king then m_squareOfPiecePinningThis will be -1, -1
+void Piece::updatePinnedInfo()
+{
+    if(m_type == PieceType::KING)
+        return;
+
+    auto const& b = ChessApp::getBoard();
+    resetLocationOfPiecePinningThis();//set m_locationOfPiecePinningThis back to -1, -1
+    Vec2i const kingPos = m_side == Side::WHITE ?
+        King::getWhiteKingPos() : King::getBlackKingPos();
+
+    bool isDiagonal = false;
+    if(areSquaresOnSameDiagonal(kingPos, m_chessPos)) isDiagonal = true;//if the king is on the same diagonal as *this
+    else if(!areSquaresOnSameRankOrFile(kingPos, m_chessPos)) return;//if we arent on the same diagonal or rank/file 
+
+    Vec2i const kingToThis = m_chessPos - kingPos;//direction from the king to *this
+    Vec2i const direction//a vector for which direction to look to see if *this is pinned by another piece
+    {
+        (kingToThis.x == 0) ? 0 : kingToThis.x/abs(kingToThis.x),//conditional checks to make sure no divide by 0 happens
+        (kingToThis.y == 0) ? 0 : kingToThis.y/abs(kingToThis.y)
+    };
+    Vec2i offsetPosition = kingPos;//start at the king
+
+    for(;;)//go from king to *this to ensure that there isnt anything inbetween *this and the king
+    {
+        offsetPosition += direction;//make a step...
+
+        assert(ChessApp::inRange(offsetPosition) && "loop ran off the board somehow");
+
+        Piece const *const p = b.getPieceAt(offsetPosition);
+        if(p)//if there is a piece at offsetPosition
+        {
+            if(p != this)//if there is a piece inbeween *this (that isnt *this and regarless of color)
+            {
+                return;
+            }
+            else//if *p is *this
+            {
+                offsetPosition += direction;//take one more step so we are 1 step past *this
+                break;
+            }
+        }
+    }
+
+    //continue marching along from where the first loop left off
+    //until we potentially find a piece that would be pinning *this to the king.
+    //I could have merged these into 1 loop but it seemed more readable to seperate them
+    for( ; ChessApp::inRange(offsetPosition); offsetPosition += direction)
+    {
+        Piece const *const p = b.getPieceAt(offsetPosition);
+        using enum PieceType;
+        if(p)//if there is a piece at offsetPos
+        {
+            if(p->m_side == m_side)//if the piece we ran into is the same color as *this
+                return;
+
+            if(isDiagonal)//if *this is on the same diagonal as the king
+            {
+                m_locationOfPiecePinningThis = p->m_type == QUEEN || p->m_type == BISHOP
+                    ? p->m_chessPos : Vec2i{-1, -1};
+                return;
+            }
+            else//if *this is on the same rank or file as the king
+            {
+                m_locationOfPiecePinningThis = p->m_type == QUEEN || p->m_type == ROOK
+                    ? p->m_chessPos : Vec2i{-1,-1};
+                return;
+            }
+        }
+    }
+}
+
+std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> const& Piece::getPieceTextures()
+{
+    if(!s_textures[0])//if the textures havent been initialized
+        throw "attempt to access uninitialized Piece::s_textures";
+
+    return s_textures;
+}
+
+void Piece::setChessPosition(Vec2i const newChessPos)
+{   
+    m_chessPos = newChessPos;
+
+    //update the kings static position members
+    if(m_type == PieceType::KING)
+    {
+        if(m_side == Side::WHITE) King::setWhiteKingPos(newChessPos);
+        else King::setBlackKingPos(newChessPos);
+    }
+
+    m_screenPos = ChessApp::chess2ScreenPos(newChessPos);
+    m_destRect.x = m_screenPos.x - m_destRect.w * 0.5f;
+    m_destRect.y = m_screenPos.y - m_destRect.h * 0.5f;
+}
+
+void Piece::initTextures()
+{
+    using enum textureIndices;
+    SDL_Renderer* renderer = ChessApp::getCurrentRenderer();
+    if(!(s_textures[static_cast<Uint32>(WPAWN)]   = IMG_LoadTexture(renderer, "textures/whitePawn256.png"))) 
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(WKNIGHT)] = IMG_LoadTexture(renderer, "textures/whiteKnight256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(WROOK)]   = IMG_LoadTexture(renderer, "textures/whiteRook256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(WBISHOP)] = IMG_LoadTexture(renderer, "textures/whiteBishop256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(WQUEEN)]  = IMG_LoadTexture(renderer, "textures/whiteQueen256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(WKING)]   = IMG_LoadTexture(renderer, "textures/whiteKing256.png")))
+        throw IMG_GetError();
+
+    if(!(s_textures[static_cast<Uint32>(BPAWN)]   = IMG_LoadTexture(renderer, "textures/blackPawn256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(BKNIGHT)] = IMG_LoadTexture(renderer, "textures/blackKnight256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(BROOK)]   = IMG_LoadTexture(renderer, "textures/blackRook256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(BBISHOP)] = IMG_LoadTexture(renderer, "textures/blackBishop256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(BQUEEN)]  = IMG_LoadTexture(renderer, "textures/blackQueen256.png")))
+        throw IMG_GetError();
+    if(!(s_textures[static_cast<Uint32>(BKING)]   = IMG_LoadTexture(renderer, "textures/blackKing256.png")))
+        throw IMG_GetError();
+}
