@@ -2,8 +2,6 @@
 #include "SDL.h"
 #include "PieceTypes.h"
 #include "ChessApplication.h"
-#include <cctype>
-#include <algorithm>
 #include <string>
 #include <exception>
 #include <fstream>

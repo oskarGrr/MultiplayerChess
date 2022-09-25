@@ -709,7 +709,7 @@ void Rook::updateLegalMoves()
         {
             Vec2i direction2Move{move - m_chessPos};
 
-            int intDotProduct = direction2Move.x * direction2PinningPiece.x +
+            int intDotProduct = direction2Move.x * direction2PinningPiece.x + 
                                 direction2Move.y * direction2PinningPiece.y;
 
             if(intDotProduct != 0)
@@ -875,8 +875,10 @@ void King::updateLegalMoves()
 
         if(std::find(cbegin, cend, move) != cend)
         {
-            if(king2Move == left && hasLongCastleRights) shouldEraseLongCastle = true;
-            else if(king2Move == right && hasShortCastleRights) shouldEraseShortCastle = true;
+            if(king2Move == left && hasLongCastleRights) 
+                shouldEraseLongCastle = true;
+            else if(king2Move == right && hasShortCastleRights) 
+                shouldEraseShortCastle = true;
         }
         else m_legalMoves.emplace_back(move, moveType);
     }
@@ -887,7 +889,8 @@ void King::updateLegalMoves()
         auto const castleMove = std::find_if(begin, end,
         [this, isLongCastle](auto const& move) -> bool
         {
-            Vec2i const castlePos{m_chessPos.x + (isLongCastle ? -2 : 2), m_chessPos.y};
+            Vec2i const castlePos{m_chessPos.x + 
+                (isLongCastle ? -2 : 2), m_chessPos.y};
             return move.first == castlePos;
         });
 

@@ -1,6 +1,6 @@
 #include "ChessApplication.h"
 #include "PieceTypes.h"
-#include <memory>
+#include <memory>//std::make_unique && std::unique_ptr
 #include "SDL.h"
 
 ChessApp ChessApp::s_theApplication{};
