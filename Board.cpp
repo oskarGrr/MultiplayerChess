@@ -15,8 +15,6 @@ Board::Board()
 {
     //load the board with the fen string
     std::string const startingFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); 
-      
-    //set up board variables and allocate the pieces
     loadFENIntoBoard(startingFEN);
 
     //update the pieces internal legal moves
