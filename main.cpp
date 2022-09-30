@@ -1,6 +1,6 @@
 #include "ChessApplication.h"
-#include <exception>
-#include <fstream>
+#include <exception>//std::exception
+#include <fstream>//ofstream
 
 int main(int argCount, char* arguments[])
 {

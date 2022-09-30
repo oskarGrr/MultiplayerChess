@@ -135,7 +135,7 @@ void Piece::orthogonalSlide()
 
         //loops runs as long as the slide stays on the board
         //or the break occures below because the loop ran into a piece
-        for( ; ChessApp::inRange(offsetPos); )
+        while(ChessApp::inRange(offsetPos))
         {
             Piece const *const piece = b.getPieceAt(offsetPos);
 
@@ -191,7 +191,7 @@ void Piece::diagonalSlide()
 
         //loops runs as long as the diagonal slide stays on the board
         //or the break occures below because the slide ran into a piece
-        for( ; ChessApp::inRange(offsetPos); )
+        while(ChessApp::inRange(offsetPos))
         {
             Piece const *const piece = b.getPieceAt(offsetPos);
 
@@ -902,16 +902,6 @@ void King::updateLegalMoves()
     if(shouldEraseShortCastle || cs == SINGLE_CHECK) eraseCastle(false);
     if(shouldEraseLongCastle  || cs == SINGLE_CHECK) eraseCastle(true);
 }
-
-////used by the board to update only the king's 
-////legal moves when there is a double check on the king
-//void King::updateKingLegalMoves()
-//{
-//    Board& b = ChessApp::getBoard();
-//    bool whitesTurn = b.getWhosTurnItIs();
-//    Piece* const _this = b.getPieceAt(whitesTurn ? getWhiteKingPos() : getBlackKingPos()); 
-//    _this->updateLegalMoves();
-//}
 
 bool Piece::areSquaresOnSameDiagonal(Vec2i const pos0, Vec2i const pos1)
 {
