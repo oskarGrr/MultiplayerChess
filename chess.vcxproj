@@ -161,6 +161,13 @@
   <ItemGroup>
     <ClCompile Include="Board.cpp" />
     <ClCompile Include="ChessApplication.cpp" />
+    <ClCompile Include="imgui.cpp" />
+    <ClCompile Include="imgui_demo.cpp" />
+    <ClCompile Include="imgui_draw.cpp" />
+    <ClCompile Include="imgui_impl_sdl.cpp" />
+    <ClCompile Include="imgui_impl_sdlrenderer.cpp" />
+    <ClCompile Include="imgui_tables.cpp" />
+    <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PieceTypes.cpp" />
     <ClCompile Include="Window.cpp" />
@@ -168,6 +175,14 @@
   <ItemGroup>
     <ClInclude Include="Board.h" />
     <ClInclude Include="ChessApplication.h" />
+    <ClInclude Include="imconfig.h" />
+    <ClInclude Include="imgui.h" />
+    <ClInclude Include="imgui_impl_sdl.h" />
+    <ClInclude Include="imgui_impl_sdlrenderer.h" />
+    <ClInclude Include="imgui_internal.h" />
+    <ClInclude Include="imstb_rectpack.h" />
+    <ClInclude Include="imstb_textedit.h" />
+    <ClInclude Include="imstb_truetype.h" />
     <ClInclude Include="Vector2i.h" />
     <ClInclude Include="PieceTypes.h" />
     <ClInclude Include="Window.h" />

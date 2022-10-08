@@ -44,6 +44,8 @@ public:
 
 private:
 
+    static bool processEvents();
+    static void renderAllTheThings();
     static void drawSquares();
     static void drawPieces();
     static void drawIndicatorCircles();

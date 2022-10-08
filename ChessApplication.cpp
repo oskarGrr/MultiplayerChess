@@ -1,6 +1,9 @@
 #include "ChessApplication.h"
 #include "PieceTypes.h"
 #include <memory>//std::make_unique && std::unique_ptr
+
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_sdlrenderer.h"
 #include "SDL.h"
 
 ChessApp ChessApp::s_theApplication{};
@@ -19,39 +22,41 @@ ChessApp::~ChessApp()
     SDL_DestroyTexture(m_redCircleTexture);
 }
 
-//tells if a chess position is on the board or not
-bool ChessApp::inRange(Vec2i const chessPos)
+bool ChessApp::processEvents()
 {
-    return (chessPos.x <= 7 && chessPos.x >= 0 && chessPos.y <= 7 && chessPos.y >= 0);
+    SDL_Event event;
+    while(SDL_PollEvent(&event))
+    {     
+        //allow imgui to proccess its own events and update its IO state
+        ImGui_ImplSDL2_ProcessEvent(&event);
+
+        switch(event.type)
+        {
+        case SDL_QUIT: return false;
+        case SDL_MOUSEBUTTONDOWN: s_theApplication.m_board.piecePickUpRoutine(event); break;
+        case SDL_MOUSEBUTTONUP:   s_theApplication.m_board.piecePutDownRoutine(event);
+        }
+    }
+}
+
+void ChessApp::renderAllTheThings()
+{
+     ImGui::Render();
+     SDL_RenderClear(s_theApplication.m_wnd.m_renderer);
+     drawSquares();
+     drawPieces();
+     drawIndicatorCircles();
+     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+     SDL_RenderPresent(s_theApplication.m_wnd.m_renderer);
 }
 
 void ChessApp::run()
 {
     bool running = true;
     while(running)
-    {
-        SDL_RenderClear(m_wnd.m_renderer);
-        drawSquares();
-        drawPieces();
-        drawIndicatorCircles();
-        SDL_RenderPresent(m_wnd.m_renderer);
-        
-        SDL_Event e;
-        while(SDL_PollEvent(&e))
-        {
-            switch(e.type)
-            {
-            case SDL_QUIT:
-                running = false;
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                m_board.piecePickUpRoutine(e);
-                break;
-            case SDL_MOUSEBUTTONUP:
-                m_board.piecePutDownRoutine(e);
-                break;
-            }
-        }   
+    {   
+        processEvents();
+        renderAllTheThings();
         SDL_Delay(10);
     }
 }
@@ -91,7 +96,8 @@ void ChessApp::initCircleTexture
         }
     }
 
-    SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
+    SDL_Surface* surface = SDL_CreateRGBSurfaceFrom
+    (
          pixels.get(), 
          diameter, 
          diameter,
@@ -106,12 +112,19 @@ void ChessApp::initCircleTexture
         exit(1);
     }
 
-    *toInit = SDL_CreateTextureFromSurface(
+    *toInit = SDL_CreateTextureFromSurface
+    (
         s_theApplication.getCurrentRenderer(), 
         surface
     );
 
     SDL_FreeSurface(surface);
+}
+
+//tells if a chess position is on the board or not
+bool ChessApp::inRange(Vec2i const chessPos)
+{
+    return (chessPos.x <= 7 && chessPos.x >= 0 && chessPos.y <= 7 && chessPos.y >= 0);
 }
 
 void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
