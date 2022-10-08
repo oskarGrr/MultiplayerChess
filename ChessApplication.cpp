@@ -22,7 +22,7 @@ ChessApp::~ChessApp()
     SDL_DestroyTexture(m_redCircleTexture);
 }
 
-bool ChessApp::processEvents()
+void ChessApp::processEvents(bool& wasQuitInvoked)
 {
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -32,7 +32,7 @@ bool ChessApp::processEvents()
 
         switch(event.type)
         {
-        case SDL_QUIT: return false;
+        case SDL_QUIT: wasQuitInvoked = false; break;
         case SDL_MOUSEBUTTONDOWN: s_theApplication.m_board.piecePickUpRoutine(event); break;
         case SDL_MOUSEBUTTONUP:   s_theApplication.m_board.piecePutDownRoutine(event);
         }
@@ -55,7 +55,10 @@ void ChessApp::run()
     bool running = true;
     while(running)
     {   
-        processEvents();
+        processEvents(running);
+        ImGui_ImplSDLRenderer_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
         renderAllTheThings();
         SDL_Delay(10);
     }

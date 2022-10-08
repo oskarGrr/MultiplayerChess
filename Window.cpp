@@ -11,13 +11,11 @@ Window::Window(int const width, int const height,
     : m_renderer(nullptr), m_window(nullptr),
       m_width(width), m_height(height)
 {
-    int ret = SDL_Init(SDL_INIT_VIDEO);
-
-    //set m_window && m_renderer
-    SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &m_window, &m_renderer);
-
+    SDL_Init(SDL_subsystems);
+    SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &m_window, &m_renderer);//set m_window && m_renderer
     SDL_SetWindowTitle(m_window, title);
 
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsLight();   
     ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
@@ -25,7 +23,7 @@ Window::Window(int const width, int const height,
 
     //add the font from the fonts folder
     auto& io = ImGui::GetIO();
-    io.Fonts->AddFontFromFileTTF("fonts/DriodSans.ttf", 16.0); 
+    io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0); 
 }
 
 //cleanup window and imGui

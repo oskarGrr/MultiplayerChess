@@ -44,7 +44,7 @@ public:
 
 private:
 
-    static bool processEvents();
+    static void processEvents(bool& wasQuitInvoked);
     static void renderAllTheThings();
     static void drawSquares();
     static void drawPieces();
