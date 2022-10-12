@@ -9,10 +9,17 @@
 ChessApp ChessApp::s_theApplication{};
 
 ChessApp::ChessApp()
-    : m_wnd(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT, "Chess", SDL_INIT_VIDEO, 0u),
-      m_board{}, m_squareSize(MAIN_WINDOW_WIDTH / 8), m_circleTexture(nullptr), m_redCircleTexture(nullptr)
+    : m_chessBoardWidth(896u), m_chessBoardHeight(896u), 
+      m_menuBarHeight(0.0f), m_squareSize(m_chessBoardWidth / 8),
+      m_lightSquareColor{154.0f/255, 238.0f/255, 198.0f/255, 255.0f/255}, 
+      m_darkSquareColor{36.0f/255, 115.0f/255, 77.0f/255, 255.0f/255},
+      m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO, 0u), m_board{}, 
+      m_circleTexture(nullptr), m_redCircleTexture(nullptr)
 {
-    initCircleTexture(m_squareSize / 6, 0x6A, 0x6A, 0x6A, 0x7F, &m_circleTexture);
+   /*initCircleTexture(m_squareSize / 6, 0x6A, 0x6A, 0x6A, 0x7F, &m_circleTexture);
+    initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);*/
+
+    initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
     initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);
 }
 
@@ -22,43 +29,106 @@ ChessApp::~ChessApp()
     SDL_DestroyTexture(m_redCircleTexture);
 }
 
-void ChessApp::processEvents(bool& wasQuitInvoked)
+//return true if we should close the app
+bool ChessApp::processEvents()
 {
     SDL_Event event;
     while(SDL_PollEvent(&event))
-    {     
-        //allow imgui to proccess its own events and update its IO state
+    {   
+        //allow imgui to proccess its own events and update the IO state
         ImGui_ImplSDL2_ProcessEvent(&event);
 
         switch(event.type)
         {
-        case SDL_QUIT: wasQuitInvoked = false; break;
+        case SDL_QUIT: return true;
         case SDL_MOUSEBUTTONDOWN: s_theApplication.m_board.piecePickUpRoutine(event); break;
         case SDL_MOUSEBUTTONUP:   s_theApplication.m_board.piecePutDownRoutine(event);
         }
     }
+
+    return false;
 }
 
+//called once per frame in ChessApp::run() to render everything (even the imgui stuff)
 void ChessApp::renderAllTheThings()
 {
-     ImGui::Render();
-     SDL_RenderClear(s_theApplication.m_wnd.m_renderer);
-     drawSquares();
-     drawPieces();
-     drawIndicatorCircles();
-     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
-     SDL_RenderPresent(s_theApplication.m_wnd.m_renderer);
+    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    //shorter names
+    auto& app = s_theApplication;
+    auto& board = app.m_board;
+
+    if(app.m_wnd.m_ColorEditorWindowIsOpen) [[unlikely]]
+    {
+        ImGui::Begin("change square colors", 
+            &app.m_wnd.m_ColorEditorWindowIsOpen);
+
+        ImGui::TextUnformatted("light squares");
+        ImGui::ColorPicker3("light squares", &app.m_lightSquareColor[0]);
+        ImGui::Separator();
+        ImGui::TextUnformatted("dark squares");
+        ImGui::ColorPicker3("dark squares", &app.m_darkSquareColor[0]);
+
+        ImGui::End();
+    }
+
+    if(ImGui::BeginMainMenuBar()) [[unlikely]]
+    {
+        if(ImGui::BeginMenu("options"))
+        {   
+            ImGui::MenuItem("change colors", nullptr, 
+                &app.m_wnd.m_ColorEditorWindowIsOpen);
+               
+            ImGui::MenuItem("show ImGui demo", nullptr, 
+                &app.m_wnd.m_demoWindowIsOpen);
+
+            ImGui::EndMenu();
+        }
+
+        if(ImGui::Button("flip board", {70, 20}))
+            s_theApplication.flipBoard();
+
+        static bool needMenuBarSize = true;
+        if(needMenuBarSize) [[unlikely]]
+        {   
+            app.m_menuBarHeight = ImGui::GetWindowSize().y;
+
+            SDL_SetWindowSize(app.m_wnd.m_window, app.m_wnd.m_width, 
+                app.m_wnd.m_height + app.m_menuBarHeight);
+
+            for(auto p : app.m_board.m_livePieces)
+            {
+                if(!p) continue;
+                auto sp = chess2ScreenPos(p->getChessPosition());
+                p->setScreenPos(sp);
+            }
+
+            needMenuBarSize = false;
+        }
+
+        ImGui::EndMainMenuBar();
+    }
+
+    if(app.m_wnd.m_demoWindowIsOpen)
+        ImGui::ShowDemoWindow();
+
+    ImGui::Render();
+    SDL_RenderClear(app.m_wnd.m_renderer);
+    drawSquares();
+    drawPieces();
+    drawIndicatorCircles();
+    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+    SDL_RenderPresent(app.m_wnd.m_renderer);
 }
 
 void ChessApp::run()
 {
-    bool running = true;
-    while(running)
+    bool shouldQuit = false;
+    while(!shouldQuit)
     {   
-        processEvents(running);
-        ImGui_ImplSDLRenderer_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
+        shouldQuit = processEvents();       
         renderAllTheThings();
         SDL_Delay(10);
     }
@@ -112,7 +182,7 @@ void ChessApp::initCircleTexture
     if(!surface)
     {
         std::cerr << SDL_GetError();
-        exit(1);
+        std::terminate();
     }
 
     *toInit = SDL_CreateTextureFromSurface
@@ -144,8 +214,10 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
         s_theApplication.m_squareSize * 4
     };
 
-    bool const opositeSidePromotion = side != s_theApplication.m_board.getPlayingSide();
-    if(opositeSidePromotion)
+    //true if the promotion popup should be on the bottom of the screen (the board has been flipped)
+    bool const hasBoardBeenFlipped = side != s_theApplication.m_board.getViewingPerspective();
+
+    if(hasBoardBeenFlipped)
     {
         //move up three and a half squares
         popupRect.y = promotionSquareScreenPos.y - s_theApplication.m_squareSize * 3.5;
@@ -183,7 +255,7 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
         };
 
         //slide the pieces down/up
-        if(side != s_theApplication.m_board.getPlayingSide())//up
+        if(side != s_theApplication.m_board.getViewingPerspective())//up
         {
             destinations[i].y -= yOffset;
         }
@@ -229,7 +301,7 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
                     //      2  |N|         1 |R|
                     //      3  |B|         0 |Q|
 
-                    int const whichPiece = opositeSidePromotion ? 
+                    int const whichPiece = hasBoardBeenFlipped ? 
                         7 - y / s_theApplication.m_squareSize : y / s_theApplication.m_squareSize;
 
                     switch(whichPiece)
@@ -255,7 +327,6 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
             }
         }
         SDL_RenderPresent(renderer);
-
     }
 }
 
@@ -267,17 +338,30 @@ bool ChessApp::isMouseOver(SDL_Rect const& r)
     return(x >= r.x && x <= r.x+r.w && y >= r.y && y <= r.h + r.y);
 }
 
+void ChessApp::flipBoard()
+{
+    m_board.m_viewingPerspective = m_board.m_viewingPerspective == Side::WHITE ? 
+        Side::BLACK : Side::WHITE;
+
+    for(auto p : m_board.m_livePieces)
+    { 
+        if(!p) continue;
+        auto sp = chess2ScreenPos(p->getChessPosition());
+        p->setScreenPos(sp);
+    }
+}
+
 //take a chess position and flip it to the correct screen position
-//based on which perspective the client is viewing the board from
+//based on which perspective the player is viewing the board from
 Vec2i ChessApp::chess2ScreenPos(Vec2i const pos)
 {
-    Vec2i ret = {pos.x, pos.y};
+    Vec2i ret{pos};
 
-    if(s_theApplication.m_board.getPlayingSide() == Side::WHITE)
+    if(s_theApplication.m_board.getViewingPerspective() == Side::WHITE)
     {
         ret.y = 7 - ret.y;
     }
-    else
+    else//if viewing the board from blacks perspective
     {
         ret.x = 7 - ret.x;
     }
@@ -290,18 +374,22 @@ Vec2i ChessApp::chess2ScreenPos(Vec2i const pos)
     ret.y += s_theApplication.m_squareSize * 0.5f;
     ret.x += s_theApplication.m_squareSize * 0.5f;
 
+    //move down to account for the menu bar (will only work after the first frame)
+    ret.y += s_theApplication.m_menuBarHeight;
+
     return ret;
 }
 
+//wont check if pos is on the chess board callee must do that
 Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
 {
-    Vec2i ret = 
+    Vec2i ret
     {
         pos.x / s_theApplication.m_squareSize,
         pos.y / s_theApplication.m_squareSize
     };
 
-    if(s_theApplication.m_board.getPlayingSide() == Side::WHITE)
+    if(s_theApplication.m_board.getViewingPerspective() == Side::WHITE)
     {
         ret.y = 7 - ret.y;
     }
@@ -313,10 +401,18 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
     return ret;
 }
 
+bool ChessApp::isPositionOnBoard(Vec2i const pos)
+{
+    auto& app = s_theApplication;//shorter name
+    return pos.x > 0 && 
+           pos.x < app.m_chessBoardWidth && 
+           pos.y > app.m_menuBarHeight &&
+           pos.y < app.m_wnd.m_height;
+}
+
 void ChessApp::drawIndicatorCircles()
 {
     const Piece* const pom = Piece::getPieceOnMouse();
-
     if(!pom) return;
 
     SDL_Renderer *const renderer  = ChessApp::getCurrentRenderer();
@@ -352,26 +448,41 @@ void ChessApp::drawIndicatorCircles()
 
 void ChessApp::drawSquares()
 {
-    Uint32 const squareSize = ChessApp::getSquareSize();
-    SDL_Rect square = {0, 0, squareSize, squareSize};
-    SDL_Renderer *const currRenderer = ChessApp::getCurrentRenderer();
+    auto& app = s_theApplication;//shorter name
+    SDL_Rect square{0, app.m_menuBarHeight, app.m_squareSize,  app.m_squareSize};
+    SDL_Renderer *const renderer = ChessApp::getCurrentRenderer();
 
-    for(int i = 0; i < 8; ++i, square.x += squareSize)
+    for(int i = 0; i < 8; ++i, square.x += app.m_squareSize)
     {
-        for(int j = 0; j < 8; ++j, square.y += squareSize)
+        for(int j = 0; j < 8; ++j, square.y += app.m_squareSize)
         {
-            if( !( i + j & 1 ) )
+            if( !( i + j & 1 ) )//if light square
             {
-                SDL_SetRenderDrawColor(currRenderer, 229, 242, 208, 255);
+                //scale up the colors from 0-1 to 0-255 and draw
+                SDL_SetRenderDrawColor
+                (
+                    renderer, 
+                    app.m_lightSquareColor[0] * 255.0f, 
+                    app.m_lightSquareColor[1] * 255.0f, 
+                    app.m_lightSquareColor[2] * 255.0f, 
+                    app.m_lightSquareColor[3] * 255.0f
+                );
             }
-            else
+            else//if dark square
             {
-                SDL_SetRenderDrawColor(currRenderer, 94, 138, 67, 255);
+                SDL_SetRenderDrawColor
+                (
+                    renderer,
+                    app.m_darkSquareColor[0] * 255.0f,
+                    app.m_darkSquareColor[1] * 255.0f,
+                    app.m_darkSquareColor[2] * 255.0f,
+                    app.m_darkSquareColor[3] * 255.0f
+                );
             }
 
-            SDL_RenderFillRect(currRenderer, &square);
+            SDL_RenderFillRect(renderer, &square);
         }
-        square.y = 0;
+        square.y = app.m_menuBarHeight;
     }
 }
 

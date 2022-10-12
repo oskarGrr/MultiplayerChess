@@ -80,7 +80,7 @@ public:
     inline void resetEnPassant(){m_enPassantPosition = {-1, -1};}//reset the enPassantTargetLocation back to -1, -1
     inline Side getWhosTurnItIs() const {return m_sideOfWhosTurnItIs;}
     std::vector<Vec2i> getAttackedSquares(Side isWhite) const;//get all the attacked squares for the given side 
-    inline Side getPlayingSide() const {return m_playingSide;}//get which side the user is playing as
+    inline Side getViewingPerspective() const {return m_viewingPerspective;}//get which side the user is viewing the board from
     void capturePiece(Vec2i const location);//moves a Piece* to the captured piece pool
 
     enum struct CheckState{INVALID = 0, NO_CHECK, SINGLE_CHECK, DOUBLE_CHECK};
@@ -96,7 +96,7 @@ private:
     Vec2i        m_enPassantPosition;        //position of the square where en passant is possible in the next move
     Side         m_sideOfWhosTurnItIs;       //used to remember whos turn is it
     CastleRights m_castlingRights;           //bitwise & with the CastleRights enumerations
-    Side const   m_playingSide;              //the side (white or black) that the user is playing as
+    Side         m_viewingPerspective;       //the side (white or black) that the player is viewing the board from
 
     void updateLegalMoves();//updates the pieces internal psuedo legal, fully legal, and attacked squares vectors
     void updatePinnedPieces();

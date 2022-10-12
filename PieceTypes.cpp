@@ -20,7 +20,7 @@ Piece::Piece(Side const side, Vec2i const chessPos)
     }
 }
 
-//just inits Piece::_destRect and Piece::_sourceRect for the ctors below
+//just inits Piece::m_destRect and Piece::m_sourceRect for the ctors below
 void Piece::initRects()
 {
     int textureWidth = 0, textureHeight = 0;
@@ -114,6 +114,13 @@ void Piece::drawPieceOnMouse() const
     SDL_GetMouseState(&x, &y);
     SDL_Rect dest{x - m_destRect.w * 0.5f, y - m_destRect.w * 0.5f, m_destRect.w, m_destRect.h};
     SDL_RenderCopy(ChessApp::getCurrentRenderer(), m_texture, &m_sourceRect, &dest);
+}
+
+void Piece::setScreenPos(Vec2i const newPos)
+{
+    m_screenPos  = newPos;
+    m_destRect.x = newPos.x - m_destRect.w * 0.5f;
+    m_destRect.y = newPos.y - m_destRect.h * 0.5f;
 }
 
 //used by rooks & queens to slide a piece in all 4 orthogonal 

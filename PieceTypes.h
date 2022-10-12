@@ -82,6 +82,8 @@ public:
     void drawPieceOnMouse() const;
     void draw() const;
     void updatePinnedInfo();//updates a pieces m_locationOfPiecePinningThis
+    void setScreenPos(Vec2i const newPos);
+    inline Vec2i getScreenPos() const {return m_screenPos;}
     inline bool isPiecePinned() const {return m_locationOfPiecePinningThis != Vec2i{-1, -1};};//if m_locationOfPiecePinningThis is == -1, -1 then there isnt a piece pinning *this to its king
     inline static Piece* getPieceOnMouse(){return s_pieceOnMouse;}
     inline static void setPieceOnMouse(Piece *const newVal){s_pieceOnMouse = newVal;}

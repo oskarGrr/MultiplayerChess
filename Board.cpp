@@ -11,7 +11,7 @@ Board::Board()
     : m_livePieces{}, m_capturedPieces{}, m_checkState(CheckState::INVALID),
       m_locationOfCheckingPiece{-1,-1},   m_enPassantPosition{-1,-1},
       m_sideOfWhosTurnItIs(Side::WHITE),  m_castlingRights{CastleRights::NONE}, 
-      m_playingSide(Side::WHITE)
+      m_viewingPerspective(Side::WHITE)
 {
     //load the board with the fen string
     std::string const startingFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); 
@@ -192,8 +192,15 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
 {
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || Piece::getPieceOnMouse())
         return;
-    
-    Piece *const p = getPieceAt(ChessApp::screen2ChessPos({mouseEvent.button.x, mouseEvent.button.y}));
+
+    Vec2i screenPos = {mouseEvent.button.x, mouseEvent.button.y};
+
+    if(!ChessApp::isPositionOnBoard(screenPos))
+        return;
+
+    Vec2i chessPos = ChessApp::screen2ChessPos(screenPos);
+
+    Piece *const p = getPieceAt(chessPos);
 
     if(p && p->getSide() == m_sideOfWhosTurnItIs)
         Piece::setPieceOnMouse(p);
@@ -217,12 +224,20 @@ auto Board::requestMove(Vec2i requestedPosition)
 }
 
 void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
-{
+{  
     const Piece* const pom = Piece::getPieceOnMouse();
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || !pom)
         return;
 
-    Vec2i chessPos{ChessApp::screen2ChessPos({mouseEvent.button.x, mouseEvent.button.y})};
+    Vec2i screenPos = {mouseEvent.button.x, mouseEvent.button.y};
+
+    if(!ChessApp::isPositionOnBoard(screenPos))
+    { 
+        Piece::setPieceOnMouse(nullptr);//put the piece down
+        return;
+    }
+
+    Vec2i chessPos{ChessApp::screen2ChessPos(screenPos)};
 
     const auto it = requestMove(chessPos);
     if(it != pom->getLegalMoves().end())

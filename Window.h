@@ -19,4 +19,6 @@ private:
     SDL_Renderer* m_renderer;
     SDL_Window* m_window;
     int const m_width, m_height;
+    bool m_ColorEditorWindowIsOpen;
+    bool m_demoWindowIsOpen;
 };
