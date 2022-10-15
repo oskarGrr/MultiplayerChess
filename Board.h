@@ -4,6 +4,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <memory>//std::shared_ptr
 
 class chessApp;
 class Piece;
@@ -72,7 +73,7 @@ public:
     void removeCastlingRights(const CastleRights cr);
     void piecePickUpRoutine(SDL_Event const&) const;
     void piecePutDownRoutine(SDL_Event const&);
-    inline Piece* getPieceAt(Vec2i const chessPos) const {return m_livePieces[chessPos.y * 8 + chessPos.x];}
+    inline auto getPieceAt(Vec2i const chessPos) const {return m_pieces[ChessApp::chessPos2Index(chessPos)];}//share a reference to the piece with the caller
     void updateEnPassant(Vec2i const newPostition);
     inline bool isThereEnPassantAvailable() const {return m_enPassantPosition != Vec2i{-1, -1};}
     inline Vec2i getEnPassantIndex() const {return m_enPassantPosition;}
@@ -88,15 +89,13 @@ public:
 
 private:
     
-    std::array<Piece*, 64> m_livePieces;  //the pointers will be null if there isnt a piece there
-    std::vector<Piece*> m_capturedPieces; //where the pointers go to be deleted in the destructor
-
-    CheckState   m_checkState;   
-    Vec2i        m_locationOfCheckingPiece;  //where is the piece putting a king in check otherwise -1, -1
-    Vec2i        m_enPassantPosition;        //position of the square where en passant is possible in the next move
-    Side         m_sideOfWhosTurnItIs;       //used to remember whos turn is it
-    CastleRights m_castlingRights;           //bitwise & with the CastleRights enumerations
-    Side         m_viewingPerspective;       //the side (white or black) that the player is viewing the board from
+    std::vector<std::shared_ptr<Piece>> m_pieces;
+    CheckState    m_checkState;   
+    Vec2i         m_locationOfCheckingPiece;  //where is the piece putting a king in check otherwise -1, -1
+    Vec2i         m_enPassantPosition;        //position of the square where en passant is possible in the next move
+    Side          m_sideOfWhosTurnItIs;       //used to remember whos turn is it
+    CastleRights  m_castlingRights;           //bitwise & with the CastleRights enumerations
+    Side          m_viewingPerspective;       //the side (white or black) that the player is viewing the board from
 
     void updateLegalMoves();//updates the pieces internal psuedo legal, fully legal, and attacked squares vectors
     void updatePinnedPieces();
