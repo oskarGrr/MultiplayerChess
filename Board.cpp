@@ -8,7 +8,7 @@
 #include <cassert>
 
 Board::Board()
-    : m_pieces{}, m_checkState(CheckState::INVALID),
+    : m_pieces{}, m_lastCapturedPiece{}, m_checkState(CheckState::INVALID),
       m_locationOfCheckingPiece{-1,-1},   m_enPassantPosition{-1,-1},
       m_sideOfWhosTurnItIs(Side::WHITE),  m_castlingRights{CastleRights::NONE}, 
       m_viewingPerspective(Side::WHITE)
@@ -264,8 +264,8 @@ void Board::handleKingMove(Vec2i const newKingPos)
 //handle the most recent capture of a rook
 void Board::handleRookCapture()
 {
-    assert(!m_capturedPieces.empty());
-    Rook const *const rook = dynamic_cast<Rook*>(m_capturedPieces.back());
+    assert(m_lastCapturedPiece);
+    auto const rook = std::dynamic_pointer_cast<Rook>(m_lastCapturedPiece);;
     assert(rook);
 
     bool const wasRookWhite = rook->getSide() == Side::WHITE;
@@ -274,7 +274,7 @@ void Board::handleRookCapture()
 
     if(koqs == NEITHER) return;
 
-    if(koqs == KING_SIDE) 
+    if(koqs == KING_SIDE)
     {
         removeCastlingRights(wasRookWhite ? 
             CastleRights::WSHORT : CastleRights::BSHORT);
@@ -413,7 +413,7 @@ void Board::toggleTurn()
 //update the pieces m_pseudoLegals and m_attackedSquares
 void Board::updatePseudoLegalsAndAttackedSquares()
 {
-    for(Piece *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {   
         if(p)
         {
@@ -429,7 +429,7 @@ void Board::updatePseudoLegalsAndAttackedSquares()
 std::vector<Vec2i> Board::getAttackedSquares(Side side) const
 {
     std::vector<Vec2i> ret{};
-    for(Piece const *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {
         if(p && side == p->getSide())
         {
@@ -507,7 +507,7 @@ void Board::updateLegalMoves()
     //now that all of the pieces pseudo legal moves, attacked 
     //squares, pinned pieces, and m_checkState are up to 
     //date we can calculate the fully legal moves
-    for(Piece *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {
         if(p && p->getSide() == m_sideOfWhosTurnItIs)
             p->updateLegalMoves();
@@ -516,12 +516,12 @@ void Board::updateLegalMoves()
 
 void Board::capturePiece(Vec2i const location)
 {  
-    Piece *const piece = getPieceAt(location);
+    auto const pieceToCapture = getPieceAt(location);
+    if(!pieceToCapture) return;//if there isnt a piece here just leave   
 
-    if(!piece) return;//if there isnt a piece here just leave
-    
-    m_capturedPieces.push_back(piece);
-    m_livePieces[ChessApp::chessPos2Index(location)] = nullptr;
+    m_lastCapturedPiece = getPieceAt(location);
+    assert(ChessApp::inRange(location));
+    m_pieces[ChessApp::chessPos2Index(location)] = nullptr;
 }
 
 //all piece moves should go through this function 
