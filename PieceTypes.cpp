@@ -144,7 +144,7 @@ void Piece::orthogonalSlide()
         //or the break occures below because the loop ran into a piece
         while(ChessApp::inRange(offsetPos))
         {
-            Piece const *const piece = b.getPieceAt(offsetPos);
+            auto const piece = b.getPieceAt(offsetPos);
 
             if(!piece)//if there isnt a piece add it to the vector
             {
@@ -156,7 +156,7 @@ void Piece::orthogonalSlide()
                 //if the piece we ran into is the oposite color then add it to the vector
                 if(m_side != piece->m_side)
                 {
-                    m_pseudoLegals.emplace_back(offsetPos, getType(piece) == PieceType::ROOK ?
+                    m_pseudoLegals.emplace_back(offsetPos, getType(*piece) == PieceType::ROOK ?
                         ROOK_CAPTURE : NORMAL);
 
                     m_attackedSquares.push_back(offsetPos);
@@ -200,7 +200,7 @@ void Piece::diagonalSlide()
         //or the break occures below because the slide ran into a piece
         while(ChessApp::inRange(offsetPos))
         {
-            Piece const *const piece = b.getPieceAt(offsetPos);
+            auto piece = b.getPieceAt(offsetPos);
 
             if(!piece)//if there isnt a piece at offsetIndex add it to the vector
             {
@@ -212,7 +212,7 @@ void Piece::diagonalSlide()
                 //if the piece we ran into is the oposite color then add it to the vector
                 if(m_side != piece->m_side)
                 {
-                    m_pseudoLegals.emplace_back(offsetPos, getType(piece) == PieceType::ROOK ?
+                    m_pseudoLegals.emplace_back(offsetPos, getType(*piece) == PieceType::ROOK ?
                         ROOK_CAPTURE : NORMAL);
 
                     m_attackedSquares.push_back(offsetPos);
@@ -277,13 +277,13 @@ void Pawn::updatePseudoLegalAndAttacked()
     {
         if(ChessApp::inRange(squareToCheck))
         {
-            Piece const *const piece = b.getPieceAt(squareToCheck);
+            auto const piece = b.getPieceAt(squareToCheck);
             if(piece)//if there is a piece at squareToCheck
             {
                 if(piece->getSide() != m_side)//if piece is of the oposite color to *this
                 {   
                     bool const isPromotion = squareToCheck.y == 7 || squareToCheck.y == 0;
-                    bool const isRookCapture = getType(piece) == PieceType::ROOK;
+                    bool const isRookCapture = getType(*piece) == PieceType::ROOK;
                     if(isPromotion)
                     {
                         m_pseudoLegals.emplace_back(squareToCheck, isRookCapture ? 
@@ -330,7 +330,7 @@ void Knight::updatePseudoLegalAndAttacked()
     {
         if(ChessApp::inRange(offsetPos))
         {
-            Piece const *const piece = b.getPieceAt(offsetPos);
+            auto const piece = b.getPieceAt(offsetPos);
             if(!piece)
             {
                 m_attackedSquares.push_back(offsetPos);
@@ -340,7 +340,7 @@ void Knight::updatePseudoLegalAndAttacked()
             {
                 //if there is a piece here and its the oposite color of the knight
                 m_attackedSquares.push_back(offsetPos);
-                m_pseudoLegals.emplace_back(offsetPos, getType(piece) == PieceType::ROOK ?
+                m_pseudoLegals.emplace_back(offsetPos, getType(*piece) == PieceType::ROOK ?
                     ROOK_CAPTURE : NORMAL);
             }
             else//if the piece is the same color as the knight
@@ -437,12 +437,12 @@ void King::updatePseudoLegalAndAttacked()
             if(!ChessApp::inRange(offsetPosition))
                 continue;
 
-            Piece const *const piece = b.getPieceAt(offsetPosition);
+            auto const piece = b.getPieceAt(offsetPosition);
 
             //when the loop gets the the position in between 4 and 5
             //in the diagram above it will be on the same square as the king
             //so continue to the next loop iteration
-            if(piece == this)
+            if(piece.get() == this)
                 continue;                                     
 
             if(!piece)//there isnt a piece at the offset position
@@ -487,7 +487,7 @@ bool Piece::doesNonKingMoveResolveCheck
     using enum PieceType;
     Board& b = ChessApp::getBoard();
     auto const& [move, moveType] = moveToCheck;
-    Piece const *const checkingPiece = b.getPieceAt(posOfCheckingPiece);
+    auto const checkingPiece = b.getPieceAt(posOfCheckingPiece);
 
     //if we are in check and there is an en passant move
     //available that means we are in check from a double pushed pawn.
@@ -549,7 +549,7 @@ bool Pawn::doesEnPassantLeaveKingInCheck(Vec2i const enPassantMove) const
     Vec2i offsetPos{kingPos.x + xDirection, kingPos.y};
     for(;; offsetPos.x += xDirection)
     {
-        Piece const *const p = b.getPieceAt(offsetPos);
+        auto const p = b.getPieceAt(offsetPos);
 
         if(p)
         {
@@ -567,13 +567,13 @@ bool Pawn::doesEnPassantLeaveKingInCheck(Vec2i const enPassantMove) const
     offsetPos.x += xDirection*2;
     for(; ChessApp::inRange(offsetPos); offsetPos.x += xDirection)
     {
-        Piece *const p = b.getPieceAt(offsetPos);
+        auto const p = b.getPieceAt(offsetPos);
 
         //if we ran into a piece check if it is a queen or a rook
         if(p)
         {
             using enum PieceType;
-            auto const type = getType(p);
+            auto const type = getType(*p);
             return type == ROOK || type == QUEEN;
         }
     }
@@ -953,10 +953,10 @@ void Piece::updatePinnedInfo()
 
         assert(ChessApp::inRange(offsetPosition) && "loop ran off the board somehow");
 
-        Piece const *const p = b.getPieceAt(offsetPosition);
+        auto const p = b.getPieceAt(offsetPosition);
         if(p)//if there is a piece at offsetPosition
         {
-            if(p != this)//if there is a piece inbeween *this (that isnt *this and regarless of color)
+            if(p.get() != this)//if there is a piece inbeween *this (that isnt *this and regarless of color)
             {
                 return;
             }
@@ -973,7 +973,7 @@ void Piece::updatePinnedInfo()
     //I could have merged these into 1 loop but it seemed more readable to seperate them
     for( ; ChessApp::inRange(offsetPosition); offsetPosition += direction)
     {
-        Piece const *const p = b.getPieceAt(offsetPosition);
+        auto const p = b.getPieceAt(offsetPosition);
         using enum PieceType;
         if(p)//if there is a piece at offsetPos
         {

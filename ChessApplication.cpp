@@ -11,14 +11,11 @@ ChessApp ChessApp::s_theApplication{};
 ChessApp::ChessApp()
     : m_chessBoardWidth(896u), m_chessBoardHeight(896u), 
       m_menuBarHeight(0.0f), m_squareSize(m_chessBoardWidth / 8),
-      m_lightSquareColor{154.0f/255, 238.0f/255, 198.0f/255, 255.0f/255}, 
-      m_darkSquareColor{36.0f/255, 115.0f/255, 77.0f/255, 255.0f/255},
+      m_lightSquareColor{214.0f/255, 235.0f/255, 225.0f/255, 255.0f/255}, 
+      m_darkSquareColor{43.0f/255, 86.0f/255, 65.0f/255, 255.0f/255},
       m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO, 0u), m_board{}, 
       m_circleTexture(nullptr), m_redCircleTexture(nullptr)
 {
-   /*initCircleTexture(m_squareSize / 6, 0x6A, 0x6A, 0x6A, 0x7F, &m_circleTexture);
-    initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);*/
-
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
     initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);
 }
@@ -98,7 +95,7 @@ void ChessApp::renderAllTheThings()
             SDL_SetWindowSize(app.m_wnd.m_window, app.m_wnd.m_width, 
                 app.m_wnd.m_height + app.m_menuBarHeight);
 
-            for(auto p : app.m_board.m_livePieces)
+            for(auto const &p : app.m_board.m_pieces)
             {
                 if(!p) continue;
                 auto sp = chess2ScreenPos(p->getChessPosition());
@@ -343,7 +340,7 @@ void ChessApp::flipBoard()
     m_board.m_viewingPerspective = m_board.m_viewingPerspective == Side::WHITE ? 
         Side::BLACK : Side::WHITE;
 
-    for(auto p : m_board.m_livePieces)
+    for(auto const& p : m_board.m_pieces)
     { 
         if(!p) continue;
         auto sp = chess2ScreenPos(p->getChessPosition());
@@ -412,7 +409,7 @@ bool ChessApp::isPositionOnBoard(Vec2i const pos)
 
 void ChessApp::drawIndicatorCircles()
 {
-    const Piece* const pom = Piece::getPieceOnMouse();
+    auto const pom = Piece::getPieceOnMouse();
     if(!pom) return;
 
     SDL_Renderer *const renderer  = ChessApp::getCurrentRenderer();
@@ -434,7 +431,7 @@ void ChessApp::drawIndicatorCircles()
         };
 
         //if there is an enemy piece or enPassant square draw red circle instead
-        Piece const *const piece = s_theApplication.m_board.getPieceAt(move);
+        auto const piece = s_theApplication.m_board.getPieceAt(move);
         if(piece && piece->getSide() != s_theApplication.m_board.getWhosTurnItIs() || 
            move == s_theApplication.m_board.getEnPassantIndex())
         {
@@ -482,18 +479,18 @@ void ChessApp::drawSquares()
 
             SDL_RenderFillRect(renderer, &square);
         }
+
         square.y = app.m_menuBarHeight;
     }
 }
 
 void ChessApp::drawPieces()
 {
-    Piece const *const pom = Piece::getPieceOnMouse();
+    auto const pom = Piece::getPieceOnMouse();
 
     //draw all the pieces and defer the draw() call for the piece 
     //on the mouse until the end of the function
-    auto const& livePieces = s_theApplication.m_board.m_livePieces;
-    for(Piece const *const piece : livePieces)
+    for(auto const& piece : s_theApplication.m_board.m_pieces)
         if(piece && piece != pom) piece->draw();
 
     if(pom) pom->drawPieceOnMouse();

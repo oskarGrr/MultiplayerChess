@@ -8,7 +8,7 @@
 #include <cassert>
 
 Board::Board()
-    : m_livePieces{}, m_capturedPieces{}, m_checkState(CheckState::INVALID),
+    : m_pieces{}, m_lastCapturedPiece{}, m_checkState(CheckState::INVALID),
       m_locationOfCheckingPiece{-1,-1},   m_enPassantPosition{-1,-1},
       m_sideOfWhosTurnItIs(Side::WHITE),  m_castlingRights{CastleRights::NONE}, 
       m_viewingPerspective(Side::WHITE)
@@ -21,11 +21,9 @@ Board::Board()
     updateLegalMoves();
 }
 
-//give the pieces back :(
 Board::~Board()
 {
-    for(auto piece : m_livePieces) delete piece;    
-    for(auto piece : m_capturedPieces) delete piece;    
+    //the references to the pieces on the heap are managed by shared_ptr's so nothing to do here
 }
 
 //factory method for placing a piece at the specified location on the board
@@ -41,7 +39,7 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
 
     try
     {
-        m_livePieces[ChessApp::chessPos2Index(pos)] = new ConcreteTy(side, pos);
+        m_pieces[ChessApp::chessPos2Index(pos)] = std::make_shared<ConcreteTy>(side, pos);
     }
     catch(std::bad_alloc& ba)
     {
@@ -110,7 +108,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
     else return;
 
     //handle castling rights
-    constexpr Vec2i a1{0, 0}, a8{0, 7}, h1{7, 0}, h8{7, 7};
+    const Vec2i a1{0, 0}, a8{0, 7}, h1{7, 0}, h8{7, 7};
     for(; it != FEN.cend(); ++it)
     {
         if(*it == ' ')
@@ -121,7 +119,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         {
         case 'K'://if the FEN string has white king side castling encoded into it
         {   
-            Rook *const unmovedRook = dynamic_cast<Rook*>(getPieceAt(h1));               
+            auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(h1));
             assert(unmovedRook);
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::KING_SIDE);
             unmovedRook->setIfRookHasMoved(false);
@@ -130,7 +128,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         }
         case 'Q':
         {
-            Rook *const unmovedRook = dynamic_cast<Rook*>(getPieceAt(a1));
+            auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(a1));
             assert(unmovedRook);   
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::QUEEN_SIDE);
             unmovedRook->setIfRookHasMoved(false);
@@ -139,7 +137,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         }
         case 'k':
         {   
-            Rook *const unmovedRook = dynamic_cast<Rook*>(getPieceAt(h8));
+            auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(h8));
             assert(unmovedRook);
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::KING_SIDE);
             unmovedRook->setIfRookHasMoved(false);
@@ -148,7 +146,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         }
         case 'q':
         {   
-            Rook *const unmovedRook = dynamic_cast<Rook*>(getPieceAt(a8));
+            auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(a8));
             assert(unmovedRook);
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::QUEEN_SIDE);
             unmovedRook->setIfRookHasMoved(false);
@@ -200,7 +198,7 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
 
     Vec2i chessPos = ChessApp::screen2ChessPos(screenPos);
 
-    Piece *const p = getPieceAt(chessPos);
+    auto const p = getPieceAt(chessPos);
 
     if(p && p->getSide() == m_sideOfWhosTurnItIs)
         Piece::setPieceOnMouse(p);
@@ -208,7 +206,7 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
 
 auto Board::requestMove(Vec2i requestedPosition)
 {
-    Piece const *const pom = Piece::getPieceOnMouse();
+    auto const pom = Piece::getPieceOnMouse();
     auto const beg = pom->getLegalMoves().cbegin();
     auto const end = pom->getLegalMoves().cend();
     
@@ -225,7 +223,7 @@ auto Board::requestMove(Vec2i requestedPosition)
 
 void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
 {  
-    const Piece* const pom = Piece::getPieceOnMouse();
+    auto const pom = Piece::getPieceOnMouse();
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || !pom)
         return;
 
@@ -246,9 +244,14 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
     Piece::setPieceOnMouse(nullptr);//put the piece down
 }
 
+std::shared_ptr<Piece> Board::getPieceAt(Vec2i const chessPos) const
+{
+    return m_pieces[ChessApp::chessPos2Index(chessPos)];
+}
+
 void Board::handlePromotionMove(Vec2i const promotionSquare)
 {
-    Piece const *const pawnToPromote = getPieceAt(promotionSquare);
+    auto const pawnToPromote = getPieceAt(promotionSquare);
 
     //stop here and render popup window with options for which piece to promote to
     ChessApp::promotionRoutine(promotionSquare, pawnToPromote->getSide());
@@ -256,7 +259,7 @@ void Board::handlePromotionMove(Vec2i const promotionSquare)
 
 void Board::handleKingMove(Vec2i const newKingPos)
 {
-    Piece const *const king = getPieceAt(newKingPos);
+    auto const king = getPieceAt(newKingPos);
     bool const wasKingWhite = king->getSide() == Side::WHITE;
     using enum CastleRights;
     auto const bitMask = wasKingWhite ? (WLONG | WSHORT) : (BLONG | BSHORT); 
@@ -266,8 +269,8 @@ void Board::handleKingMove(Vec2i const newKingPos)
 //handle the most recent capture of a rook
 void Board::handleRookCapture()
 {
-    assert(!m_capturedPieces.empty());
-    Rook const *const rook = dynamic_cast<Rook*>(m_capturedPieces.back());
+    assert(m_lastCapturedPiece);
+    auto const rook = std::dynamic_pointer_cast<Rook>(m_lastCapturedPiece);;
     assert(rook);
 
     bool const wasRookWhite = rook->getSide() == Side::WHITE;
@@ -276,7 +279,7 @@ void Board::handleRookCapture()
 
     if(koqs == NEITHER) return;
 
-    if(koqs == KING_SIDE) 
+    if(koqs == KING_SIDE)
     {
         removeCastlingRights(wasRookWhite ? 
             CastleRights::WSHORT : CastleRights::BSHORT);
@@ -290,7 +293,7 @@ void Board::handleRookCapture()
 
 void Board::handleRookMove(Vec2i const newRookPos)
 {
-    Rook *const rook = dynamic_cast<Rook*>(getPieceAt(newRookPos));
+    auto const rook = std::dynamic_pointer_cast<Rook>(getPieceAt(newRookPos));
     assert(rook);
 
     using enum Rook::KingOrQueenSide;
@@ -340,7 +343,7 @@ void Board::handleCastleMove(Vec2i const castleSquare)
         .y = castleSquare.y
     };
 
-    Piece* rookToBeMoved = getPieceAt(oldRookPosition);
+    auto rookToBeMoved = getPieceAt(oldRookPosition);
     bool wasRookWhite = rookToBeMoved->getSide() == Side::WHITE;
 
     Vec2i const newRookPosition
@@ -415,7 +418,7 @@ void Board::toggleTurn()
 //update the pieces m_pseudoLegals and m_attackedSquares
 void Board::updatePseudoLegalsAndAttackedSquares()
 {
-    for(Piece *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {   
         if(p)
         {
@@ -431,7 +434,7 @@ void Board::updatePseudoLegalsAndAttackedSquares()
 std::vector<Vec2i> Board::getAttackedSquares(Side side) const
 {
     std::vector<Vec2i> ret{};
-    for(Piece const *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {
         if(p && side == p->getSide())
         {
@@ -447,7 +450,7 @@ std::vector<Vec2i> Board::getAttackedSquares(Side side) const
 //returns a vector or pairs where the first piece* is the pinned piece and the other is the pinning piece
 void Board::updatePinnedPieces()
 {
-    for(Piece *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {
         if(!p) continue;
 
@@ -467,7 +470,7 @@ void Board::updateCheckState()
     m_checkState = NO_CHECK;
     m_locationOfCheckingPiece = {-1, -1};
     
-    for(Piece const *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {
         if(p && p->getSide() != m_sideOfWhosTurnItIs)
         {
@@ -509,7 +512,7 @@ void Board::updateLegalMoves()
     //now that all of the pieces pseudo legal moves, attacked 
     //squares, pinned pieces, and m_checkState are up to 
     //date we can calculate the fully legal moves
-    for(Piece *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {
         if(p && p->getSide() == m_sideOfWhosTurnItIs)
             p->updateLegalMoves();
@@ -518,12 +521,12 @@ void Board::updateLegalMoves()
 
 void Board::capturePiece(Vec2i const location)
 {  
-    Piece *const piece = getPieceAt(location);
+    auto const pieceToCapture = getPieceAt(location);
+    if(!pieceToCapture) return;//if there isnt a piece here just leave   
 
-    if(!piece) return;//if there isnt a piece here just leave
-    
-    m_capturedPieces.push_back(piece);
-    m_livePieces[ChessApp::chessPos2Index(location)] = nullptr;
+    m_lastCapturedPiece = getPieceAt(location);
+    assert(ChessApp::inRange(location));
+    m_pieces[ChessApp::chessPos2Index(location)] = nullptr;
 }
 
 //all piece moves should go through this function 
@@ -536,8 +539,8 @@ void Board::movePiece(Vec2i const source, Vec2i const destination)
     int const idest   = ChessApp::chessPos2Index(destination);
     int const isource = ChessApp::chessPos2Index(source);
 
-    m_livePieces[idest]   = m_livePieces[isource];
-    m_livePieces[isource] = nullptr;
+    m_pieces[idest] = m_pieces[isource];
+    m_pieces[isource]   = nullptr;
 
-    m_livePieces[idest]->setChessPosition(destination);
+    m_pieces[idest]->setChessPosition(destination);
 }

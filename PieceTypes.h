@@ -61,7 +61,7 @@ protected:
 
     inline static std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> s_textures{};//gets initialized when pieces are made
     inline static constexpr float s_scale{0.32f};//how much to scale down the textures
-    inline static Piece* s_pieceOnMouse = nullptr;//the piece the mouse is holding otherwise nullptr
+    inline static std::shared_ptr<Piece> s_pieceOnMouse{nullptr};//the piece the mouse is holding otherwise nullptr
 
     std::vector<Move> m_pseudoLegals; //all of the pseudo legal moves a piece has and their types
     std::vector<Move> m_legalMoves;   //all of the fully legal moves a piece has and their types
@@ -85,8 +85,8 @@ public:
     void setScreenPos(Vec2i const newPos);
     inline Vec2i getScreenPos() const {return m_screenPos;}
     inline bool isPiecePinned() const {return m_locationOfPiecePinningThis != Vec2i{-1, -1};};//if m_locationOfPiecePinningThis is == -1, -1 then there isnt a piece pinning *this to its king
-    inline static Piece* getPieceOnMouse(){return s_pieceOnMouse;}
-    inline static void setPieceOnMouse(Piece *const newVal){s_pieceOnMouse = newVal;}
+    inline static auto getPieceOnMouse(){return s_pieceOnMouse;}
+    inline static void setPieceOnMouse(std::shared_ptr<Piece> const& updateTo = nullptr){ s_pieceOnMouse = updateTo; }
     static std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> const& getPieceTextures();
     inline static constexpr float getPieceTextureScale(){return s_scale;}
     void setChessPosition(Vec2i const setChessPosition);
@@ -108,7 +108,7 @@ protected:
     PieceType m_type;//the type of the concrete piece extending this abstract class
 
     //here so pieces can see the m_type of other pieces instead of using dynamic_cast
-    inline static PieceType getType(Piece const* other) {return other->m_type;}
+    inline static PieceType getType(Piece const& other) {return other.m_type;}
 
     Vec2i m_locationOfPiecePinningThis;//the location of the piece (if there is one otherwise -1, -1) pinning *this to its king
 
