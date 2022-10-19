@@ -73,7 +73,7 @@ public:
     void removeCastlingRights(const CastleRights cr);
     void piecePickUpRoutine(SDL_Event const&) const;
     void piecePutDownRoutine(SDL_Event const&);
-    inline auto getPieceAt(Vec2i const chessPos) const {return m_pieces[ChessApp::chessPos2Index(chessPos)];}//share a reference to the piece with the caller
+    std::shared_ptr<Piece> getPieceAt(Vec2i const chessPos) const;
     void updateEnPassant(Vec2i const newPostition);
     inline bool isThereEnPassantAvailable() const {return m_enPassantPosition != Vec2i{-1, -1};}
     inline Vec2i getEnPassantIndex() const {return m_enPassantPosition;}
@@ -89,7 +89,9 @@ public:
 
 private:
     
-    std::vector<std::shared_ptr<Piece>> m_pieces;
+    std::array<std::shared_ptr<Piece>, 64> m_pieces;
+    std::shared_ptr<Piece> m_lastCapturedPiece;
+
     CheckState    m_checkState;   
     Vec2i         m_locationOfCheckingPiece;  //where is the piece putting a king in check otherwise -1, -1
     Vec2i         m_enPassantPosition;        //position of the square where en passant is possible in the next move

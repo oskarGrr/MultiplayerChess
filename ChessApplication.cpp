@@ -95,7 +95,7 @@ void ChessApp::renderAllTheThings()
             SDL_SetWindowSize(app.m_wnd.m_window, app.m_wnd.m_width, 
                 app.m_wnd.m_height + app.m_menuBarHeight);
 
-            for(auto p : app.m_board.m_livePieces)
+            for(auto const &p : app.m_board.m_pieces)
             {
                 if(!p) continue;
                 auto sp = chess2ScreenPos(p->getChessPosition());
@@ -340,7 +340,7 @@ void ChessApp::flipBoard()
     m_board.m_viewingPerspective = m_board.m_viewingPerspective == Side::WHITE ? 
         Side::BLACK : Side::WHITE;
 
-    for(auto p : m_board.m_livePieces)
+    for(auto const& p : m_board.m_pieces)
     { 
         if(!p) continue;
         auto sp = chess2ScreenPos(p->getChessPosition());
@@ -409,7 +409,7 @@ bool ChessApp::isPositionOnBoard(Vec2i const pos)
 
 void ChessApp::drawIndicatorCircles()
 {
-    const Piece* const pom = Piece::getPieceOnMouse();
+    auto const pom = Piece::getPieceOnMouse();
     if(!pom) return;
 
     SDL_Renderer *const renderer  = ChessApp::getCurrentRenderer();
@@ -431,7 +431,7 @@ void ChessApp::drawIndicatorCircles()
         };
 
         //if there is an enemy piece or enPassant square draw red circle instead
-        Piece const *const piece = s_theApplication.m_board.getPieceAt(move);
+        auto const piece = s_theApplication.m_board.getPieceAt(move);
         if(piece && piece->getSide() != s_theApplication.m_board.getWhosTurnItIs() || 
            move == s_theApplication.m_board.getEnPassantIndex())
         {
@@ -486,12 +486,11 @@ void ChessApp::drawSquares()
 
 void ChessApp::drawPieces()
 {
-    Piece const *const pom = Piece::getPieceOnMouse();
+    auto const pom = Piece::getPieceOnMouse();
 
     //draw all the pieces and defer the draw() call for the piece 
     //on the mouse until the end of the function
-    auto const& livePieces = s_theApplication.m_board.m_livePieces;
-    for(Piece const *const piece : livePieces)
+    for(auto const& piece : s_theApplication.m_board.m_pieces)
         if(piece && piece != pom) piece->draw();
 
     if(pom) pom->drawPieceOnMouse();

@@ -39,7 +39,7 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
 
     try
     {
-        m_livePieces[ChessApp::chessPos2Index(pos)] = new ConcreteTy(side, pos);
+        m_pieces[ChessApp::chessPos2Index(pos)] = std::make_shared<ConcreteTy>(side, pos);
     }
     catch(std::bad_alloc& ba)
     {
@@ -244,6 +244,11 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
     Piece::setPieceOnMouse(nullptr);//put the piece down
 }
 
+std::shared_ptr<Piece> Board::getPieceAt(Vec2i const chessPos) const
+{
+    return m_pieces[ChessApp::chessPos2Index(chessPos)];
+}
+
 void Board::handlePromotionMove(Vec2i const promotionSquare)
 {
     auto const pawnToPromote = getPieceAt(promotionSquare);
@@ -445,7 +450,7 @@ std::vector<Vec2i> Board::getAttackedSquares(Side side) const
 //returns a vector or pairs where the first piece* is the pinned piece and the other is the pinning piece
 void Board::updatePinnedPieces()
 {
-    for(Piece *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {
         if(!p) continue;
 
@@ -465,7 +470,7 @@ void Board::updateCheckState()
     m_checkState = NO_CHECK;
     m_locationOfCheckingPiece = {-1, -1};
     
-    for(Piece const *const p : m_livePieces)
+    for(auto const& p : m_pieces)
     {
         if(p && p->getSide() != m_sideOfWhosTurnItIs)
         {
@@ -534,8 +539,8 @@ void Board::movePiece(Vec2i const source, Vec2i const destination)
     int const idest   = ChessApp::chessPos2Index(destination);
     int const isource = ChessApp::chessPos2Index(source);
 
-    m_livePieces[idest]   = m_livePieces[isource];
-    m_livePieces[isource] = nullptr;
+    m_pieces[idest] = m_pieces[isource];
+    m_pieces[isource]   = nullptr;
 
-    m_livePieces[idest]->setChessPosition(destination);
+    m_pieces[idest]->setChessPosition(destination);
 }
