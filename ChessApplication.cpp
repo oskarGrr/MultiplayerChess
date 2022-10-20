@@ -17,8 +17,7 @@ ChessApp::ChessApp()
       m_circleTexture(nullptr), m_redCircleTexture(nullptr)
 {
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
-    initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);
-    
+    initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);    
 }
 
 ChessApp::~ChessApp()
