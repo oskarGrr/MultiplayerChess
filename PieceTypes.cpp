@@ -529,6 +529,8 @@ bool Pawn::doesEnPassantLeaveKingInCheck(Vec2i const enPassantMove) const
     return false;
 }
 
+//after the pieces pseudo legal moves pinned pieces and the board check 
+//state have been updated then this method can be used
 void Pawn::updateLegalMoves()
 {
     m_legalMoves.clear();
@@ -609,6 +611,8 @@ void Pawn::updateLegalMoves()
     }
 }
 
+//after the pieces pseudo legal moves pinned pieces and the board check 
+//state have been updated then this method can be used
 void Knight::updateLegalMoves()
 {
     using enum Board::CheckState;
@@ -638,6 +642,8 @@ void Knight::updateLegalMoves()
     }
 }
 
+//after the pieces pseudo legal moves pinned pieces and the board check 
+//state have been updated then this method can be used
 void Rook::updateLegalMoves()
 {
     using enum Board::CheckState;
@@ -685,6 +691,8 @@ void Rook::updateLegalMoves()
     }
 }
 
+//after the pieces pseudo legal moves pinned pieces and the board check 
+//state have been updated then this method can be used
 void Bishop::updateLegalMoves()
 {
     m_legalMoves.clear();
@@ -745,6 +753,8 @@ void Bishop::updateLegalMoves()
     }
 }
 
+//after the pieces pseudo legal moves pinned pieces and the board check 
+//state have been updated then this method can be used
 void Queen::updateLegalMoves()
 {
     m_legalMoves.clear();
@@ -801,6 +811,8 @@ void Queen::updateLegalMoves()
     }
 }
 
+//after the pieces pseudo legal moves pinned pieces and the board check 
+//state have been updated then this method can be used
 void King::updateLegalMoves()
 {
     auto const& b = ChessApp::getBoard();

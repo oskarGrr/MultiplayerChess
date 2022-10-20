@@ -135,10 +135,12 @@ void ChessApp::run()
     }
 }
 
-//generates a circle texture 1 time at startup for use in the program
+//generates a circle texture at startup to use later
 void ChessApp::initCircleTexture
 (int radius, Uint8 RR, Uint8 GG, Uint8 BB, Uint8 AA, SDL_Texture** toInit)
 {
+//make sure the ordering of the RGBA bytes will be the same 
+//regarless of endianess of the target platform
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
     Uint32 rMask = 0xFF000000;
     Uint32 gMask = 0x00FF0000;
@@ -392,13 +394,13 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
     return ret;
 }
 
-bool ChessApp::isPositionOnBoard(Vec2i const pos)
+bool ChessApp::isPositionOnBoard(Vec2i const screenPosition)
 {
     auto& app = s_theApplication;//shorter name
-    return pos.x > 0 && 
-           pos.x < app.m_chessBoardWidth && 
-           pos.y > app.m_menuBarHeight &&
-           pos.y < app.m_wnd.m_height;
+    return screenPosition.x > 0 && 
+           screenPosition.x < app.m_chessBoardWidth && 
+           screenPosition.y > app.m_menuBarHeight &&
+           screenPosition.y < app.m_wnd.m_height;
 }
 
 void ChessApp::drawIndicatorCircles()

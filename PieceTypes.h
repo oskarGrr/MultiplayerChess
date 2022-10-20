@@ -66,7 +66,11 @@ protected:
 public:
 
     virtual void updatePseudoLegalAndAttacked()=0;//updates a piece's m_pseudoLegals and m_attackedSquares   
-    virtual void updateLegalMoves()=0;//updates the full legal moves for a given concrete piece
+
+    //updates the full legal moves for a given concrete piece.
+    //after the pieces pseudo legal moves pinned pieces and the board check 
+    //state have been updated then this method can be used
+    virtual void updateLegalMoves()=0;
 
     void updatePinnedInfo();//updates a pieces m_locationOfPiecePinningThis
     inline bool isPiecePinned() const {return m_locationOfPiecePinningThis != Vec2i{-1, -1};};//if m_locationOfPiecePinningThis is == -1, -1 then there isnt a piece pinning *this to its king

@@ -27,9 +27,6 @@ Board::~Board()
 }
 
 //factory method for placing a piece at the specified location on the board
-//these should only be called in the boards constructor ideally to follow RAII.
-//except for when there is a call to either ConreteTy = Queen, Rook, Knight, or Bishop upon promotion.
-//all of the memory will be freed in the boards destructor
 template<typename ConcreteTy>
 void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
 {
@@ -49,9 +46,6 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
     }
 }
 
-//this function can be used to load a FEN with less than 6 fields
-//(like just the pysical positions of the pieces). but if it detects
-//more than 6 fields in the FEN string it will throw and exception
 void Board::loadFENIntoBoard(std::string const& FEN)
 {   
     int file = 0, rank = 7;
@@ -508,12 +502,12 @@ void Board::updateLegalMoves()
     //   if the king is in check.
     updateCheckState();
 
-    //updates all of the pieces Piece::m_locationOfPiecePinningThis
+    //3) now update all of the pieces Piece::m_locationOfPiecePinningThis
     updatePinnedPieces();
 
-    //now that all of the pieces pseudo legal moves, attacked 
-    //squares, pinned pieces, and m_checkState are up to 
-    //date we can calculate the fully legal moves
+    //4) now that all of the pieces pseudo legal moves, attacked 
+    //   squares, pinned pieces, and m_checkState are up to 
+    //   date we can calculate the fully legal moves
     for(auto const& p : m_pieces)
     {
         if(p && p->getSide() == m_sideOfWhosTurnItIs)
