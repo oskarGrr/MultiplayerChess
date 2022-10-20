@@ -87,6 +87,8 @@ King::King(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
     else s_bKingPos = m_chessPos;
 }
 
+//not called in the destructor for a piece but rather by the 
+//destructor of the single instance of ChessApp
 void Piece::destoryTextures()
 {
     for(SDL_Texture* t : s_textures) 
@@ -95,12 +97,7 @@ void Piece::destoryTextures()
 
 Piece::~Piece()
 {
-    static bool haveTexturesBeenFreed = false;
-    if(!haveTexturesBeenFreed)
-    {
-        destoryTextures();
-        haveTexturesBeenFreed = true;
-    }
+    //nothing to do here
 }
 
 void Piece::draw() const 

@@ -253,8 +253,10 @@ void Board::handlePromotionMove(Vec2i const promotionSquare)
 {
     auto const pawnToPromote = getPieceAt(promotionSquare);
 
+    auto& app = ChessApp::getApp();
+
     //stop here and render popup window with options for which piece to promote to
-    ChessApp::promotionRoutine(promotionSquare, pawnToPromote->getSide());
+    app.promotionRoutine(promotionSquare, pawnToPromote->getSide());
 }
 
 void Board::handleKingMove(Vec2i const newKingPos)

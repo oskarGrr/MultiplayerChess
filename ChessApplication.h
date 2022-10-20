@@ -5,6 +5,15 @@
 #include "SDL.h"
 #include "imgui.h"
 
+#define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
+
+//indecies into the array of SDL textures for the different pieces
+enum struct textureIndices : Uint32
+{
+    WPAWN, WKNIGHT, WROOK, WBISHOP, WQUEEN, WKING,
+    BPAWN, BKNIGHT, BROOK, BBISHOP, BQUEEN, BKING
+};
+
 //singleton chessApp that contains the board (which owns/"holds" the pieces)
 class ChessApp
 {
@@ -34,20 +43,18 @@ public:
     static bool isPositionOnBoard(Vec2i const);
     static bool inRange(Vec2i const chessPos);//tells if a chess position is on the board
     static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
-    static void initCircleTexture(int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a, SDL_Texture** toInit);
-    static void promotionRoutine(Vec2i promotionSquare, Side wasPawnWhite);
-
-    inline static SDL_Texture* getCircleTexture(){return s_theApplication.m_circleTexture;};
-    inline static SDL_Texture* getRedCircleTexture(){return s_theApplication.m_redCircleTexture;};
+    void promotionRoutine(Vec2i promotionSquare, Side wasPawnWhite);
 
 private:
 
     void flipBoard();
-    static bool processEvents();
-    static void renderAllTheThings();
-    static void drawSquares();
-    static void drawPieces();
-    static void drawIndicatorCircles();
+    bool processEvents();
+    void renderAllTheThings();
+    void drawSquares();
+    void drawPieces();
+    void drawIndicatorCircles();
+    void initCircleTexture(int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a, SDL_Texture** toInit);
+    void loadPieceTexturesFromDisk();
 
     Uint32 const m_chessBoardWidth;
     Uint32 const m_chessBoardHeight;

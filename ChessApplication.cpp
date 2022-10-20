@@ -18,12 +18,14 @@ ChessApp::ChessApp()
 {
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
     initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);
+    
 }
 
 ChessApp::~ChessApp()
 {
     SDL_DestroyTexture(m_circleTexture);
     SDL_DestroyTexture(m_redCircleTexture);
+    Piece::destoryTextures();
 }
 
 //return true if we should close the app
@@ -413,11 +415,9 @@ void ChessApp::drawIndicatorCircles()
     if(!pom) return;
 
     SDL_Renderer *const renderer  = ChessApp::getCurrentRenderer();
-    SDL_Texture  *const circle    = ChessApp::getCircleTexture();
-    SDL_Texture  *const redCircle = ChessApp::getRedCircleTexture();
 
     SDL_Rect circleSource{};
-    SDL_QueryTexture(circle, nullptr, nullptr, &circleSource.w, &circleSource.h);
+    SDL_QueryTexture(m_circleTexture, nullptr, nullptr, &circleSource.w, &circleSource.h);
 
     for(auto const& [move, moveType] : pom->getLegalMoves())
     {
@@ -435,11 +435,11 @@ void ChessApp::drawIndicatorCircles()
         if(piece && piece->getSide() != s_theApplication.m_board.getWhosTurnItIs() || 
            move == s_theApplication.m_board.getEnPassantIndex())
         {
-            SDL_RenderCopy(renderer, redCircle, &circleSource, &circleDest);
+            SDL_RenderCopy(renderer, m_redCircleTexture, &circleSource, &circleDest);
             continue;
         }
 
-        SDL_RenderCopy(renderer, circle, &circleSource, &circleDest);
+        SDL_RenderCopy(renderer, m_circleTexture, &circleSource, &circleDest);
     }
 }
 

@@ -34,12 +34,6 @@ enum struct MoveInfo : Uint32
 //consumed by the board after that move is made
 using Move = std::pair<Vec2i, MoveInfo>;
 
-enum struct textureIndices : Uint32
-{
-    WPAWN, WKNIGHT, WROOK, WBISHOP, WQUEEN, WKING,
-    BPAWN, BKNIGHT, BROOK, BBISHOP, BQUEEN, BKING
-};
-
 //this class isnt responsible for ownership
 //of the Pieces. the ChessApp::_Board is, because the board "holds" the pieces.
 //This abstract Piece class is meant to serve as a base class for
@@ -59,7 +53,7 @@ public:
     
 protected:
 
-    inline static std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> s_textures{};//gets initialized when pieces are made
+    inline static std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> s_textures{};
     inline static constexpr float s_scale{0.32f};//how much to scale down the textures
     inline static std::shared_ptr<Piece> s_pieceOnMouse{nullptr};//the piece the mouse is holding otherwise nullptr
 
@@ -96,10 +90,11 @@ public:
     inline std::vector<Move> const& getLegalMoves() const {return m_legalMoves;}
     inline std::vector<Vec2i> const& getAttackedSquares() const {return m_attackedSquares;}
 
+    static void destoryTextures();
+
 private:
 
     static void initTextures();//called once in the base ctor
-    static void destoryTextures();//called once in the dtor
     inline void resetLocationOfPiecePinningThis(){m_locationOfPiecePinningThis = {-1,-1};}
 
 protected:
