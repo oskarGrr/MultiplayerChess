@@ -1,0 +1,7 @@
+.vs
+chess.vcxproj.filters
+chess.vcxproj.user
+*.obj
+imgui.ini
+src.zip
+x64/

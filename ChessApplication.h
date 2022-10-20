@@ -8,10 +8,10 @@
 #define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
 
 //indecies into the array of SDL textures for the different pieces
-enum struct textureIndices : Uint32
+enum struct TextureIndices : Uint32
 {
     WPAWN, WKNIGHT, WROOK, WBISHOP, WQUEEN, WKING,
-    BPAWN, BKNIGHT, BROOK, BBISHOP, BQUEEN, BKING
+    BPAWN, BKNIGHT, BROOK, BBISHOP, BQUEEN, BKING, INVALID
 };
 
 //singleton chessApp that contains the board (which owns/"holds" the pieces)
@@ -43,7 +43,9 @@ public:
     static bool isPositionOnBoard(Vec2i const);
     static bool inRange(Vec2i const chessPos);//tells if a chess position is on the board
     static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
+
     void promotionRoutine(Vec2i promotionSquare, Side wasPawnWhite);
+    inline auto const& getTextures() const {return m_pieceTextures;}
 
 private:
 
@@ -66,4 +68,7 @@ private:
     Board  m_board;//the singleton board composed here as part of the ChessApp instance
     SDL_Texture* m_circleTexture;
     SDL_Texture* m_redCircleTexture;
+    float const m_pieceTextureScale;
+    std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> m_pieceTextures;//the textures for the chess pieces
+    std::array<Vec2i,        NUM_OF_PIECE_TEXTURES> m_pieceTextureSizes;//width and height of the above textures
 };

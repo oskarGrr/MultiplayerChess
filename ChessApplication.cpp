@@ -5,6 +5,7 @@
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 #include "SDL.h"
+#include "SDL_image.h"
 
 ChessApp ChessApp::s_theApplication{};
 
@@ -14,17 +15,19 @@ ChessApp::ChessApp()
       m_lightSquareColor{214.0f/255, 235.0f/255, 225.0f/255, 255.0f/255}, 
       m_darkSquareColor{43.0f/255, 86.0f/255, 65.0f/255, 255.0f/255},
       m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO, 0u), m_board{}, 
-      m_circleTexture(nullptr), m_redCircleTexture(nullptr)
+      m_circleTexture(nullptr), m_redCircleTexture(nullptr), 
+      m_pieceTextureScale(0.32f), m_pieceTextures{}
 {
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
     initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);    
+    loadPieceTexturesFromDisk();
 }
 
 ChessApp::~ChessApp()
 {
     SDL_DestroyTexture(m_circleTexture);
     SDL_DestroyTexture(m_redCircleTexture);
-    Piece::destoryTextures();
+    for(auto t : m_pieceTextures) SDL_DestroyTexture(t);
 }
 
 //return true if we should close the app
@@ -96,12 +99,12 @@ void ChessApp::renderAllTheThings()
             SDL_SetWindowSize(app.m_wnd.m_window, app.m_wnd.m_width, 
                 app.m_wnd.m_height + app.m_menuBarHeight);
 
-            for(auto const &p : app.m_board.m_pieces)
-            {
-                if(!p) continue;
-                auto sp = chess2ScreenPos(p->getChessPosition());
-                p->setScreenPos(sp);
-            }
+            //for(auto const &p : app.m_board.m_pieces)
+            //{
+            //    if(!p) continue;
+            //    auto sp = chess2ScreenPos(p->getChessPosition());
+            //    p->setScreenPos(sp);
+            //}
 
             needMenuBarSize = false;
         }
@@ -225,20 +228,17 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
         popupRect.y = promotionSquareScreenPos.y - s_theApplication.m_squareSize * 0.5f;
     }
 
-    using enum textureIndices;
-    auto const& pieceTextures = Piece::getPieceTextures();
+    using enum TextureIndices;
     std::array<SDL_Texture*, 4> textures
     {
-        pieceTextures[static_cast<Uint32>(wasPawnWhite ? WQUEEN  : BQUEEN)],
-        pieceTextures[static_cast<Uint32>(wasPawnWhite ? WROOK   : BROOK)],
-        pieceTextures[static_cast<Uint32>(wasPawnWhite ? WKNIGHT : BKNIGHT)],
-        pieceTextures[static_cast<Uint32>(wasPawnWhite ? WBISHOP : BBISHOP)]
+        m_pieceTextures[static_cast<Uint32>(wasPawnWhite ? WQUEEN  : BQUEEN)],
+        m_pieceTextures[static_cast<Uint32>(wasPawnWhite ? WROOK   : BROOK)],
+        m_pieceTextures[static_cast<Uint32>(wasPawnWhite ? WKNIGHT : BKNIGHT)],
+        m_pieceTextures[static_cast<Uint32>(wasPawnWhite ? WBISHOP : BBISHOP)]
     };
 
     std::array<SDL_Rect, 4> sources{};//how big are the textures before any scaling
     std::array<SDL_Rect, 4> destinations{};//where will the textures be drawn and how big after scaling
-
-    constexpr float textureScale = Piece::getPieceTextureScale();
 
     //fill in the source and destination rectancles for every texture
     for(int i = 0, yOffset = 0; i < 4; ++i, yOffset += s_theApplication.m_squareSize)
@@ -246,10 +246,10 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
         SDL_QueryTexture(textures[i], nullptr, nullptr, &sources[i].w, &sources[i].h);
         destinations[i] = 
         {
-            promotionSquareScreenPos.x - static_cast<int>(sources[i].w * textureScale * 0.5f),
-            promotionSquareScreenPos.y - static_cast<int>(sources[i].h * textureScale * 0.5f),
-            static_cast<int>(sources[i].w * textureScale),
-            static_cast<int>(sources[i].h * textureScale)
+            promotionSquareScreenPos.x - static_cast<int>(sources[i].w * m_pieceTextureScale * 0.5f),
+            promotionSquareScreenPos.y - static_cast<int>(sources[i].h * m_pieceTextureScale * 0.5f),
+            static_cast<int>(sources[i].w * m_pieceTextureScale),
+            static_cast<int>(sources[i].h * m_pieceTextureScale)
         };
 
         //slide the pieces down/up
@@ -340,13 +340,6 @@ void ChessApp::flipBoard()
 {
     m_board.m_viewingPerspective = m_board.m_viewingPerspective == Side::WHITE ? 
         Side::BLACK : Side::WHITE;
-
-    for(auto const& p : m_board.m_pieces)
-    { 
-        if(!p) continue;
-        auto sp = chess2ScreenPos(p->getChessPosition());
-        p->setScreenPos(sp);
-    }
 }
 
 //take a chess position and flip it to the correct screen position
@@ -430,9 +423,9 @@ void ChessApp::drawIndicatorCircles()
         };
 
         //if there is an enemy piece or enPassant square draw red circle instead
-        auto const piece = s_theApplication.m_board.getPieceAt(move);
-        if(piece && piece->getSide() != s_theApplication.m_board.getWhosTurnItIs() || 
-           move == s_theApplication.m_board.getEnPassantIndex())
+        auto const piece = m_board.getPieceAt(move);
+        if(piece && piece->getSide() != m_board.getWhosTurnItIs() || 
+           move == m_board.getEnPassantIndex())
         {
             SDL_RenderCopy(renderer, m_redCircleTexture, &circleSource, &circleDest);
             continue;
@@ -490,7 +483,94 @@ void ChessApp::drawPieces()
     //draw all the pieces and defer the draw() call for the piece 
     //on the mouse until the end of the function
     for(auto const& piece : s_theApplication.m_board.m_pieces)
-        if(piece && piece != pom) piece->draw();
+    { 
+        if(piece && piece != pom)
+        {
+            //figure out where on the screen the piece is (the middle of the square)
+            Vec2i screenPosition = chess2ScreenPos(piece->getChessPosition());
+            
+            //get the width and height of whichever texture the piece on the mouse is
+            Vec2i textureSize = m_pieceTextureSizes[static_cast<Uint32>(piece->getWhichTexture())];
+            
+            //from the screen position figure out the destination rectangle
+            SDL_Rect dest
+            {
+                .x = screenPosition.x - textureSize.x / 2, 
+                .y = screenPosition.y - textureSize.y / 2, 
+                .w = textureSize.x, 
+                .h = textureSize.y
+            };
+            
+            SDL_RenderCopy
+            (
+                ChessApp::getCurrentRenderer(), 
+                m_pieceTextures[static_cast<Uint32>(piece->getWhichTexture())],
+                nullptr, &dest
+            );
+        }
+    }
 
-    if(pom) pom->drawPieceOnMouse();
+    if(pom)
+    {
+        Vec2i screenPosition = chess2ScreenPos(pom->getChessPosition());
+        Vec2i textureSize = m_pieceTextureSizes[static_cast<Uint32>(pom->getWhichTexture())];
+
+        //create a destination where the mouse cursor is
+        int mouseX = 0, mouseY = 0;
+        SDL_GetMouseState(&mouseX, &mouseY);
+        SDL_Rect mouseDestination
+        {
+            .x = mouseX - textureSize.x / 2,
+            .y = mouseY - textureSize.y / 2,
+            .w = textureSize.x, 
+            .h = textureSize.y
+        };
+
+        SDL_RenderCopy
+        (
+            ChessApp::getCurrentRenderer(), 
+            m_pieceTextures[static_cast<Uint32>(pom->getWhichTexture())],
+            nullptr, &mouseDestination
+        );
+    }
+}
+
+void ChessApp::loadPieceTexturesFromDisk()
+{
+    using enum TextureIndices;
+    SDL_Renderer* renderer = ChessApp::getCurrentRenderer();
+    if(!(m_pieceTextures[static_cast<Uint32>(WPAWN)]   = IMG_LoadTexture(renderer, "textures/whitePawn256.png"))) 
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(WKNIGHT)] = IMG_LoadTexture(renderer, "textures/whiteKnight256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(WROOK)]   = IMG_LoadTexture(renderer, "textures/whiteRook256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(WBISHOP)] = IMG_LoadTexture(renderer, "textures/whiteBishop256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(WQUEEN)]  = IMG_LoadTexture(renderer, "textures/whiteQueen256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(WKING)]   = IMG_LoadTexture(renderer, "textures/whiteKing256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(BPAWN)]   = IMG_LoadTexture(renderer, "textures/blackPawn256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(BKNIGHT)] = IMG_LoadTexture(renderer, "textures/blackKnight256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(BROOK)]   = IMG_LoadTexture(renderer, "textures/blackRook256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(BBISHOP)] = IMG_LoadTexture(renderer, "textures/blackBishop256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(BQUEEN)]  = IMG_LoadTexture(renderer, "textures/blackQueen256.png")))
+        throw IMG_GetError();
+    if(!(m_pieceTextures[static_cast<Uint32>(BKING)]   = IMG_LoadTexture(renderer, "textures/blackKing256.png")))
+        throw IMG_GetError();
+
+    //get the width and height of each texture
+    for(int i = 0; i < NUM_OF_PIECE_TEXTURES; ++i)
+    {
+        SDL_QueryTexture(m_pieceTextures[i], nullptr, nullptr, 
+            &m_pieceTextureSizes[i].x, &m_pieceTextureSizes[i].y);
+
+        //scale the texture up or down to the correct size
+        m_pieceTextureSizes[i] *= m_pieceTextureScale;
+    }
 }

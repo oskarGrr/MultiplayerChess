@@ -49,52 +49,39 @@ public:
     Piece& operator=(Piece&&)=delete;
 
     Piece(Side const side, Vec2i const chessPos);
-    virtual ~Piece();
+    virtual ~Piece();//a Piece doesnt own any resources but its good practice to remember to include a vitual dtor here since Piece is abstract
     
 protected:
 
-    inline static std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> s_textures{};
-    inline static constexpr float s_scale{0.32f};//how much to scale down the textures
     inline static std::shared_ptr<Piece> s_pieceOnMouse{nullptr};//the piece the mouse is holding otherwise nullptr
 
     std::vector<Move> m_pseudoLegals; //all of the pseudo legal moves a piece has and their types
     std::vector<Move> m_legalMoves;   //all of the fully legal moves a piece has and their types
 
-    Side const m_side;                          //black or white piece
-    Vec2i m_chessPos;                           //the file and rank (x,y) of where the piece is (0-7)
-    Vec2i m_screenPos;                          //location (on the screen) of the middle of the square that the piece is on
-    std::vector<Vec2i> m_attackedSquares;       //all the squares being attacked by *this
-    SDL_Texture* m_texture;                     //every piece will have an SDL texture that will point to the correct piece texture
-    SDL_Rect m_sourceRect;
-    SDL_Rect m_destRect;
+    Side const m_side;                      //black or white piece
+    Vec2i m_chessPos;                       //the file and rank (x,y) of where the piece is (0-7)
+    std::vector<Vec2i> m_attackedSquares;   //all the squares being attacked by *this
+    TextureIndices m_whichTexture;          //array offset into the array of piece textures owned by ChessApp signifying which texture belongs to this piece              
 
 public:
 
     virtual void updatePseudoLegalAndAttacked()=0;//updates a piece's m_pseudoLegals and m_attackedSquares   
     virtual void updateLegalMoves()=0;//updates the full legal moves for a given concrete piece
 
-    void drawPieceOnMouse() const;
-    void draw() const;
     void updatePinnedInfo();//updates a pieces m_locationOfPiecePinningThis
-    void setScreenPos(Vec2i const newPos);
-    inline Vec2i getScreenPos() const {return m_screenPos;}
     inline bool isPiecePinned() const {return m_locationOfPiecePinningThis != Vec2i{-1, -1};};//if m_locationOfPiecePinningThis is == -1, -1 then there isnt a piece pinning *this to its king
     inline static auto getPieceOnMouse(){return s_pieceOnMouse;}
-    inline static void setPieceOnMouse(std::shared_ptr<Piece> const& updateTo = nullptr){ s_pieceOnMouse = updateTo; }
-    static std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> const& getPieceTextures();
-    inline static constexpr float getPieceTextureScale(){return s_scale;}
+    inline static void setPieceOnMouse(std::shared_ptr<Piece> const& updateTo = nullptr){s_pieceOnMouse = updateTo;}
     void setChessPosition(Vec2i const setChessPosition);
     inline Vec2i getChessPosition() const {return m_chessPos;}
     inline Side getSide() const {return m_side;}
     inline std::vector<Move> const& getPseudoLegalMoves() const {return m_pseudoLegals;}
     inline std::vector<Move> const& getLegalMoves() const {return m_legalMoves;}
     inline std::vector<Vec2i> const& getAttackedSquares() const {return m_attackedSquares;}
-
-    static void destoryTextures();
+    inline TextureIndices getWhichTexture() const {return m_whichTexture;}
 
 private:
 
-    static void initTextures();//called once in the base ctor
     inline void resetLocationOfPiecePinningThis(){m_locationOfPiecePinningThis = {-1,-1};}
 
 protected:
@@ -118,7 +105,6 @@ protected:
     //called by the concrete implementations of virtual void updateLegalMoves()=0;
     static bool doesNonKingMoveResolveCheck(Move const&, Vec2i const posOfCheckingPiece);
 
-    void initRects();//just called in the derived ctors to set up the texture sizes
     static bool areSquaresOnSameDiagonal(Vec2i const, Vec2i const);
     static bool areSquaresOnSameRankOrFile(Vec2i const, Vec2i const);
 };

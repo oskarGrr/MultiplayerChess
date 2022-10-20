@@ -7,92 +7,58 @@
 #include <algorithm>//std::foreach
 
 Piece::Piece(Side const side, Vec2i const chessPos)
-    : m_pseudoLegals{}, m_legalMoves{}, m_side(side), m_chessPos(chessPos),
-      m_screenPos(ChessApp::chess2ScreenPos(chessPos)), m_attackedSquares{},
-      m_texture(nullptr), m_sourceRect{}, m_destRect{},
-      m_type(PieceType::INVALID), m_locationOfPiecePinningThis{-1, -1}
+    : m_pseudoLegals{}, m_legalMoves{}, m_side(side),
+      m_chessPos(chessPos), m_attackedSquares{},
+      m_whichTexture(TextureIndices::INVALID), m_type(PieceType::INVALID), 
+      m_locationOfPiecePinningThis{-1, -1}
 {
-    static bool texturesHaveBeenInitialized = false;
-    if(!texturesHaveBeenInitialized)
-    {
-        initTextures();
-        texturesHaveBeenInitialized = true;
-    }
-}
 
-//just inits Piece::m_destRect and Piece::m_sourceRect for the ctors below
-void Piece::initRects()
-{
-    int textureWidth = 0, textureHeight = 0;
-    SDL_QueryTexture(m_texture, nullptr, nullptr, &textureWidth, &textureHeight);
-    m_sourceRect = {0, 0, textureWidth, textureHeight};
-    m_destRect =
-    {
-        static_cast<int>(m_screenPos.x - m_sourceRect.w * s_scale * 0.5f),
-        static_cast<int>(m_screenPos.y - m_sourceRect.h * s_scale * 0.5f), 
-        static_cast<int>(m_sourceRect.w * s_scale),
-        static_cast<int>(m_sourceRect.h * s_scale)
-    };
 }
 
 Pawn::Pawn(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum textureIndices;
-    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WPAWN : BPAWN)];
+    using enum TextureIndices;
     m_type = PieceType::PAWN;
-    initRects();
+    m_whichTexture = side == Side::WHITE ? WPAWN : BPAWN;
 }
 
 Knight::Knight(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum textureIndices;
-    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WKNIGHT : BKNIGHT)];
+    using enum TextureIndices;
     m_type = PieceType::KNIGHT;
-    initRects();
+    m_whichTexture = side == Side::WHITE ? WKNIGHT : BKNIGHT;
 }
 
 Rook::Rook(Side const side, Vec2i const chessPos) : Piece(side, chessPos),
     m_hasMoved(true), m_koqs(KingOrQueenSide::NEITHER)
 {
-    using enum textureIndices;
-    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WROOK : BROOK)];
+    using enum TextureIndices;
     m_type = PieceType::ROOK;
-    initRects();
+    m_whichTexture = side == Side::WHITE ? WROOK : BROOK;
 }
 
 Bishop::Bishop(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum textureIndices;
-    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WBISHOP : BBISHOP)];
+    using enum TextureIndices;
     m_type = PieceType::BISHOP;
-    initRects();
+    m_whichTexture = side == Side::WHITE ? WBISHOP : BBISHOP;
 }
 
 Queen::Queen(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum textureIndices;
-    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WQUEEN: BQUEEN)];
+    using enum TextureIndices;
+    m_whichTexture = side == Side::WHITE ? WQUEEN : BQUEEN;
     m_type = PieceType::QUEEN;
-    initRects();
 }
 
 King::King(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum textureIndices;
-    m_texture = s_textures[static_cast<Uint32>(side == Side::WHITE ? WKING : BKING)];
+    using enum TextureIndices;
     m_type = PieceType::KING;
-    initRects();
+    m_whichTexture = side == Side::WHITE ? WKING : BKING;
 
     if(side == Side::WHITE) s_wKingPos = m_chessPos;
     else s_bKingPos = m_chessPos;
-}
-
-//not called in the destructor for a piece but rather by the 
-//destructor of the single instance of ChessApp
-void Piece::destoryTextures()
-{
-    for(SDL_Texture* t : s_textures) 
-        SDL_DestroyTexture(t);
 }
 
 Piece::~Piece()
@@ -100,28 +66,7 @@ Piece::~Piece()
     //nothing to do here
 }
 
-void Piece::draw() const 
-{
-    SDL_RenderCopy(ChessApp::getCurrentRenderer(), m_texture, &m_sourceRect, &m_destRect);
-}
-
-void Piece::drawPieceOnMouse() const
-{
-    int x = 0, y = 0;
-    SDL_GetMouseState(&x, &y);
-    SDL_Rect dest{x - m_destRect.w * 0.5f, y - m_destRect.w * 0.5f, m_destRect.w, m_destRect.h};
-    SDL_RenderCopy(ChessApp::getCurrentRenderer(), m_texture, &m_sourceRect, &dest);
-}
-
-void Piece::setScreenPos(Vec2i const newPos)
-{
-    m_screenPos  = newPos;
-    m_destRect.x = newPos.x - m_destRect.w * 0.5f;
-    m_destRect.y = newPos.y - m_destRect.h * 0.5f;
-}
-
-//used by rooks & queens to slide a piece in all 4 orthogonal 
-//directions pushing back pseudo legal moves along the way
+//used by queens & rooks impl of virtual void updatePseudoLegalAndAttacked()=0; 
 void Piece::orthogonalSlide()
 {
     auto const& b = ChessApp::getBoard();
@@ -178,7 +123,7 @@ void Piece::orthogonalSlide()
     }
 }
 
-//used by queens & bishops
+//used by queens & bishops impl of virtual void updatePseudoLegalAndAttacked()=0; 
 void Piece::diagonalSlide()
 {
     auto const& b = ChessApp::getBoard();
@@ -239,6 +184,7 @@ void Piece::diagonalSlide()
 }
 
 //calculate the pseudo legal moves for a pawn and store then in Piece::m_pseudoLegals
+//also calculates Piece::m_attackedSquares
 void Pawn::updatePseudoLegalAndAttacked()
 {
     m_pseudoLegals.clear();
@@ -315,6 +261,7 @@ void Pawn::updatePseudoLegalAndAttacked()
 }
 
 //calculate the pseudo legal moves for a knight and store then in Piece::m_pseudoLegals
+//also calculates Piece::m_attackedSquares
 void Knight::updatePseudoLegalAndAttacked()
 {
     auto const& b = ChessApp::getBoard();
@@ -382,6 +329,7 @@ void Knight::updatePseudoLegalAndAttacked()
 }
 
 //calculate the pseudo legal moves for a rook and store then in Piece::m_pseudoLegals
+//also calculates Piece::m_attackedSquares
 void Rook::updatePseudoLegalAndAttacked()
 {
     m_pseudoLegals.clear();
@@ -392,6 +340,7 @@ void Rook::updatePseudoLegalAndAttacked()
 }
 
 //calculate the pseudo legal moves for a bishop and store then in Piece::m_pseudoLegals
+//also calculates Piece::m_attackedSquares
 void Bishop::updatePseudoLegalAndAttacked()
 {
     m_pseudoLegals.clear();
@@ -400,6 +349,7 @@ void Bishop::updatePseudoLegalAndAttacked()
 }
 
 //calculate the pseudo legal moves for a queen and store then in Piece::m_pseudoLegals
+//also calculates Piece::m_attackedSquares
 void Queen::updatePseudoLegalAndAttacked()
 {
     m_pseudoLegals.clear();
@@ -409,6 +359,7 @@ void Queen::updatePseudoLegalAndAttacked()
 }
 
 //calculate the pseudo legal moves for a king and store then in Piece::m_pseudoLegals
+//also calculates Piece::m_attackedSquares
 void King::updatePseudoLegalAndAttacked()
 {
     auto const& b = ChessApp::getBoard();
@@ -993,14 +944,6 @@ void Piece::updatePinnedInfo()
     }
 }
 
-std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> const& Piece::getPieceTextures()
-{
-    if(!s_textures[0])//if the textures havent been initialized
-        throw "attempt to access uninitialized Piece::s_textures";
-
-    return s_textures;
-}
-
 void Piece::setChessPosition(Vec2i const newChessPos)
 {   
     m_chessPos = newChessPos;
@@ -1011,39 +954,4 @@ void Piece::setChessPosition(Vec2i const newChessPos)
         if(m_side == Side::WHITE) King::setWhiteKingPos(newChessPos);
         else King::setBlackKingPos(newChessPos);
     }
-
-    m_screenPos = ChessApp::chess2ScreenPos(newChessPos);
-    m_destRect.x = m_screenPos.x - m_destRect.w * 0.5f;
-    m_destRect.y = m_screenPos.y - m_destRect.h * 0.5f;
-}
-
-void Piece::initTextures()
-{
-    using enum textureIndices;
-    SDL_Renderer* renderer = ChessApp::getCurrentRenderer();
-    if(!(s_textures[static_cast<Uint32>(WPAWN)]   = IMG_LoadTexture(renderer, "textures/whitePawn256.png"))) 
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(WKNIGHT)] = IMG_LoadTexture(renderer, "textures/whiteKnight256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(WROOK)]   = IMG_LoadTexture(renderer, "textures/whiteRook256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(WBISHOP)] = IMG_LoadTexture(renderer, "textures/whiteBishop256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(WQUEEN)]  = IMG_LoadTexture(renderer, "textures/whiteQueen256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(WKING)]   = IMG_LoadTexture(renderer, "textures/whiteKing256.png")))
-        throw IMG_GetError();
-
-    if(!(s_textures[static_cast<Uint32>(BPAWN)]   = IMG_LoadTexture(renderer, "textures/blackPawn256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(BKNIGHT)] = IMG_LoadTexture(renderer, "textures/blackKnight256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(BROOK)]   = IMG_LoadTexture(renderer, "textures/blackRook256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(BBISHOP)] = IMG_LoadTexture(renderer, "textures/blackBishop256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(BQUEEN)]  = IMG_LoadTexture(renderer, "textures/blackQueen256.png")))
-        throw IMG_GetError();
-    if(!(s_textures[static_cast<Uint32>(BKING)]   = IMG_LoadTexture(renderer, "textures/blackKing256.png")))
-        throw IMG_GetError();
 }
