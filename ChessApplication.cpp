@@ -42,8 +42,8 @@ bool ChessApp::processEvents()
         switch(event.type)
         {
         case SDL_QUIT: return true;
-        case SDL_MOUSEBUTTONDOWN: s_theApplication.m_board.piecePickUpRoutine(event); break;
-        case SDL_MOUSEBUTTONUP:   s_theApplication.m_board.piecePutDownRoutine(event);
+        case SDL_MOUSEBUTTONDOWN: m_board.piecePickUpRoutine(event); break;
+        case SDL_MOUSEBUTTONUP:   m_board.piecePutDownRoutine(event);
         }
     }
 
@@ -57,20 +57,16 @@ void ChessApp::renderAllTheThings()
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    //shorter names
-    auto& app = s_theApplication;
-    auto& board = app.m_board;
-
-    if(app.m_wnd.m_ColorEditorWindowIsOpen) [[unlikely]]
+    if(m_wnd.m_ColorEditorWindowIsOpen) [[unlikely]]
     {
         ImGui::Begin("change square colors", 
-            &app.m_wnd.m_ColorEditorWindowIsOpen);
+            &m_wnd.m_ColorEditorWindowIsOpen);
 
         ImGui::TextUnformatted("light squares");
-        ImGui::ColorPicker3("light squares", &app.m_lightSquareColor[0]);
+        ImGui::ColorPicker3("light squares", &m_lightSquareColor[0]);
         ImGui::Separator();
         ImGui::TextUnformatted("dark squares");
-        ImGui::ColorPicker3("dark squares", &app.m_darkSquareColor[0]);
+        ImGui::ColorPicker3("dark squares", &m_darkSquareColor[0]);
 
         ImGui::End();
     }
@@ -80,31 +76,24 @@ void ChessApp::renderAllTheThings()
         if(ImGui::BeginMenu("options"))
         {   
             ImGui::MenuItem("change colors", nullptr, 
-                &app.m_wnd.m_ColorEditorWindowIsOpen);
+                &m_wnd.m_ColorEditorWindowIsOpen);
                
             ImGui::MenuItem("show ImGui demo", nullptr, 
-                &app.m_wnd.m_demoWindowIsOpen);
+                &m_wnd.m_demoWindowIsOpen);
 
             ImGui::EndMenu();
         }
 
         if(ImGui::Button("flip board", {70, 20}))
-            s_theApplication.flipBoard();
+            flipBoard();
 
         static bool needMenuBarSize = true;
         if(needMenuBarSize) [[unlikely]]
         {   
-            app.m_menuBarHeight = ImGui::GetWindowSize().y;
+            m_menuBarHeight = ImGui::GetWindowSize().y;
 
-            SDL_SetWindowSize(app.m_wnd.m_window, app.m_wnd.m_width, 
-                app.m_wnd.m_height + app.m_menuBarHeight);
-
-            //for(auto const &p : app.m_board.m_pieces)
-            //{
-            //    if(!p) continue;
-            //    auto sp = chess2ScreenPos(p->getChessPosition());
-            //    p->setScreenPos(sp);
-            //}
+            SDL_SetWindowSize(m_wnd.m_window, m_wnd.m_width,
+                m_wnd.m_height + m_menuBarHeight);
 
             needMenuBarSize = false;
         }
@@ -112,16 +101,16 @@ void ChessApp::renderAllTheThings()
         ImGui::EndMainMenuBar();
     }
 
-    if(app.m_wnd.m_demoWindowIsOpen)
+    if(m_wnd.m_demoWindowIsOpen)
         ImGui::ShowDemoWindow();
 
     ImGui::Render();
-    SDL_RenderClear(app.m_wnd.m_renderer);
+    SDL_RenderClear(m_wnd.m_renderer);
     drawSquares();
     drawPieces();
     drawIndicatorCircles();
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
-    SDL_RenderPresent(app.m_wnd.m_renderer);
+    SDL_RenderPresent(m_wnd.m_renderer);
 }
 
 void ChessApp::run()
@@ -188,12 +177,7 @@ void ChessApp::initCircleTexture
         std::terminate();
     }
 
-    *toInit = SDL_CreateTextureFromSurface
-    (
-        s_theApplication.getCurrentRenderer(), 
-        surface
-    );
-
+    *toInit = SDL_CreateTextureFromSurface(getCurrentRenderer(), surface);
     SDL_FreeSurface(surface);
 }
 
@@ -211,23 +195,23 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
 
     SDL_Rect popupRect =
     {
-        promotionSquareScreenPos.x - s_theApplication.m_squareSize * 0.5f,
-        promotionSquareScreenPos.y - s_theApplication.m_squareSize * 0.5f,
-        s_theApplication.m_squareSize,
-        s_theApplication.m_squareSize * 4
+        promotionSquareScreenPos.x - m_squareSize * 0.5f,
+        promotionSquareScreenPos.y - m_squareSize * 0.5f,
+        m_squareSize,
+        m_squareSize * 4
     };
 
     //true if the promotion popup should be on the bottom of the screen (the board has been flipped)
-    bool const hasBoardBeenFlipped = side != s_theApplication.m_board.getViewingPerspective();
+    bool const hasBoardBeenFlipped = side != m_board.getViewingPerspective();
 
     if(hasBoardBeenFlipped)
     {
         //move up three and a half squares
-        popupRect.y = promotionSquareScreenPos.y - s_theApplication.m_squareSize * 3.5;
+        popupRect.y = promotionSquareScreenPos.y - m_squareSize * 3.5;
     }
     else
     {
-        popupRect.y = promotionSquareScreenPos.y - s_theApplication.m_squareSize * 0.5f;
+        popupRect.y = promotionSquareScreenPos.y - m_squareSize * 0.5f;
     }
 
     using enum TextureIndices;
@@ -243,7 +227,7 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
     std::array<SDL_Rect, 4> destinations{};//where will the textures be drawn and how big after scaling
 
     //fill in the source and destination rectancles for every texture
-    for(int i = 0, yOffset = 0; i < 4; ++i, yOffset += s_theApplication.m_squareSize)
+    for(int i = 0, yOffset = 0; i < 4; ++i, yOffset += m_squareSize)
     {
         SDL_QueryTexture(textures[i], nullptr, nullptr, &sources[i].w, &sources[i].h);
         destinations[i] = 
@@ -255,7 +239,7 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
         };
 
         //slide the pieces down/up
-        if(side != s_theApplication.m_board.getViewingPerspective())//up
+        if(side != m_board.getViewingPerspective())//up
         {
             destinations[i].y -= yOffset;
         }
@@ -293,7 +277,7 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
 
                     //to avoid a memory leak by overiting the Piece* at promotionSquareChessPos
                     //(the pawn that promoted is still there) capture the pawn there before placing a new piece down   
-                    s_theApplication.m_board.capturePiece(promotionSquare);
+                    m_board.capturePiece(promotionSquare);
 
                     //the promotion popup will look like this cascading down/up from the promotion square
                     // down 0  |Q|      up 3 |B|  
@@ -302,24 +286,24 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
                     //      3  |B|         0 |Q|
 
                     int const whichPiece = hasBoardBeenFlipped ? 
-                        7 - y / s_theApplication.m_squareSize : y / s_theApplication.m_squareSize;
+                        7 - y / m_squareSize : y / m_squareSize;
 
                     switch(whichPiece)
                     {
                     case 0:
-                        s_theApplication.m_board.makeNewPieceAt<Queen>(promotionSquare, side);
+                        m_board.makeNewPieceAt<Queen>(promotionSquare, side);
                         hasSelectionBeenMade = true;
                         break;
                     case 1:
-                        s_theApplication.m_board.makeNewPieceAt<Rook>(promotionSquare, side);
+                        m_board.makeNewPieceAt<Rook>(promotionSquare, side);
                         hasSelectionBeenMade = true;
                         break;
                     case 2:
-                        s_theApplication.m_board.makeNewPieceAt<Knight>(promotionSquare, side);
+                        m_board.makeNewPieceAt<Knight>(promotionSquare, side);
                         hasSelectionBeenMade = true;
                         break;
                     case 3:
-                        s_theApplication.m_board.makeNewPieceAt<Bishop>(promotionSquare, side);
+                        m_board.makeNewPieceAt<Bishop>(promotionSquare, side);
                         hasSelectionBeenMade = true;
                         break;
                     }
@@ -439,13 +423,12 @@ void ChessApp::drawIndicatorCircles()
 
 void ChessApp::drawSquares()
 {
-    auto& app = s_theApplication;//shorter name
-    SDL_Rect square{0, app.m_menuBarHeight, app.m_squareSize,  app.m_squareSize};
+    SDL_Rect square{0, m_menuBarHeight, m_squareSize, m_squareSize};
     SDL_Renderer *const renderer = ChessApp::getCurrentRenderer();
 
-    for(int i = 0; i < 8; ++i, square.x += app.m_squareSize)
+    for(int i = 0; i < 8; ++i, square.x += m_squareSize)
     {
-        for(int j = 0; j < 8; ++j, square.y += app.m_squareSize)
+        for(int j = 0; j < 8; ++j, square.y += m_squareSize)
         {
             if( !( i + j & 1 ) )//if light square
             {
@@ -453,10 +436,10 @@ void ChessApp::drawSquares()
                 SDL_SetRenderDrawColor
                 (
                     renderer, 
-                    app.m_lightSquareColor[0] * 255.0f, 
-                    app.m_lightSquareColor[1] * 255.0f, 
-                    app.m_lightSquareColor[2] * 255.0f, 
-                    app.m_lightSquareColor[3] * 255.0f
+                    m_lightSquareColor[0] * 255.0f, 
+                    m_lightSquareColor[1] * 255.0f, 
+                    m_lightSquareColor[2] * 255.0f, 
+                    m_lightSquareColor[3] * 255.0f
                 );
             }
             else//if dark square
@@ -464,17 +447,17 @@ void ChessApp::drawSquares()
                 SDL_SetRenderDrawColor
                 (
                     renderer,
-                    app.m_darkSquareColor[0] * 255.0f,
-                    app.m_darkSquareColor[1] * 255.0f,
-                    app.m_darkSquareColor[2] * 255.0f,
-                    app.m_darkSquareColor[3] * 255.0f
+                    m_darkSquareColor[0] * 255.0f,
+                    m_darkSquareColor[1] * 255.0f,
+                    m_darkSquareColor[2] * 255.0f,
+                    m_darkSquareColor[3] * 255.0f
                 );
             }
 
             SDL_RenderFillRect(renderer, &square);
         }
 
-        square.y = app.m_menuBarHeight;
+        square.y = m_menuBarHeight;
     }
 }
 
