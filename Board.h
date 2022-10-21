@@ -47,11 +47,10 @@ class Board
 {
 private:
 
-    //only chessApp should call the private Board ctor/dtor since the singleton
-    //ChessApp instance is composed with a board 
-    //friend class ChessApp;
+    //only chessApp should call the private Board ctor/dtor since only the singleton
+    //ChessApp instance is composed with a board and one shouldnt be instantiated elsewhere
     Board();
-    ~Board();//free the pieces
+    ~Board();
 
 public:
 
