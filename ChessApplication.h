@@ -62,8 +62,8 @@ private:
     Uint32 const m_chessBoardHeight;
     float m_menuBarHeight;
     Uint32 m_squareSize;//square size in pixels
-    std::array<float, 4> m_lightSquareColor;
-    std::array<float, 4> m_darkSquareColor;
+    std::array<Uint8, 4> m_lightSquareColor;
+    std::array<Uint8, 4> m_darkSquareColor;
     Window m_wnd;//my simple wrapper class for SDL window
     Board  m_board;//the singleton board composed here as part of the ChessApp instance
     SDL_Texture* m_circleTexture;

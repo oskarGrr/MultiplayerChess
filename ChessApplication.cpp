@@ -12,8 +12,7 @@ ChessApp ChessApp::s_theApplication{};
 ChessApp::ChessApp()
     : m_chessBoardWidth(896u), m_chessBoardHeight(896u), 
       m_menuBarHeight(0.0f), m_squareSize(m_chessBoardWidth / 8),
-      m_lightSquareColor{214.0f/255, 235.0f/255, 225.0f/255, 255.0f/255},
-      m_darkSquareColor{43.0f/255, 86.0f/255, 65.0f/255, 255.0f/255},
+      m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},
       m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO, 0u), m_board{}, 
       m_circleTexture(nullptr), m_redCircleTexture(nullptr), 
       m_pieceTextureScale(0.32f), m_pieceTextures{}
@@ -63,10 +62,25 @@ void ChessApp::renderAllTheThings()
             &m_wnd.m_ColorEditorWindowIsOpen);
 
         ImGui::TextUnformatted("light squares");
-        ImGui::ColorPicker3("light squares", &m_lightSquareColor[0]);
+
+        ImVec4 f_lightSquares{};//a float (0-1) version of the light squares
+        ImVec4 f_darkSquares{};//a float (0-1) version of the dark squares
+        for(std::size_t i = 0; i < 4; ++i)
+        {
+            f_lightSquares[i] = m_lightSquareColor[i] / 255.0f;
+            f_darkSquares[i] = m_darkSquareColor[i] / 255.0f;
+        }
+
+        ImGui::ColorPicker3("light squares", &f_lightSquares[0]);
         ImGui::Separator();
         ImGui::TextUnformatted("dark squares");
-        ImGui::ColorPicker3("dark squares", &m_darkSquareColor[0]);
+        ImGui::ColorPicker3("dark squares", &f_darkSquares[0]);
+
+        for(std::size_t i = 0; i < 4; ++i)
+        {
+            m_lightSquareColor[i] = static_cast<Uint8>(f_lightSquares[i] * 255);
+            m_darkSquareColor[i] = static_cast<Uint8>(f_darkSquares[i] * 255);
+        }
 
         ImGui::End();
     }
@@ -93,7 +107,7 @@ void ChessApp::renderAllTheThings()
             m_menuBarHeight = ImGui::GetWindowSize().y;
 
             SDL_SetWindowSize(m_wnd.m_window, m_wnd.m_width,
-                m_wnd.m_height + m_menuBarHeight);
+                static_cast<int>(m_wnd.m_height + m_menuBarHeight));
 
             needMenuBarSize = false;
         }
@@ -195,10 +209,10 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
 
     SDL_Rect popupRect =
     {
-        promotionSquareScreenPos.x - m_squareSize * 0.5f,
-        promotionSquareScreenPos.y - m_squareSize * 0.5f,
-        m_squareSize,
-        m_squareSize * 4
+        static_cast<int>(promotionSquareScreenPos.x - m_squareSize * 0.5f),
+        static_cast<int>(promotionSquareScreenPos.y - m_squareSize * 0.5f),
+        static_cast<int>(m_squareSize),
+        static_cast<int>(m_squareSize * 4)
     };
 
     //true if the promotion popup should be on the bottom of the screen (the board has been flipped)
@@ -207,11 +221,11 @@ void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
     if(hasBoardBeenFlipped)
     {
         //move up three and a half squares
-        popupRect.y = promotionSquareScreenPos.y - m_squareSize * 3.5;
+        popupRect.y = static_cast<int>(promotionSquareScreenPos.y - m_squareSize * 3.5);
     }
     else
     {
-        popupRect.y = promotionSquareScreenPos.y - m_squareSize * 0.5f;
+        popupRect.y = static_cast<int>(promotionSquareScreenPos.y - m_squareSize * 0.5f);
     }
 
     using enum TextureIndices;
@@ -348,11 +362,11 @@ Vec2i ChessApp::chess2ScreenPos(Vec2i const pos)
     ret.y *= s_theApplication.m_squareSize;
 
     //move from top left to middle of square
-    ret.y += s_theApplication.m_squareSize * 0.5f;
-    ret.x += s_theApplication.m_squareSize * 0.5f;
+    ret.y += static_cast<int>(s_theApplication.m_squareSize * 0.5f);
+    ret.x += static_cast<int>(s_theApplication.m_squareSize * 0.5f);
 
     //move down to account for the menu bar (will only work after the first frame)
-    ret.y += s_theApplication.m_menuBarHeight;
+    ret.y += static_cast<int>(s_theApplication.m_menuBarHeight);
 
     return ret;
 }
@@ -362,8 +376,8 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
 {
     Vec2i ret
     {
-        pos.x / s_theApplication.m_squareSize,
-        pos.y / s_theApplication.m_squareSize
+        static_cast<int>(pos.x / s_theApplication.m_squareSize),
+        static_cast<int>(pos.y / s_theApplication.m_squareSize)
     };
 
     if(s_theApplication.m_board.getViewingPerspective() == Side::WHITE)
@@ -380,9 +394,9 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
 
 bool ChessApp::isPositionOnBoard(Vec2i const screenPosition)
 {
-    auto& app = s_theApplication;//shorter name
+    auto const& app = s_theApplication;//shorter name
     return screenPosition.x > 0 && 
-           screenPosition.x < app.m_chessBoardWidth && 
+           static_cast<Uint32>(screenPosition.x) < app.m_chessBoardWidth &&
            screenPosition.y > app.m_menuBarHeight &&
            screenPosition.y < app.m_wnd.m_height;
 }
@@ -402,10 +416,10 @@ void ChessApp::drawIndicatorCircles()
         Vec2i const circlePos{ChessApp::chess2ScreenPos(move)};
         SDL_Rect const circleDest
         {
-            circlePos.x - circleSource.w * 0.5f,
-            circlePos.y - circleSource.w * 0.5f,
-            circleSource.w,
-            circleSource.h
+            static_cast<int>(circlePos.x - circleSource.w * 0.5f),
+            static_cast<int>(circlePos.y - circleSource.w * 0.5f),
+            static_cast<int>(circleSource.w),
+            static_cast<int>(circleSource.h)
         };
 
         //if there is an enemy piece or enPassant square draw red circle instead
@@ -423,7 +437,9 @@ void ChessApp::drawIndicatorCircles()
 
 void ChessApp::drawSquares()
 {
-    SDL_Rect square{0, m_menuBarHeight, m_squareSize, m_squareSize};
+    SDL_Rect square{0, static_cast<int>(m_menuBarHeight), 
+        static_cast<int>(m_squareSize), static_cast<int>(m_squareSize)};
+
     SDL_Renderer *const renderer = ChessApp::getCurrentRenderer();
 
     for(int i = 0; i < 8; ++i, square.x += m_squareSize)
@@ -436,10 +452,10 @@ void ChessApp::drawSquares()
                 SDL_SetRenderDrawColor
                 (
                     renderer, 
-                    m_lightSquareColor[0] * 255.0f, 
-                    m_lightSquareColor[1] * 255.0f, 
-                    m_lightSquareColor[2] * 255.0f, 
-                    m_lightSquareColor[3] * 255.0f
+                    m_lightSquareColor[0], 
+                    m_lightSquareColor[1], 
+                    m_lightSquareColor[2], 
+                    m_lightSquareColor[3]
                 );
             }
             else//if dark square
@@ -447,17 +463,17 @@ void ChessApp::drawSquares()
                 SDL_SetRenderDrawColor
                 (
                     renderer,
-                    m_darkSquareColor[0] * 255.0f,
-                    m_darkSquareColor[1] * 255.0f,
-                    m_darkSquareColor[2] * 255.0f,
-                    m_darkSquareColor[3] * 255.0f
+                    m_darkSquareColor[0],
+                    m_darkSquareColor[1],
+                    m_darkSquareColor[2],
+                    m_darkSquareColor[3]
                 );
             }
 
             SDL_RenderFillRect(renderer, &square);
         }
 
-        square.y = m_menuBarHeight;
+        square.y = static_cast<int>(m_menuBarHeight);
     }
 }
 

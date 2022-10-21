@@ -38,8 +38,9 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
     {
         m_pieces[ChessApp::chessPos2Index(pos)] = std::make_shared<ConcreteTy>(side, pos);
     }
-    catch(std::bad_alloc& ba)
+    catch(std::bad_alloc const& ba)
     {
+        (void)ba;//silences c4101 (unused local variable) (cant use [[maybe unused]] here...)
         std::ofstream ofs("log.txt");
         ofs << "problem allocating memory for a " << typeid(ConcreteTy).name();
         ofs.close();
