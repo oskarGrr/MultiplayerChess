@@ -12,7 +12,7 @@ ChessApp ChessApp::s_theApplication{};
 ChessApp::ChessApp()
     : m_chessBoardWidth(896u), m_chessBoardHeight(896u), 
       m_menuBarHeight(0.0f), m_squareSize(m_chessBoardWidth / 8),
-      m_lightSquareColor{214.0f/255, 235.0f/255, 225.0f/255, 255.0f/255}, 
+      m_lightSquareColor{214.0f/255, 235.0f/255, 225.0f/255, 255.0f/255},
       m_darkSquareColor{43.0f/255, 86.0f/255, 65.0f/255, 255.0f/255},
       m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO, 0u), m_board{}, 
       m_circleTexture(nullptr), m_redCircleTexture(nullptr), 
