@@ -63,7 +63,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         if(*it == '/')
         {
             --rank;
-            file=0;
+            file = 0;
         }
         else if(isdigit(*it))
         {
@@ -222,7 +222,7 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || !pom)
         return;
 
-    Vec2i screenPos = {mouseEvent.button.x, mouseEvent.button.y};
+    Vec2i screenPos{mouseEvent.button.x, mouseEvent.button.y};
 
     if(!ChessApp::isPositionOnBoard(screenPos))
     { 
@@ -234,8 +234,12 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
 
     const auto it = requestMove(chessPos);
     if(it != pom->getLegalMoves().end())
+    { 
         commitMove(*it);
-    
+        auto& app = ChessApp::getApp();
+        app.playChessMoveSound();
+    }
+
     Piece::setPieceOnMouse(nullptr);//put the piece down
 }
 

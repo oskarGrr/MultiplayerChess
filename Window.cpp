@@ -1,4 +1,3 @@
-#include <iostream>
 #include "Window.h"
 #include "SDL.h"
 #include "imgui.h"
@@ -8,10 +7,8 @@
 Window::Window(int const width, int const height, 
                char const* title, Uint32 const SDL_subsystems,
                Uint32 const SDL_windowFlags)
-    : m_renderer(nullptr), m_window(nullptr),
-      m_width(width), m_height(height),
-      m_ColorEditorWindowIsOpen(false),
-      m_demoWindowIsOpen(false)
+    : m_renderer(nullptr), m_window(nullptr), m_width(width), m_height(height),
+      m_ColorEditorWindowIsOpen(false), m_demoWindowIsOpen(false)
 {
     SDL_Init(SDL_subsystems);
     SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &m_window, &m_renderer);//set m_window && m_renderer
@@ -26,6 +23,7 @@ Window::Window(int const width, int const height,
     //add the font from the fonts folder
     auto& io = ImGui::GetIO();
     io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0); 
+
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 9.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 9.0f);
     auto& style = ImGui::GetStyle();

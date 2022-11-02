@@ -11,7 +11,8 @@ int main(int argCount, char* arguments[])
     }
     catch(std::exception& e)
     {
-        std::ofstream ofs("log.txt");
+        std::ofstream ofs;
+        ofs.open("log.txt");
         ofs << e.what() << '\n';
         ofs.close();
         return EXIT_FAILURE;

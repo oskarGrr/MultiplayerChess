@@ -170,6 +170,7 @@
     <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PieceTypes.cpp" />
+    <ClCompile Include="WavSound.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -185,6 +186,7 @@
     <ClInclude Include="imstb_truetype.h" />
     <ClInclude Include="Vector2i.h" />
     <ClInclude Include="PieceTypes.h" />
+    <ClInclude Include="WavSound.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -1,7 +1,6 @@
 #include "ChessApplication.h"
 #include "PieceTypes.h"
-#include <memory>//std::make_unique && std::unique_ptr
-
+#include <memory>//std::make_unique/make_shared and std::unique_ptr/shared_ptr
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 #include "SDL.h"
@@ -9,13 +8,14 @@
 
 ChessApp ChessApp::s_theApplication{};
 
-ChessApp::ChessApp()
-    : m_chessBoardWidth(896u), m_chessBoardHeight(896u), 
-      m_menuBarHeight(0.0f), m_squareSize(m_chessBoardWidth / 8),
+ChessApp::ChessApp() :
+      m_chessBoardWidth(896u), m_chessBoardHeight(896u), 
+      m_squareSize(m_chessBoardWidth / 8), m_menuBarHeight(0.0f),
+      m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0u), m_board{}, 
+      m_pieceMoveSound("sounds/woodChessMove.wav"),
       m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},
-      m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO, 0u), m_board{}, 
-      m_circleTexture(nullptr), m_redCircleTexture(nullptr), 
-      m_pieceTextureScale(0.32f), m_pieceTextures{}
+      m_circleTexture(nullptr), m_redCircleTexture(nullptr),
+      m_pieceTextureScale(1.0f), m_pieceTextures{}
 {
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
     initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);    
@@ -26,7 +26,7 @@ ChessApp::~ChessApp()
 {
     SDL_DestroyTexture(m_circleTexture);
     SDL_DestroyTexture(m_redCircleTexture);
-    for(auto t : m_pieceTextures) SDL_DestroyTexture(t);
+    for(auto* t : m_pieceTextures) SDL_DestroyTexture(t);
 }
 
 //return true if we should close the app
@@ -45,7 +45,7 @@ bool ChessApp::processEvents()
         case SDL_MOUSEBUTTONUP:   m_board.piecePutDownRoutine(event);
         }
     }
-
+    
     return false;
 }
 
@@ -121,8 +121,8 @@ void ChessApp::renderAllTheThings()
     ImGui::Render();
     SDL_RenderClear(m_wnd.m_renderer);
     drawSquares();
-    drawPieces();
     drawIndicatorCircles();
+    drawPieces();
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(m_wnd.m_renderer);
 }
@@ -193,6 +193,11 @@ void ChessApp::initCircleTexture
 
     *toInit = SDL_CreateTextureFromSurface(getCurrentRenderer(), surface);
     SDL_FreeSurface(surface);
+}
+
+void ChessApp::playChessMoveSound()
+{
+    s_theApplication.m_pieceMoveSound.playFullSound();
 }
 
 //tells if a chess position is on the board or not
@@ -540,29 +545,29 @@ void ChessApp::loadPieceTexturesFromDisk()
 {
     using enum TextureIndices;
     SDL_Renderer* renderer = ChessApp::getCurrentRenderer();
-    if(!(m_pieceTextures[static_cast<Uint32>(WPAWN)]   = IMG_LoadTexture(renderer, "textures/whitePawn256.png"))) 
+    if(!(m_pieceTextures[static_cast<Uint32>(WPAWN)]   = IMG_LoadTexture(renderer, "textures/wPawn.png"))) 
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WKNIGHT)] = IMG_LoadTexture(renderer, "textures/whiteKnight256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(WKNIGHT)] = IMG_LoadTexture(renderer, "textures/wKnight.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WROOK)]   = IMG_LoadTexture(renderer, "textures/whiteRook256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(WROOK)]   = IMG_LoadTexture(renderer, "textures/wRook.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WBISHOP)] = IMG_LoadTexture(renderer, "textures/whiteBishop256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(WBISHOP)] = IMG_LoadTexture(renderer, "textures/wBishop.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WQUEEN)]  = IMG_LoadTexture(renderer, "textures/whiteQueen256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(WQUEEN)]  = IMG_LoadTexture(renderer, "textures/wQueen.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WKING)]   = IMG_LoadTexture(renderer, "textures/whiteKing256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(WKING)]   = IMG_LoadTexture(renderer, "textures/wKing.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BPAWN)]   = IMG_LoadTexture(renderer, "textures/blackPawn256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(BPAWN)]   = IMG_LoadTexture(renderer, "textures/bPawn.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BKNIGHT)] = IMG_LoadTexture(renderer, "textures/blackKnight256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(BKNIGHT)] = IMG_LoadTexture(renderer, "textures/bKnight.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BROOK)]   = IMG_LoadTexture(renderer, "textures/blackRook256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(BROOK)]   = IMG_LoadTexture(renderer, "textures/bRook.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BBISHOP)] = IMG_LoadTexture(renderer, "textures/blackBishop256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(BBISHOP)] = IMG_LoadTexture(renderer, "textures/bBishop.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BQUEEN)]  = IMG_LoadTexture(renderer, "textures/blackQueen256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(BQUEEN)]  = IMG_LoadTexture(renderer, "textures/bQueen.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BKING)]   = IMG_LoadTexture(renderer, "textures/blackKing256.png")))
+    if(!(m_pieceTextures[static_cast<Uint32>(BKING)]   = IMG_LoadTexture(renderer, "textures/bKing.png")))
         throw IMG_GetError();
 
     //get the width and height of each texture

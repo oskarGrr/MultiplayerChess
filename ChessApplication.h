@@ -2,6 +2,7 @@
 #include "Vector2i.h"
 #include "Board.h"
 #include "Window.h"
+#include "WavSound.h"
 #include "SDL.h"
 #include "imgui.h"
 
@@ -43,6 +44,7 @@ public:
     static bool isPositionOnBoard(Vec2i const);
     static bool inRange(Vec2i const chessPos);//tells if a chess position is on the board
     static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
+    static void playChessMoveSound();
 
     void promotionRoutine(Vec2i promotionSquare, Side wasPawnWhite);
     inline auto const& getTextures() const {return m_pieceTextures;}
@@ -60,11 +62,15 @@ private:
 
     Uint32 const m_chessBoardWidth;
     Uint32 const m_chessBoardHeight;
-    float m_menuBarHeight;
     Uint32 m_squareSize;//square size in pixels
+    float  m_menuBarHeight;
+
+    Window   m_wnd;//my simple wrapper class for SDL window
+    WavSound m_pieceMoveSound;
+
     std::array<Uint8, 4> m_lightSquareColor;
     std::array<Uint8, 4> m_darkSquareColor;
-    Window m_wnd;//my simple wrapper class for SDL window
+
     Board  m_board;//the singleton board composed here as part of the ChessApp instance
     SDL_Texture* m_circleTexture;
     SDL_Texture* m_redCircleTexture;
