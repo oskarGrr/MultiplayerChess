@@ -236,8 +236,6 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
     if(it != pom->getLegalMoves().end())
     { 
         commitMove(*it);
-        auto& app = ChessApp::getApp();
-        app.playChessMoveSound();
     }
 
     Piece::setPieceOnMouse(nullptr);//put the piece down
@@ -381,6 +379,7 @@ void Board::commitMove(Move const& newMove)
 void Board::postMoveUpdate(Move const& newMove)
 {
     const auto& [move, moveType] = newMove;
+    auto& app = ChessApp::getApp();
     using enum MoveInfo;
 
     switch(moveType)
@@ -397,7 +396,16 @@ void Board::postMoveUpdate(Move const& newMove)
         handleRookCapture();
         handlePromotionMove(move);
     }
-    }                   
+    }
+
+    if(moveType == CASTLE)
+    {
+        app.playChessCastleSound();
+    }
+    else
+    {
+        app.playChessMoveSound();
+    }
 
     if(moveType != DOUBLE_PUSH)
         resetEnPassant();

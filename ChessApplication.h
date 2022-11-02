@@ -45,6 +45,7 @@ public:
     static bool inRange(Vec2i const chessPos);//tells if a chess position is on the board
     static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
     static void playChessMoveSound();
+    static void playChessCastleSound();
 
     void promotionRoutine(Vec2i promotionSquare, Side wasPawnWhite);
     inline auto const& getTextures() const {return m_pieceTextures;}
@@ -67,10 +68,9 @@ private:
 
     Window   m_wnd;//my simple wrapper class for SDL window
     WavSound m_pieceMoveSound;
-
+    WavSound m_pieceCastleSound;
     std::array<Uint8, 4> m_lightSquareColor;
     std::array<Uint8, 4> m_darkSquareColor;
-
     Board  m_board;//the singleton board composed here as part of the ChessApp instance
     SDL_Texture* m_circleTexture;
     SDL_Texture* m_redCircleTexture;

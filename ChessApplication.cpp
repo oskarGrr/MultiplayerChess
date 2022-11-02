@@ -12,7 +12,7 @@ ChessApp::ChessApp() :
       m_chessBoardWidth(896u), m_chessBoardHeight(896u), 
       m_squareSize(m_chessBoardWidth / 8), m_menuBarHeight(0.0f),
       m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0u), m_board{}, 
-      m_pieceMoveSound("sounds/woodChessMove.wav"),
+      m_pieceMoveSound("sounds/woodChessMove.wav"), m_pieceCastleSound("sounds/woodChessCastle.wav"),
       m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},
       m_circleTexture(nullptr), m_redCircleTexture(nullptr),
       m_pieceTextureScale(1.0f), m_pieceTextures{}
@@ -198,6 +198,11 @@ void ChessApp::initCircleTexture
 void ChessApp::playChessMoveSound()
 {
     s_theApplication.m_pieceMoveSound.playFullSound();
+}
+
+void ChessApp::playChessCastleSound()
+{
+    s_theApplication.m_pieceCastleSound.playFullSound();
 }
 
 //tells if a chess position is on the board or not
