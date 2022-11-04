@@ -247,9 +247,8 @@ std::shared_ptr<Piece> Board::getPieceAt(Vec2i const chessPos) const
 }
 
 void Board::handlePromotionMove(Vec2i const promotionSquare)
-{
+{        
     auto const pawnToPromote = getPieceAt(promotionSquare);
-
     auto& app = ChessApp::getApp();
 
     //stop here and render popup window with options for which piece to promote to
@@ -376,10 +375,43 @@ void Board::commitMove(Move const& newMove)
     postMoveUpdate(newMove);
 }
 
+//to be called in postMoveUpdate() after the correct above single ha
+//method was called and before m_lastCapturedPiece is reset to null
+void Board::playCorrectMoveAudio(Move const& recentMove)
+{
+    const auto& [move, moveType] = recentMove;
+    switch(moveType)
+    {
+    using enum MoveInfo;
+    //move sounds
+    case DOUBLE_PUSH: [[fallthrough]];
+    case ROOK_MOVE:   [[fallthrough]];
+    case NORMAL: ChessApp::playChessMoveSound(); break;
+
+    //capture sounds
+    case ENPASSANT: [[fallthrough]];
+    case ROOK_CAPTURE: [[fallthrough]];
+    case ROOK_CAPTURE_AND_PROMOTION: [[fallthrough]];
+    case NORMAL_CAPTURE: ChessApp::playChessCaptureSound(); break;
+
+    //capture or move sound 
+    case PROMOTION:   [[fallthrough]];
+    case KING_MOVE:
+    {
+        auto& b = ChessApp::getBoard();
+        if(b.getLastCapturedPiece())//if the king move captured a piece
+            ChessApp::playChessCaptureSound();
+        else
+            ChessApp::playChessMoveSound();
+        break;
+    }
+    case CASTLE: ChessApp::playChessCastleSound();
+    }
+}
+
 void Board::postMoveUpdate(Move const& newMove)
 {
     const auto& [move, moveType] = newMove;
-    auto& app = ChessApp::getApp();
     using enum MoveInfo;
 
     switch(moveType)
@@ -389,28 +421,22 @@ void Board::postMoveUpdate(Move const& newMove)
     case ENPASSANT:     handleEnPassantMove();      break;
     case CASTLE:        handleCastleMove(move);     break;
     case ROOK_MOVE:     handleRookMove(move);       break;
-    case ROOK_CAPTURE:  handleRookCapture();        break;
+    case ROOK_CAPTURE:  handleRookCapture();        break;//when a rook gets captured
     case KING_MOVE:     handleKingMove(move);       break;
-    case ROOK_CAPTURE_AND_PROMOTION:
+    case ROOK_CAPTURE_AND_PROMOTION://when a pawn captures a rook on the first or eighth rank 
     {
         handleRookCapture();
-        handlePromotionMove(move);
+        handlePromotionMove(move);         
+        break;
     }
-    }
-
-    if(moveType == CASTLE)
-    {
-        app.playChessCastleSound();
-    }
-    else
-    {
-        app.playChessMoveSound();
     }
 
     if(moveType != DOUBLE_PUSH)
         resetEnPassant();
 
     toggleTurn();
+    playCorrectMoveAudio(newMove);
+    setLastCapturedPiece(nullptr);//if there was a last captured piece it was consumed. so set it to null
     updateLegalMoves();
 }
 

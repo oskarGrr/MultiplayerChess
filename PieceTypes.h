@@ -19,14 +19,15 @@ enum struct Side : Uint32
 enum struct MoveInfo : Uint32
 {
     NORMAL,
-    DOUBLE_PUSH,   //a double pawn push move
-    ENPASSANT,     //an en passant capture move
-    PROMOTION,     //a pawn promotion move
-    CASTLE,        //a castling move
+    NORMAL_CAPTURE, //a capture that inst an en passant or rook capture
+    DOUBLE_PUSH,    //a double pawn push move
+    ENPASSANT,      //an en passant capture move
+    PROMOTION,      //a pawn promotion move
+    CASTLE,         //a castling move
     ROOK_MOVE,
     KING_MOVE,
     ROOK_CAPTURE,
-    ROOK_CAPTURE_AND_PROMOTION //case where a pawn catures a rook and promotes
+    ROOK_CAPTURE_AND_PROMOTION, //case where a pawn catures a rook and promotes
 };
 
 //a Move type is now a Vector 2 that holds where the piece 

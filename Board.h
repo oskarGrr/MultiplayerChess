@@ -82,6 +82,8 @@ public:
     std::vector<Vec2i> getAttackedSquares(Side isWhite) const;//get all the attacked squares for the given side 
     inline Side getViewingPerspective() const {return m_viewingPerspective;}//get which side the user is viewing the board from
     void capturePiece(Vec2i const location);//moves a Piece* to the captured piece pool
+    inline auto getLastCapturedPiece(){return m_lastCapturedPiece;}
+    inline void setLastCapturedPiece(auto p){m_lastCapturedPiece = p;}
 
     enum struct CheckState{INVALID = 0, NO_CHECK, SINGLE_CHECK, DOUBLE_CHECK};
     inline CheckState getCheckState() const {return m_checkState;};
@@ -113,6 +115,10 @@ private:
     void handleRookMove(Vec2i const newRookPos);
     void handleRookCapture();
     void handleKingMove(Vec2i const newKingPos);
+
+    //to be called in postMoveUpdate() after the correct above single hanlde 
+    //method was called and before m_lastCapturedPiece is reset to null
+    void playCorrectMoveAudio(Move const&);
 
     auto requestMove(Vec2i requestedPosition);
     void commitMove(Move const& newMove);

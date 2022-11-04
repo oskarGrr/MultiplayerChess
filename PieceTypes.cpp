@@ -63,7 +63,7 @@ King::King(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 
 Piece::~Piece()
 {
-    //nothing to do here
+    //nothing to do here. Its just good practice to remember to include a virtual dtor in classes with vtables
 }
 
 //used by queens & rooks impl of virtual void updatePseudoLegalAndAttacked()=0; 
@@ -88,7 +88,7 @@ void Piece::orthogonalSlide()
         {
             auto const piece = b.getPieceAt(offsetPos);
 
-            if(!piece)//if there isnt a piece add it to the vector
+            if(!piece)//if there isnt a piece add it to the vectors
             {
                 m_pseudoLegals.emplace_back(offsetPos, NORMAL);
                 m_attackedSquares.push_back(offsetPos);
@@ -96,10 +96,10 @@ void Piece::orthogonalSlide()
             else//if there is a piece here
             {
                 //if the piece we ran into is the oposite color then add it to the vector
-                if(m_side != piece->m_side)
+                if(m_side != piece->getSide())
                 {
                     m_pseudoLegals.emplace_back(offsetPos, getType(*piece) == PieceType::ROOK ?
-                        ROOK_CAPTURE : NORMAL);
+                        ROOK_CAPTURE : NORMAL_CAPTURE);
 
                     m_attackedSquares.push_back(offsetPos);
 
@@ -144,7 +144,7 @@ void Piece::diagonalSlide()
         {
             auto piece = b.getPieceAt(offsetPos);
 
-            if(!piece)//if there isnt a piece at offsetIndex add it to the vector
+            if(!piece)//if there isnt a piece at offsetIndex add it to the vectors
             {
                 m_pseudoLegals.emplace_back(offsetPos, NORMAL);
                 m_attackedSquares.push_back(offsetPos);
@@ -152,10 +152,10 @@ void Piece::diagonalSlide()
             else//if there is a piece at offsetIndex
             {
                 //if the piece we ran into is the oposite color then add it to the vector
-                if(m_side != piece->m_side)
+                if(m_side != piece->getSide())
                 {
                     m_pseudoLegals.emplace_back(offsetPos, getType(*piece) == PieceType::ROOK ?
-                        ROOK_CAPTURE : NORMAL);
+                        ROOK_CAPTURE : NORMAL_CAPTURE);
 
                     m_attackedSquares.push_back(offsetPos);
 
@@ -190,7 +190,7 @@ void Pawn::updatePseudoLegalAndAttacked()
     m_pseudoLegals.clear();
     m_attackedSquares.clear();
     auto const& b = ChessApp::getBoard();
-    int const yDirection = m_side == Side::WHITE ? 1 : -1;
+    int const yDirection = m_side == Side::WHITE ? 1 : -1;//the direction that the pawn is moving
     Vec2i const oneInFront{m_chessPos.x, m_chessPos.y + yDirection};
     using enum MoveInfo;
 
@@ -237,7 +237,7 @@ void Pawn::updatePseudoLegalAndAttacked()
                         //the only rook capture we care about is one where the rook 
                         //hasnt moved yet. If the capture here is a rook, then the rook has
                         //already moved and so we can just emplace a NORMAL moveInfo enum instead
-                        m_pseudoLegals.emplace_back(squareToCheck, NORMAL);
+                        m_pseudoLegals.emplace_back(squareToCheck, NORMAL_CAPTURE);
                     }
                 }
             }
@@ -285,7 +285,7 @@ void Knight::updatePseudoLegalAndAttacked()
                 //if there is a piece here and its the oposite color of the knight
                 m_attackedSquares.push_back(offsetPos);
                 m_pseudoLegals.emplace_back(offsetPos, getType(*piece) == PieceType::ROOK ?
-                    ROOK_CAPTURE : NORMAL);
+                    ROOK_CAPTURE : NORMAL_CAPTURE);
             }
             else//if the piece is the same color as the knight
             {
@@ -336,7 +336,7 @@ void Rook::updatePseudoLegalAndAttacked()
     m_attackedSquares.clear();
     orthogonalSlide();//slide the piece in all 4 orthogonal directions
     std::for_each(m_pseudoLegals.begin(), m_pseudoLegals.end(), 
-        [](auto& move){move.second = MoveInfo::ROOK_MOVE;});
+        [](auto& move){if(move.second == MoveInfo::NORMAL) move.second = MoveInfo::ROOK_MOVE;});
 }
 
 //calculate the pseudo legal moves for a bishop and store then in Piece::m_pseudoLegals

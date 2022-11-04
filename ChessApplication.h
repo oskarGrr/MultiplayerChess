@@ -44,8 +44,9 @@ public:
     static bool isPositionOnBoard(Vec2i const);
     static bool inRange(Vec2i const chessPos);//tells if a chess position is on the board
     static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
-    static void playChessMoveSound();
-    static void playChessCastleSound();
+    inline static void playChessMoveSound(){s_theApplication.m_pieceMoveSound.playFullSound();}
+    inline static void playChessCastleSound(){s_theApplication.m_pieceCastleSound.playFullSound();}
+    inline static void playChessCaptureSound(){s_theApplication.m_pieceCaptureSound.playFullSound();}
 
     void promotionRoutine(Vec2i promotionSquare, Side wasPawnWhite);
     inline auto const& getTextures() const {return m_pieceTextures;}
@@ -65,10 +66,10 @@ private:
     Uint32 const m_chessBoardHeight;
     Uint32 m_squareSize;//square size in pixels
     float  m_menuBarHeight;
-
     Window   m_wnd;//my simple wrapper class for SDL window
     WavSound m_pieceMoveSound;
     WavSound m_pieceCastleSound;
+    WavSound m_pieceCaptureSound;
     std::array<Uint8, 4> m_lightSquareColor;
     std::array<Uint8, 4> m_darkSquareColor;
     Board  m_board;//the singleton board composed here as part of the ChessApp instance

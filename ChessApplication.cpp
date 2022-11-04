@@ -13,10 +13,11 @@ ChessApp::ChessApp() :
       m_squareSize(m_chessBoardWidth / 8), m_menuBarHeight(0.0f),
       m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0u), m_board{}, 
       m_pieceMoveSound("sounds/woodChessMove.wav"), m_pieceCastleSound("sounds/woodChessCastle.wav"),
+      m_pieceCaptureSound("sounds/woodCaptureMove.wav"),
       m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},
       m_circleTexture(nullptr), m_redCircleTexture(nullptr),
       m_pieceTextureScale(1.0f), m_pieceTextures{}
-{
+{ 
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
     initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);    
     loadPieceTexturesFromDisk();
@@ -193,16 +194,6 @@ void ChessApp::initCircleTexture
 
     *toInit = SDL_CreateTextureFromSurface(getCurrentRenderer(), surface);
     SDL_FreeSurface(surface);
-}
-
-void ChessApp::playChessMoveSound()
-{
-    s_theApplication.m_pieceMoveSound.playFullSound();
-}
-
-void ChessApp::playChessCastleSound()
-{
-    s_theApplication.m_pieceCastleSound.playFullSound();
 }
 
 //tells if a chess position is on the board or not
