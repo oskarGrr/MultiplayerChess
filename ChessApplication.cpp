@@ -50,12 +50,33 @@ bool ChessApp::processEvents()
     return false;
 }
 
-//called once per frame in ChessApp::run() to render everything (even the imgui stuff)
-void ChessApp::renderAllTheThings()
+//methods that are called at the begin and end of renderAllTheThings() 
+void ChessApp::beginFrame()
 {
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+}
+
+void ChessApp::endFrame()
+{
+    ImGui::Render();
+    SDL_RenderClear(m_wnd.m_renderer);
+    drawSquares();
+    drawPiecesNotOnMouse();
+    if(!isPromotionWndOpen()) [[likely]]
+    { 
+        drawMoveIndicatorCircles();
+        drawPieceOnMouse();
+    }
+    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+    SDL_RenderPresent(m_wnd.m_renderer);
+}
+
+//called once per frame in ChessApp::run() to render everything 
+void ChessApp::renderAllTheThings()
+{
+    beginFrame();
 
     if(m_wnd.m_ColorEditorWindowIsOpen) [[unlikely]]
     {
@@ -119,13 +140,13 @@ void ChessApp::renderAllTheThings()
     if(m_wnd.m_demoWindowIsOpen)
         ImGui::ShowDemoWindow();
 
-    ImGui::Render();
-    SDL_RenderClear(m_wnd.m_renderer);
-    drawSquares();
-    drawIndicatorCircles();
-    drawPieces();
-    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
-    SDL_RenderPresent(m_wnd.m_renderer);
+    if(m_wnd.m_promotionWindowIsOpen)
+    {
+        //render an imgui window prompting the user to pick a piece
+        promotionRoutine(); 
+    }  
+    
+    endFrame();
 }
 
 void ChessApp::run()
@@ -199,134 +220,67 @@ void ChessApp::initCircleTexture
 //tells if a chess position is on the board or not
 bool ChessApp::inRange(Vec2i const chessPos)
 {
-    return (chessPos.x <= 7 && chessPos.x >= 0 && chessPos.y <= 7 && chessPos.y >= 0);
+    return chessPos.x <= 7 && chessPos.x >= 0 && chessPos.y <= 7 && chessPos.y >= 0;
 }
 
-void ChessApp::promotionRoutine(Vec2i promotionSquare, Side side)
+template<typename pieceTy> 
+void ChessApp::finalizePromotion(Vec2i const& promotionSquare, bool const wasCapture)
 {
-    Vec2i const promotionSquareScreenPos = chess2ScreenPos(promotionSquare);
-    SDL_Renderer* renderer = ChessApp::getCurrentRenderer();
-    bool const wasPawnWhite = (side == Side::WHITE);
+    auto pom = Piece::getPieceOnMouse();
+    m_board.makeNewPieceAt<pieceTy>(promotionSquare, pom->getSide());
+    m_board.toggleTurn();
+    m_board.updateLegalMoves();
+    closePromotionWindow();
+    Piece::setPieceOnMouse(nullptr);
+    if(wasCapture) playChessCaptureSound();
+    else playChessMoveSound();
+}
 
-    SDL_Rect popupRect =
-    {
-        static_cast<int>(promotionSquareScreenPos.x - m_squareSize * 0.5f),
-        static_cast<int>(promotionSquareScreenPos.y - m_squareSize * 0.5f),
-        static_cast<int>(m_squareSize),
-        static_cast<int>(m_squareSize * 4)
-    };
+void ChessApp::promotionRoutine()
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {1.0f, 1.0f});
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,   {0.0f, 0.0f});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,  {0.0f, 1.0f});
+    ImGui::StyleColorsDark();
 
-    //true if the promotion popup should be on the bottom of the screen (the board has been flipped)
-    bool const hasBoardBeenFlipped = side != m_board.getViewingPerspective();
+    ImGui::Begin("pick a piece!", nullptr, 
+        ImGuiWindowFlags_NoResize    | 
+        ImGuiWindowFlags_NoMove      | 
+        ImGuiWindowFlags_NoScrollbar | 
+        ImGuiWindowFlags_NoCollapse  | 
+        ImGuiWindowFlags_NoTitleBar  |
+        ImGuiWindowFlags_NoBackground); 
 
-    if(hasBoardBeenFlipped)
-    {
-        //move up three and a half squares
-        popupRect.y = static_cast<int>(promotionSquareScreenPos.y - m_squareSize * 3.5);
-    }
-    else
-    {
-        popupRect.y = static_cast<int>(promotionSquareScreenPos.y - m_squareSize * 0.5f);
-    }
+    auto pom = Piece::getPieceOnMouse(), lastCapturedPiece = m_board.getLastCapturedPiece();
+    assert(pom);     
+    bool const wasPawnWhite = pom->getSide() == Side::WHITE;
 
-    using enum TextureIndices;
-    std::array<SDL_Texture*, 4> textures
-    {
-        m_pieceTextures[static_cast<Uint32>(wasPawnWhite ? WQUEEN  : BQUEEN)],
-        m_pieceTextures[static_cast<Uint32>(wasPawnWhite ? WROOK   : BROOK)],
-        m_pieceTextures[static_cast<Uint32>(wasPawnWhite ? WKNIGHT : BKNIGHT)],
-        m_pieceTextures[static_cast<Uint32>(wasPawnWhite ? WBISHOP : BBISHOP)]
-    };
+    Vec2i promotionSquare = lastCapturedPiece ? lastCapturedPiece->getChessPosition() : pom->getChessPosition();
+    Vec2i promotionScreenPos = chess2ScreenPos(promotionSquare);
+    promotionScreenPos.x -= m_squareSize / 2; promotionScreenPos.y -= m_squareSize / 2;
+    if(m_board.getViewingPerspective() != pom->getSide()) promotionScreenPos.y -= m_squareSize * 3;
+    ImGui::SetWindowPos(promotionScreenPos);
 
-    std::array<SDL_Rect, 4> sources{};//how big are the textures before any scaling
-    std::array<SDL_Rect, 4> destinations{};//where will the textures be drawn and how big after scaling
+    auto indecies = (pom->getSide() == Side::WHITE) ? std::array{WQUEEN, WROOK, WKNIGHT, WBISHOP} :
+        std::array{BQUEEN, BROOK, BKNIGHT, BBISHOP};
 
-    //fill in the source and destination rectancles for every texture
-    for(int i = 0, yOffset = 0; i < 4; ++i, yOffset += m_squareSize)
-    {
-        SDL_QueryTexture(textures[i], nullptr, nullptr, &sources[i].w, &sources[i].h);
-        destinations[i] = 
-        {
-            promotionSquareScreenPos.x - static_cast<int>(sources[i].w * m_pieceTextureScale * 0.5f),
-            promotionSquareScreenPos.y - static_cast<int>(sources[i].h * m_pieceTextureScale * 0.5f),
-            static_cast<int>(sources[i].w * m_pieceTextureScale),
-            static_cast<int>(sources[i].h * m_pieceTextureScale)
-        };
+    if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[0]]), m_pieceTextureSizes[indecies[0]], 
+        {0,0}, {1,1}, -1, {0,0,0,0}, {1,1,1,0.25f}))
+        finalizePromotion<Queen>(promotionSquare,  !!lastCapturedPiece);
+    if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[1]]), m_pieceTextureSizes[indecies[1]], 
+        {0,0}, {1,1}, -1, {0,0,0,0}, {1,1,1,0.25f}))
+        finalizePromotion<Rook>(promotionSquare,   !!lastCapturedPiece);
+    if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[2]]), m_pieceTextureSizes[indecies[2]], 
+        {0,0}, {1,1}, -1, {0,0,0,0}, {1,1,1,0.25f}))
+        finalizePromotion<Knight>(promotionSquare, !!lastCapturedPiece);     
+    if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[3]]), m_pieceTextureSizes[indecies[3]], 
+        {0,0}, {1,1}, -1, {0,0,0,0}, {1,1,1,0.25f}))
+        finalizePromotion<Bishop>(promotionSquare, !!lastCapturedPiece);
 
-        //slide the pieces down/up
-        if(side != m_board.getViewingPerspective())//up
-        {
-            destinations[i].y -= yOffset;
-        }
-        else//down
-        {
-            destinations[i].y += yOffset;
-        }
-    }
-
-    bool hasSelectionBeenMade = false;
-    while(!hasSelectionBeenMade)
-    {
-        SDL_RenderClear(renderer);
-        drawSquares();
-        drawPieces();
-
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderFillRect(renderer, &popupRect);
-
-        for(int i = 0; i < 4; ++i)
-            SDL_RenderCopy(renderer, textures[i], &sources[i], &destinations[i]);
-
-        SDL_Event e;
-        while(SDL_PollEvent(&e))
-        {
-            if(e.type == SDL_QUIT)
-                exit(0);
-            
-            if(e.type == SDL_MOUSEBUTTONDOWN)
-            {
-                if(ChessApp::isMouseOver(popupRect))
-                {   
-                    int y = 0;
-                    SDL_GetMouseState(nullptr, &y);
-
-                    //to avoid a memory leak by overiting the Piece* at promotionSquareChessPos
-                    //(the pawn that promoted is still there) capture the pawn there before placing a new piece down   
-                    m_board.capturePiece(promotionSquare);
-
-                    //the promotion popup will look like this cascading down/up from the promotion square
-                    // down 0  |Q|      up 3 |B|  
-                    //      1  |R|         2 |N|
-                    //      2  |N|         1 |R|
-                    //      3  |B|         0 |Q|
-
-                    int const whichPiece = hasBoardBeenFlipped ? 
-                        7 - y / m_squareSize : y / m_squareSize;
-
-                    switch(whichPiece)
-                    {
-                    case 0:
-                        m_board.makeNewPieceAt<Queen>(promotionSquare, side);
-                        hasSelectionBeenMade = true;
-                        break;
-                    case 1:
-                        m_board.makeNewPieceAt<Rook>(promotionSquare, side);
-                        hasSelectionBeenMade = true;
-                        break;
-                    case 2:
-                        m_board.makeNewPieceAt<Knight>(promotionSquare, side);
-                        hasSelectionBeenMade = true;
-                        break;
-                    case 3:
-                        m_board.makeNewPieceAt<Bishop>(promotionSquare, side);
-                        hasSelectionBeenMade = true;
-                        break;
-                    }
-                }
-            }
-        }
-        SDL_RenderPresent(renderer);
-    }
+    ImGui::End();
+    ImGui::StyleColorsLight();
+    ImGui::PopStyleVar(4);
 }
 
 //tells wether mouse position is over a given rectangle
@@ -366,7 +320,9 @@ Vec2i ChessApp::chess2ScreenPos(Vec2i const pos)
     ret.y += static_cast<int>(s_theApplication.m_squareSize * 0.5f);
     ret.x += static_cast<int>(s_theApplication.m_squareSize * 0.5f);
 
-    //move down to account for the menu bar (will only work after the first frame)
+    //move down to account for the menu bar.
+    //will only work after the first frame since the first imgui frame
+    //needs to be started to measure the menu bar
     ret.y += static_cast<int>(s_theApplication.m_menuBarHeight);
 
     return ret;
@@ -393,7 +349,8 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
     return ret;
 }
 
-bool ChessApp::isPositionOnBoard(Vec2i const screenPosition)
+//TODO MAKE THIS ALSO RETURN FALSE FOR MOUSE BEING OVER IMGUI MENU
+bool ChessApp::isScreenPositionOnBoard(Vec2i const screenPosition)
 {
     auto const& app = s_theApplication;//shorter name
     return screenPosition.x > 0 && 
@@ -402,7 +359,7 @@ bool ChessApp::isPositionOnBoard(Vec2i const screenPosition)
            screenPosition.y < app.m_wnd.m_height;
 }
 
-void ChessApp::drawIndicatorCircles()
+void ChessApp::drawMoveIndicatorCircles()
 {
     auto const pom = Piece::getPieceOnMouse();
     if(!pom) return;
@@ -478,24 +435,25 @@ void ChessApp::drawSquares()
     }
 }
 
-void ChessApp::drawPieces()
+void ChessApp::drawPiecesNotOnMouse()
 {
-    auto const pom = Piece::getPieceOnMouse();
+    auto const& pom = Piece::getPieceOnMouse();
 
-    //draw all the pieces and defer the draw() call for the piece 
-    //on the mouse until the end of the function
-    for(auto const& piece : s_theApplication.m_board.m_pieces)
+    for(auto const piece : s_theApplication.m_board.m_pieces)
     { 
         if(piece && piece != pom)
         {
             //figure out where on the screen the piece is (the middle of the square)
             Vec2i screenPosition = chess2ScreenPos(piece->getChessPosition());
             
+            //get the index into the array of piece textures for this piece
+            auto idx = piece->getWhichTexture();
+
             //get the width and height of whichever texture the piece on the mouse is
-            Vec2i textureSize = m_pieceTextureSizes[static_cast<Uint32>(piece->getWhichTexture())];
+            Vec2i textureSize = m_pieceTextureSizes[idx];
             
             //from the screen position figure out the destination rectangle
-            SDL_Rect dest
+            SDL_Rect destination
             {
                 .x = screenPosition.x - textureSize.x / 2, 
                 .y = screenPosition.y - textureSize.y / 2, 
@@ -505,65 +463,65 @@ void ChessApp::drawPieces()
             
             SDL_RenderCopy
             (
-                ChessApp::getCurrentRenderer(), 
-                m_pieceTextures[static_cast<Uint32>(piece->getWhichTexture())],
-                nullptr, &dest
+                getCurrentRenderer(), 
+                m_pieceTextures[idx],
+                nullptr, &destination
             );
         }
     }
+}
 
+void ChessApp::drawPieceOnMouse()
+{
+    auto const pom = Piece::getPieceOnMouse();
     if(pom)
     {
-        Vec2i screenPosition = chess2ScreenPos(pom->getChessPosition());
-        Vec2i textureSize = m_pieceTextureSizes[static_cast<Uint32>(pom->getWhichTexture())];
-
-        //create a destination where the mouse cursor is
-        int mouseX = 0, mouseY = 0;
-        SDL_GetMouseState(&mouseX, &mouseY);
-        SDL_Rect mouseDestination
+        Vec2i mousePosition{};
+        SDL_GetMouseState(&mousePosition.x, &mousePosition.y);
+        Vec2i textureSize = m_pieceTextureSizes[pom->getWhichTexture()];
+        SDL_Rect destination
         {
-            .x = mouseX - textureSize.x / 2,
-            .y = mouseY - textureSize.y / 2,
+            .x = mousePosition.x - textureSize.x / 2,
+            .y = mousePosition.y - textureSize.y / 2,
             .w = textureSize.x, 
             .h = textureSize.y
         };
-
         SDL_RenderCopy
         (
-            ChessApp::getCurrentRenderer(), 
-            m_pieceTextures[static_cast<Uint32>(pom->getWhichTexture())],
-            nullptr, &mouseDestination
+            getCurrentRenderer(), 
+            m_pieceTextures[pom->getWhichTexture()],
+            nullptr,
+            &destination
         );
     }
 }
 
 void ChessApp::loadPieceTexturesFromDisk()
-{
-    using enum TextureIndices;
+{   
     SDL_Renderer* renderer = ChessApp::getCurrentRenderer();
-    if(!(m_pieceTextures[static_cast<Uint32>(WPAWN)]   = IMG_LoadTexture(renderer, "textures/wPawn.png"))) 
+    if(!(m_pieceTextures[WPAWN]   = IMG_LoadTexture(renderer, "textures/wPawn.png"))) 
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WKNIGHT)] = IMG_LoadTexture(renderer, "textures/wKnight.png")))
+    if(!(m_pieceTextures[WKNIGHT] = IMG_LoadTexture(renderer, "textures/wKnight.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WROOK)]   = IMG_LoadTexture(renderer, "textures/wRook.png")))
+    if(!(m_pieceTextures[WROOK]   = IMG_LoadTexture(renderer, "textures/wRook.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WBISHOP)] = IMG_LoadTexture(renderer, "textures/wBishop.png")))
+    if(!(m_pieceTextures[WBISHOP] = IMG_LoadTexture(renderer, "textures/wBishop.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WQUEEN)]  = IMG_LoadTexture(renderer, "textures/wQueen.png")))
+    if(!(m_pieceTextures[WQUEEN]  = IMG_LoadTexture(renderer, "textures/wQueen.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(WKING)]   = IMG_LoadTexture(renderer, "textures/wKing.png")))
+    if(!(m_pieceTextures[WKING]   = IMG_LoadTexture(renderer, "textures/wKing.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BPAWN)]   = IMG_LoadTexture(renderer, "textures/bPawn.png")))
+    if(!(m_pieceTextures[BPAWN]   = IMG_LoadTexture(renderer, "textures/bPawn.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BKNIGHT)] = IMG_LoadTexture(renderer, "textures/bKnight.png")))
+    if(!(m_pieceTextures[BKNIGHT] = IMG_LoadTexture(renderer, "textures/bKnight.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BROOK)]   = IMG_LoadTexture(renderer, "textures/bRook.png")))
+    if(!(m_pieceTextures[BROOK]   = IMG_LoadTexture(renderer, "textures/bRook.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BBISHOP)] = IMG_LoadTexture(renderer, "textures/bBishop.png")))
+    if(!(m_pieceTextures[BBISHOP] = IMG_LoadTexture(renderer, "textures/bBishop.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BQUEEN)]  = IMG_LoadTexture(renderer, "textures/bQueen.png")))
+    if(!(m_pieceTextures[BQUEEN]  = IMG_LoadTexture(renderer, "textures/bQueen.png")))
         throw IMG_GetError();
-    if(!(m_pieceTextures[static_cast<Uint32>(BKING)]   = IMG_LoadTexture(renderer, "textures/bKing.png")))
+    if(!(m_pieceTextures[BKING]   = IMG_LoadTexture(renderer, "textures/bKing.png")))
         throw IMG_GetError();
 
     //get the width and height of each texture

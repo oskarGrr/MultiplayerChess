@@ -14,7 +14,7 @@ Board::Board()
       m_viewingPerspective(Side::WHITE)
 {
     //load the board with the fen string
-    std::string const startingFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); 
+    std::string const startingFEN("rnbqkbnr/pPpppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"); 
     loadFENIntoBoard(startingFEN);
 
     //update the pieces internal legal moves
@@ -188,7 +188,7 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
 
     Vec2i screenPos = {mouseEvent.button.x, mouseEvent.button.y};
 
-    if(!ChessApp::isPositionOnBoard(screenPos))
+    if(!ChessApp::isScreenPositionOnBoard(screenPos))
         return;
 
     Vec2i chessPos = ChessApp::screen2ChessPos(screenPos);
@@ -222,20 +222,31 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || !pom)
         return;
 
+    //case where the promotion window is open and the user has yet to choose a piece
+    if(ChessApp::isPromotionWndOpen())
+        return;
+        
     Vec2i screenPos{mouseEvent.button.x, mouseEvent.button.y};
 
-    if(!ChessApp::isPositionOnBoard(screenPos))
+    if(!ChessApp::isScreenPositionOnBoard(screenPos))
     { 
         Piece::setPieceOnMouse(nullptr);//put the piece down
         return;
     }
 
-    Vec2i chessPos{ChessApp::screen2ChessPos(screenPos)};
-
-    const auto it = requestMove(chessPos);
+    const auto it = requestMove(ChessApp::screen2ChessPos(screenPos));
     if(it != pom->getLegalMoves().end())
-    { 
-        commitMove(*it);
+    {
+        if(it->second == MoveInfo::PROMOTION || 
+           it->second == MoveInfo::ROOK_CAPTURE_AND_PROMOTION)
+        {
+            movePiece(Piece::getPieceOnMouse()->getChessPosition(), it->first);
+            ChessApp::queuePromotionWndToOpen();
+            return;//leave without commiting the move or putting the piece down
+        }
+
+        movePiece(Piece::getPieceOnMouse()->getChessPosition(), it->first);
+        postMoveUpdate(*it);
     }
 
     Piece::setPieceOnMouse(nullptr);//put the piece down
@@ -244,15 +255,6 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
 std::shared_ptr<Piece> Board::getPieceAt(Vec2i const chessPos) const
 {
     return m_pieces[ChessApp::chessPos2Index(chessPos)];
-}
-
-void Board::handlePromotionMove(Vec2i const promotionSquare)
-{        
-    auto const pawnToPromote = getPieceAt(promotionSquare);
-    auto& app = ChessApp::getApp();
-
-    //stop here and render popup window with options for which piece to promote to
-    app.promotionRoutine(promotionSquare, pawnToPromote->getSide());
 }
 
 void Board::handleKingMove(Vec2i const newKingPos)
@@ -369,12 +371,6 @@ void Board::handleEnPassantMove()
     capturePiece(doublePushedPawnPosition);
 }
 
-void Board::commitMove(Move const& newMove)
-{
-    movePiece(Piece::getPieceOnMouse()->getChessPosition(), newMove.first);
-    postMoveUpdate(newMove);
-}
-
 //to be called in postMoveUpdate() after the correct above single ha
 //method was called and before m_lastCapturedPiece is reset to null
 void Board::playCorrectMoveAudio(Move const& recentMove)
@@ -416,7 +412,6 @@ void Board::postMoveUpdate(Move const& newMove)
 
     switch(moveType)
     {
-    case PROMOTION:     handlePromotionMove(move);  break;
     case DOUBLE_PUSH:   handleDoublePushMove(move); break;
     case ENPASSANT:     handleEnPassantMove();      break;
     case CASTLE:        handleCastleMove(move);     break;
@@ -426,7 +421,6 @@ void Board::postMoveUpdate(Move const& newMove)
     case ROOK_CAPTURE_AND_PROMOTION://when a pawn captures a rook on the first or eighth rank 
     {
         handleRookCapture();
-        handlePromotionMove(move);         
         break;
     }
     }
@@ -434,9 +428,15 @@ void Board::postMoveUpdate(Move const& newMove)
     if(moveType != DOUBLE_PUSH)
         resetEnPassant();
 
-    toggleTurn();
+    //if the move type was a promotion then the user still needs to decide which piece 
+    //to pick in the newly rendered promotion window. once a piece is picked 
+    if(moveType == PROMOTION)
+        return;
+
     playCorrectMoveAudio(newMove);
+    toggleTurn();
     setLastCapturedPiece(nullptr);//if there was a last captured piece it was consumed. so set it to null
+
     updateLegalMoves();
 }
 
@@ -575,7 +575,7 @@ void Board::movePiece(Vec2i const source, Vec2i const destination)
     int const isource = ChessApp::chessPos2Index(source);
 
     m_pieces[idest] = m_pieces[isource];
-    m_pieces[isource]   = nullptr;
+    m_pieces[isource] = nullptr;
 
     m_pieces[idest]->setChessPosition(destination);
 }

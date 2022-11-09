@@ -2,14 +2,15 @@
 #include "SDL.h"
 class chessApp;
 
+//simple wrapper that initializes an SDL window as well as imgui
 class Window
 {
 private:
 
-    friend class ChessApp;//only chess app should make winsows
+    friend class ChessApp;//only chess app should make windows
     Window(int const width, int const height, 
         char const* title, Uint32 const SDL_subsystems, Uint32 const SDL_windowFlags);
-    ~Window();
+    ~Window();//cleanup SDL and imGui
 
     Window(Window const&)=delete;
     Window(Window&&)=delete;
@@ -21,4 +22,5 @@ private:
     int const m_width, m_height;
     bool m_ColorEditorWindowIsOpen;
     bool m_demoWindowIsOpen;
+    bool m_promotionWindowIsOpen;
 };

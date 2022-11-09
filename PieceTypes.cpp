@@ -9,7 +9,7 @@
 Piece::Piece(Side const side, Vec2i const chessPos)
     : m_pseudoLegals{}, m_legalMoves{}, m_side(side),
       m_chessPos(chessPos), m_attackedSquares{},
-      m_whichTexture(TextureIndices::INVALID), m_type(PieceType::INVALID), 
+      m_whichTexture(ChessApp::TextureIndices::INVALID), m_type(PieceType::INVALID), 
       m_locationOfPiecePinningThis{-1, -1}
 {
 
@@ -17,14 +17,14 @@ Piece::Piece(Side const side, Vec2i const chessPos)
 
 Pawn::Pawn(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum TextureIndices;
+    using enum ChessApp::TextureIndices;
     m_type = PieceType::PAWN;
     m_whichTexture = side == Side::WHITE ? WPAWN : BPAWN;
 }
 
 Knight::Knight(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum TextureIndices;
+    using enum ChessApp::TextureIndices;
     m_type = PieceType::KNIGHT;
     m_whichTexture = side == Side::WHITE ? WKNIGHT : BKNIGHT;
 }
@@ -32,28 +32,28 @@ Knight::Knight(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 Rook::Rook(Side const side, Vec2i const chessPos) : Piece(side, chessPos),
     m_hasMoved(true), m_koqs(KingOrQueenSide::NEITHER)
 {
-    using enum TextureIndices;
+    using enum ChessApp::TextureIndices;
     m_type = PieceType::ROOK;
     m_whichTexture = side == Side::WHITE ? WROOK : BROOK;
 }
 
 Bishop::Bishop(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum TextureIndices;
+    using enum ChessApp::TextureIndices;
     m_type = PieceType::BISHOP;
     m_whichTexture = side == Side::WHITE ? WBISHOP : BBISHOP;
 }
 
 Queen::Queen(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum TextureIndices;
+    using enum ChessApp::TextureIndices;
     m_whichTexture = side == Side::WHITE ? WQUEEN : BQUEEN;
     m_type = PieceType::QUEEN;
 }
 
 King::King(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum TextureIndices;
+    using enum ChessApp::TextureIndices;
     m_type = PieceType::KING;
     m_whichTexture = side == Side::WHITE ? WKING : BKING;
 

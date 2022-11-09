@@ -8,7 +8,7 @@ Window::Window(int const width, int const height,
                char const* title, Uint32 const SDL_subsystems,
                Uint32 const SDL_windowFlags)
     : m_renderer(nullptr), m_window(nullptr), m_width(width), m_height(height),
-      m_ColorEditorWindowIsOpen(false), m_demoWindowIsOpen(false)
+      m_ColorEditorWindowIsOpen(false), m_demoWindowIsOpen(false), m_promotionWindowIsOpen(false)
 {
     SDL_Init(SDL_subsystems);
     SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &m_window, &m_renderer);//set m_window && m_renderer
@@ -26,12 +26,13 @@ Window::Window(int const width, int const height,
 
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 9.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 9.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
     auto& style = ImGui::GetStyle();
     style.FramePadding = {5.0f, 3.0f};
     style.DisplaySafeAreaPadding = {0.0f, 5.0f};
 }
 
-//cleanup window and imGui
+//cleanup SDL and imGui
 Window::~Window()
 {
     ImGui_ImplSDLRenderer_Shutdown();

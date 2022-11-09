@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include "imgui.h"
 
 //inline vector2 struct used for chess positions (0-7)
 struct Vec2i
@@ -10,15 +11,20 @@ struct Vec2i
     //to supply default comparison operators for this struct
     auto operator<=>(Vec2i const&) const = default;
 
-    inline void printAsChessPos() const 
+    inline operator ImVec2() const
     {
-        std::cout << char(x + 97) << (y + 1);
+        return ImVec2(static_cast<float>(x), static_cast<float>(y));
     }
 
     friend std::ostream& operator<<(std::ostream& os, Vec2i const& v)
     {
         std::cout << v.x << ", " << v.y; 
         return os;
+    }
+
+    inline void printAsChessPos() const 
+    {
+        std::cout << char(x + 97) << (y + 1);
     }
 
     inline Vec2i operator-(Vec2i const& rhs) const

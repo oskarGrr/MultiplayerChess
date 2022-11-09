@@ -59,10 +59,10 @@ protected:
     std::vector<Move> m_pseudoLegals; //all of the pseudo legal moves a piece has and their types
     std::vector<Move> m_legalMoves;   //all of the fully legal moves a piece has and their types
 
-    Side const m_side;                      //black or white piece
-    Vec2i m_chessPos;                       //the file and rank (x,y) of where the piece is (0-7)
-    std::vector<Vec2i> m_attackedSquares;   //all the squares being attacked by *this
-    TextureIndices m_whichTexture;          //array offset into the array of piece textures owned by ChessApp signifying which texture belongs to this piece              
+    Side const m_side;                       //black or white piece
+    Vec2i m_chessPos;                        //the file and rank (x,y) of where the piece is (0-7)
+    std::vector<Vec2i> m_attackedSquares;    //all the squares being attacked by *this
+    ChessApp::TextureIndices m_whichTexture; //array offset into the array of piece textures owned by ChessApp signifying which texture belongs to this piece              
 
 public:
 
@@ -83,7 +83,7 @@ public:
     inline std::vector<Move> const& getPseudoLegalMoves() const {return m_pseudoLegals;}
     inline std::vector<Move> const& getLegalMoves() const {return m_legalMoves;}
     inline std::vector<Vec2i> const& getAttackedSquares() const {return m_attackedSquares;}
-    inline TextureIndices getWhichTexture() const {return m_whichTexture;}
+    inline auto getWhichTexture() const {return m_whichTexture;}
 
 private:
 

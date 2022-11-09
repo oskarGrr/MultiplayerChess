@@ -108,7 +108,6 @@ private:
     void loadFENIntoBoard(std::string const&);
 
     //methods called inside of posMoveUpdate() for handling certain special move types
-    void handlePromotionMove(Vec2i const promotionSquare);
     void handleDoublePushMove(Vec2i const doublePushPosition);
     void handleCastleMove(Vec2i const castleSquare);
     void handleEnPassantMove();
