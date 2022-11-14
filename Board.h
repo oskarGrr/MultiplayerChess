@@ -76,7 +76,6 @@ public:
     void updateEnPassant(Vec2i const newPostition);
     inline bool isThereEnPassantAvailable() const {return m_enPassantPosition != Vec2i{-1, -1};}
     inline Vec2i getEnPassantIndex() const {return m_enPassantPosition;}
-    inline Vec2i getLocationOfCheckingPiece() const {return m_locationOfCheckingPiece;}
     inline void resetEnPassant(){m_enPassantPosition = {-1, -1};}//reset the enPassantTargetLocation back to -1, -1
     inline Side getWhosTurnItIs() const {return m_sideOfWhosTurnItIs;}
     std::vector<Vec2i> getAttackedSquares(Side isWhite) const;//get all the attacked squares for the given side 
@@ -86,7 +85,9 @@ public:
     inline void setLastCapturedPiece(auto p){m_lastCapturedPiece = p;}
 
     enum struct CheckState{INVALID = 0, NO_CHECK, SINGLE_CHECK, DOUBLE_CHECK};
-    inline CheckState getCheckState() const {return m_checkState;};
+    inline CheckState getCheckState() const {return m_checkState;}
+    inline Vec2i getLocationOfCheckingPiece() const {return m_locationOfCheckingPiece;}
+    inline Vec2i getLocationOfSecondCheckingPiece() const {return m_locationOfSecondCheckingPiece;}
 
 private:
     
@@ -94,11 +95,12 @@ private:
     std::shared_ptr<Piece> m_lastCapturedPiece;
 
     CheckState    m_checkState;   
-    Vec2i         m_locationOfCheckingPiece;  //where is the piece putting a king in check otherwise -1, -1
-    Vec2i         m_enPassantPosition;        //position of the square where en passant is possible in the next move
-    Side          m_sideOfWhosTurnItIs;       //used to remember whos turn is it
-    CastleRights  m_castlingRights;           //bitwise & with the CastleRights enumerations
-    Side          m_viewingPerspective;       //the side (white or black) that the player is viewing the board from
+    Vec2i         m_locationOfCheckingPiece;       //where is the piece putting a king in check otherwise -1, -1
+    Vec2i         m_locationOfSecondCheckingPiece; //if the check state is in double check where is the second piece putting the king in check
+    Vec2i         m_enPassantPosition;             //position of the square where en passant is possible in the next move
+    Side          m_sideOfWhosTurnItIs;            //used to remember whos turn is it
+    CastleRights  m_castlingRights;                //bitwise & with the CastleRights enumerations
+    Side          m_viewingPerspective;            //the side (white or black) that the player is viewing the board from
 
     void updateLegalMoves();//updates the pieces internal psuedo legal, fully legal, and attacked squares vectors
     void updatePinnedPieces();

@@ -9,9 +9,9 @@
 
 Board::Board()
     : m_pieces{}, m_lastCapturedPiece{}, m_checkState(CheckState::INVALID),
-      m_locationOfCheckingPiece{-1,-1},   m_enPassantPosition{-1,-1},
-      m_sideOfWhosTurnItIs(Side::WHITE),  m_castlingRights{CastleRights::NONE}, 
-      m_viewingPerspective(Side::WHITE)
+      m_locationOfCheckingPiece{-1,-1}, m_locationOfSecondCheckingPiece{-1, -1},
+      m_enPassantPosition{-1,-1}, m_sideOfWhosTurnItIs(Side::WHITE),
+      m_castlingRights{CastleRights::NONE}, m_viewingPerspective(Side::WHITE)
 {
     //load the board with the fen string
     std::string const startingFEN("rnbqkbnr/pPpppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"); 
@@ -497,35 +497,29 @@ void Board::updatePinnedPieces()
 }
 
 void Board::updateCheckState()
-{
-    using enum CheckState;
+{       
+    m_checkState = CheckState::NO_CHECK;//reset m_checkState
+    m_locationOfCheckingPiece = {-1, -1};//reset m_locationOfCheckingPiece
+    m_locationOfSecondCheckingPiece = {-1, -1};
     Vec2i const kingPos = m_sideOfWhosTurnItIs == Side::WHITE ?
         King::getWhiteKingPos() : King::getBlackKingPos();
 
-    m_checkState = NO_CHECK;
-    m_locationOfCheckingPiece = {-1, -1};
-    
     for(auto const& p : m_pieces)
     {
         if(p && p->getSide() != m_sideOfWhosTurnItIs)
         {
             auto const cbegin = p->getAttackedSquares().cbegin(), cend = p->getAttackedSquares().cend();
-            auto possibleSingleCheck = std::find(cbegin, cend, kingPos);
-
-            if(possibleSingleCheck != cend)
+            if(std::find(cbegin, cend, kingPos) != cend)
             {
-                m_checkState = SINGLE_CHECK;
-                m_locationOfCheckingPiece = p->getChessPosition();
-                //the king is in at least CheckState::SINGLE_CHECK
-                //now check for CheckState::DOUBLE_CHECK
-
-                //if there is a possiblity for there to be a double check
-                if(++possibleSingleCheck != cend)
+                if(m_checkState == CheckState::SINGLE_CHECK)
                 {
-                    //if we are in double check
-                    if(std::find(possibleSingleCheck, cend, kingPos) != cend)
-                        m_checkState = DOUBLE_CHECK;
+                    m_checkState = CheckState::DOUBLE_CHECK;
+                    m_locationOfSecondCheckingPiece = p->getChessPosition();
+                    return;
                 }
+                
+                m_checkState = CheckState::SINGLE_CHECK;
+                m_locationOfCheckingPiece = p->getChessPosition();
             }
         }
     }

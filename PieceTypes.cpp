@@ -550,28 +550,13 @@ void Pawn::updateLegalMoves()
         //capture of the piece pinning us to our king
         for(auto const& [move, moveType] : m_pseudoLegals)
         {
-            //handle an edge case here where the move is an en passant capture
-            if(moveType == MoveInfo::ENPASSANT)
-            {  
-                Vec2i kingPos
-                {
-                    m_side == Side::WHITE ? King::getWhiteKingPos() : King::getBlackKingPos()
-                };
-
-                bool const diagonalPin = 
-                    areSquaresOnSameDiagonal(kingPos, m_locationOfPiecePinningThis);
-
-                if(diagonalPin && 
-                    areSquaresOnSameDiagonal(move, m_locationOfPiecePinningThis))
-                {
-                    m_legalMoves.emplace_back(move, moveType);
-                }
-
-                continue;
-            }
-            
-            if(move == m_locationOfPiecePinningThis)
+            //if the move doesnt break the pin because the
+            // move is along the same "line" and the pinning piece
+            if(areSquaresOnSameDiagonal(move, m_locationOfPiecePinningThis) ||
+               areSquaresOnSameRankOrFile(move, m_locationOfPiecePinningThis))
+            {
                 m_legalMoves.emplace_back(move, moveType);
+            }
         }
     }
     else//*this is not pinned to its king
@@ -879,7 +864,8 @@ bool Piece::areSquaresOnSameDiagonal(Vec2i const pos0, Vec2i const pos1)
 
 bool Piece::areSquaresOnSameRankOrFile(Vec2i const square0, Vec2i const square1)
 {
-    return (square0.x == square1.x || square0.y == square1.y);
+    return square0.x == square1.x || //if squares are on same file or..
+           square0.y == square1.y;   //if squares are on same rank
 }
 
 //updates *this's internal m_squareOfPiecePinningThis variable to hold
@@ -891,7 +877,7 @@ void Piece::updatePinnedInfo()
         return;
 
     auto const& b = ChessApp::getBoard();
-    resetLocationOfPiecePinningThis();//set m_locationOfPiecePinningThis back to -1, -1
+    resetLocationOfPiecePinningThis();//reset m_locationOfPiecePinningThis back to -1, -1
     Vec2i const kingPos = m_side == Side::WHITE ?
         King::getWhiteKingPos() : King::getBlackKingPos();
 
@@ -911,26 +897,26 @@ void Piece::updatePinnedInfo()
     {
         offsetPosition += direction;//make a step...
 
-        assert(ChessApp::inRange(offsetPosition) && "loop ran off the board somehow");
+        assert(ChessApp::inRange(offsetPosition) && "loop ran off the board somehow " && __LINE__ && __FILE__);
 
         auto const p = b.getPieceAt(offsetPosition);
         if(p)//if there is a piece at offsetPosition
         {
-            if(p.get() != this)//if there is a piece inbeween *this (that isnt *this and regarless of color)
+            if(p.get() != this)//if there is a piece in between *this and it's king
             {
                 return;
             }
             else//if *p is *this
             {
-                offsetPosition += direction;//take one more step so we are 1 step past *this
+                offsetPosition += direction;//step over *this and leave the loop
                 break;
             }
         }
     }
 
-    //continue marching along from where the first loop left off
+    //continue walking along from where the first loop left off (the first loop left off 1 square past *this)
     //until we potentially find a piece that would be pinning *this to the king.
-    //I could have merged these into 1 loop but it seemed more readable to seperate them
+    //I could have merged this into the above loop. This seemed more readable though
     for( ; ChessApp::inRange(offsetPosition); offsetPosition += direction)
     {
         auto const p = b.getPieceAt(offsetPosition);
