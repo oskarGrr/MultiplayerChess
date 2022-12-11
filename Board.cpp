@@ -14,7 +14,7 @@ Board::Board()
       m_castlingRights{CastleRights::NONE}, m_viewingPerspective(Side::WHITE)
 {
     //load the board with the fen string
-    std::string const startingFEN("rnbqkbnr/pPpppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"); 
+    std::string const startingFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); 
     loadFENIntoBoard(startingFEN);
 
     //update the pieces internal legal moves
@@ -30,8 +30,7 @@ Board::~Board()
 template<typename ConcreteTy>
 void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
 {
-    //this shouldnt happen but if it does just move the piece to the captured pool
-    if(getPieceAt(pos))
+    if(getPieceAt(pos)) 
         capturePiece(pos);
 
     try
@@ -185,6 +184,8 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
 {
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || Piece::getPieceOnMouse())
         return;
+
+    //if(getWhosTurnItIs() != Side::)
 
     Vec2i screenPos = {mouseEvent.button.x, mouseEvent.button.y};
 
@@ -550,15 +551,15 @@ void Board::updateLegalMoves()
 
 void Board::capturePiece(Vec2i const location)
 {  
+    assert(ChessApp::inRange(location));
     auto const pieceToCapture = getPieceAt(location);
     if(!pieceToCapture) return;//if there isnt a piece here just leave   
 
     m_lastCapturedPiece = getPieceAt(location);
-    assert(ChessApp::inRange(location));
     m_pieces[ChessApp::chessPos2Index(location)] = nullptr;
 }
 
-//all piece moves should go through this function 
+//all piece moves should go through this method
 void Board::movePiece(Vec2i const source, Vec2i const destination)
 {   
     //if there is a piece at the destination move it to the array of captured pieces

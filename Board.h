@@ -106,7 +106,7 @@ private:
     void updatePinnedPieces();
     void updatePseudoLegalsAndAttackedSquares();//update the pieces _PseudoLegals and get a vector of all attacked squares for the side that just made a move
     void updateCheckState();//update m_checkState
-    void movePiece(Vec2i const source, Vec2i const destination);//all piece moves should go through this function 
+    void movePiece(Vec2i const source, Vec2i const destination);//all piece moves should go through this method
     void loadFENIntoBoard(std::string const&);
 
     //methods called inside of posMoveUpdate() for handling certain special move types

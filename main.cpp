@@ -3,7 +3,7 @@
 #include <fstream>//ofstream
 
 int main(int argCount, char* arguments[])
-{
+{    
     try
     {
         ChessApp& app = ChessApp::getApp();

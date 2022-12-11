@@ -1,10 +1,12 @@
 #include "ChessApplication.h"
 #include "PieceTypes.h"
 #include <memory>//std::make_unique/make_shared and std::unique_ptr/shared_ptr
+#include <thread>//a blocking accept() call waiting for a client to connect will be in another thread (and the clock timers)
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 #include "SDL.h"
 #include "SDL_image.h"
+#include "ChessNetworking.h"
 
 ChessApp ChessApp::s_theApplication{};
 
@@ -16,7 +18,7 @@ ChessApp::ChessApp() :
       m_pieceCaptureSound("sounds/woodCaptureMove.wav"),
       m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},
       m_circleTexture(nullptr), m_redCircleTexture(nullptr),
-      m_pieceTextureScale(1.0f), m_pieceTextures{}
+      m_pieceTextureScale(1.0f), m_pieceTextures{}, m_netWork{}
 { 
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
     initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);    
@@ -50,16 +52,128 @@ bool ChessApp::processEvents()
     return false;
 }
 
-//methods that are called at the begin and end of renderAllTheThings() 
-void ChessApp::beginFrame()
+void ChessApp::drawColorEditorWindow()
+{
+    ImGui::Begin("change square colors", &m_wnd.m_ColorEditorWindowIsOpen,
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
+    
+    ImGui::TextUnformatted("light squares");
+    
+    ImVec4 f_lightSquares{};//a float (0-1) version of the light squares
+    ImVec4 f_darkSquares{};//a float (0-1) version of the dark squares
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        f_lightSquares[i] = m_lightSquareColor[i] / 255.0f;
+        f_darkSquares[i] = m_darkSquareColor[i] / 255.0f;
+    }
+    
+    ImGui::ColorPicker3("light squares", &f_lightSquares[0]);
+    ImGui::Separator();
+    ImGui::TextUnformatted("dark squares");
+    ImGui::ColorPicker3("dark squares", &f_darkSquares[0]);
+    
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        m_lightSquareColor[i] = static_cast<Uint8>(f_lightSquares[i] * 255);
+        m_darkSquareColor[i] = static_cast<Uint8>(f_darkSquares[i] * 255);
+    }
+    
+    ImGui::End();
+}
+
+//returns true if a successful connection was made
+bool ChessApp::drawConnectionWindow()
+{
+    ImGui::Begin("connect to another player", &m_wnd.m_connectWindowIsOpen, 
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
+    
+    std::string targetIP;
+    targetIP.resize(46);
+    static std::string connectionResult;
+    
+    ImGui::TextUnformatted("enter an IPv4 address and then press enter");
+    
+    if(ImGui::InputText("IP address", targetIP.data(), targetIP.size(),
+        ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        connectionResult = m_netWork.connect2Server(targetIP);
+    }
+    
+    ImGui::Separator();
+    
+    ImGui::TextUnformatted("or wait a client to connect\n."
+        "..this will block for 20 seconds before timing out");
+
+    if(ImGui::Button("wait for client to connect..."))
+    {
+        connectionResult = m_netWork.waitForClient2Connect();
+    }
+
+    ImGui::Separator();
+
+    ImGui::TextUnformatted(connectionResult.c_str());
+
+    ImGui::End();
+
+    return m_netWork.isUserConnected();
+}
+
+void ChessApp::drawMenuBar()
+{
+    if(ImGui::BeginMainMenuBar()) [[unlikely]]
+    {
+        if(ImGui::BeginMenu("options"))
+        {   
+            ImGui::MenuItem("change colors", nullptr, &m_wnd.m_ColorEditorWindowIsOpen);
+            ImGui::MenuItem("connect to another player", nullptr, &m_wnd.m_connectWindowIsOpen);
+            ImGui::MenuItem("show ImGui demo", nullptr, &m_wnd.m_demoWindowIsOpen);
+            ImGui::EndMenu();
+        }
+    
+        if(ImGui::Button("flip board", {70, 20}))
+            flipBoard();
+    
+        static bool needMenuBarSize = true;
+        if(needMenuBarSize) [[unlikely]]
+        {   
+            m_menuBarHeight = ImGui::GetWindowSize().y;
+    
+            SDL_SetWindowSize(m_wnd.m_window, m_wnd.m_width,
+                static_cast<int>(m_wnd.m_height + m_menuBarHeight));
+    
+            needMenuBarSize = false;
+        }
+    
+        ImGui::EndMainMenuBar();
+    }    
+}
+
+//called once per frame in ChessApp::run() to render everything 
+void ChessApp::renderAllTheThings()
 {
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
-}
 
-void ChessApp::endFrame()
-{
+    if(m_wnd.m_connectWindowIsOpen) [[unlikely]]
+    {
+        if(drawConnectionWindow())
+        {
+            //set up board to be in the starting position
+        }
+    }
+
+    if(m_wnd.m_ColorEditorWindowIsOpen) [[unlikely]]
+        drawColorEditorWindow();     
+    
+    if(m_wnd.m_demoWindowIsOpen) [[unlikely]]
+        ImGui::ShowDemoWindow();
+    
+    if(m_wnd.m_promotionWindowIsOpen) [[unlikely]]
+        drawPromotionPopup();
+
+    drawMenuBar();
+
     ImGui::Render();
     SDL_RenderClear(m_wnd.m_renderer);
     drawSquares();
@@ -71,82 +185,6 @@ void ChessApp::endFrame()
     }
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(m_wnd.m_renderer);
-}
-
-//called once per frame in ChessApp::run() to render everything 
-void ChessApp::renderAllTheThings()
-{
-    beginFrame();
-
-    if(m_wnd.m_ColorEditorWindowIsOpen) [[unlikely]]
-    {
-        ImGui::Begin("change square colors", 
-            &m_wnd.m_ColorEditorWindowIsOpen);
-
-        ImGui::TextUnformatted("light squares");
-
-        ImVec4 f_lightSquares{};//a float (0-1) version of the light squares
-        ImVec4 f_darkSquares{};//a float (0-1) version of the dark squares
-        for(std::size_t i = 0; i < 4; ++i)
-        {
-            f_lightSquares[i] = m_lightSquareColor[i] / 255.0f;
-            f_darkSquares[i] = m_darkSquareColor[i] / 255.0f;
-        }
-
-        ImGui::ColorPicker3("light squares", &f_lightSquares[0]);
-        ImGui::Separator();
-        ImGui::TextUnformatted("dark squares");
-        ImGui::ColorPicker3("dark squares", &f_darkSquares[0]);
-
-        for(std::size_t i = 0; i < 4; ++i)
-        {
-            m_lightSquareColor[i] = static_cast<Uint8>(f_lightSquares[i] * 255);
-            m_darkSquareColor[i] = static_cast<Uint8>(f_darkSquares[i] * 255);
-        }
-
-        ImGui::End();
-    }
-
-    if(ImGui::BeginMainMenuBar()) [[unlikely]]
-    {
-        if(ImGui::BeginMenu("options"))
-        {   
-            ImGui::MenuItem("change colors", nullptr, 
-                &m_wnd.m_ColorEditorWindowIsOpen);
-               
-            ImGui::MenuItem("show ImGui demo", nullptr, 
-                &m_wnd.m_demoWindowIsOpen);
-
-            ImGui::EndMenu();
-        }
-
-        if(ImGui::Button("flip board", {70, 20}))
-            flipBoard();
-
-        static bool needMenuBarSize = true;
-        if(needMenuBarSize) [[unlikely]]
-        {   
-            m_menuBarHeight = ImGui::GetWindowSize().y;
-
-            SDL_SetWindowSize(m_wnd.m_window, m_wnd.m_width,
-                static_cast<int>(m_wnd.m_height + m_menuBarHeight));
-
-            needMenuBarSize = false;
-        }
-
-        ImGui::EndMainMenuBar();
-    }
-
-    if(m_wnd.m_demoWindowIsOpen)
-        ImGui::ShowDemoWindow();
-
-    if(m_wnd.m_promotionWindowIsOpen)
-    {
-        //render an imgui window prompting the user to pick a piece
-        promotionRoutine(); 
-    }  
-    
-    endFrame();
 }
 
 void ChessApp::run()
@@ -223,6 +261,7 @@ bool ChessApp::inRange(Vec2i const chessPos)
     return chessPos.x <= 7 && chessPos.x >= 0 && chessPos.y <= 7 && chessPos.y >= 0;
 }
 
+//called from drawPromotionPopup() when a piece is clicked on
 template<typename pieceTy> 
 void ChessApp::finalizePromotion(Vec2i const& promotionSquare, bool const wasCapture)
 {
@@ -236,7 +275,7 @@ void ChessApp::finalizePromotion(Vec2i const& promotionSquare, bool const wasCap
     else playChessMoveSound();
 }
 
-void ChessApp::promotionRoutine()
+void ChessApp::drawPromotionPopup()
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {1.0f, 1.0f});

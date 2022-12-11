@@ -2,7 +2,7 @@
 #include "SDL.h"
 class chessApp;
 
-//simple wrapper that initializes an SDL window as well as imgui
+//simple wrapper that initializes an SDL window as well as imgui things
 class Window
 {
 private:
@@ -23,4 +23,5 @@ private:
     bool m_ColorEditorWindowIsOpen;
     bool m_demoWindowIsOpen;
     bool m_promotionWindowIsOpen;
+    bool m_connectWindowIsOpen;
 };

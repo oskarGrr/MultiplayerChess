@@ -5,6 +5,7 @@
 #include "WavSound.h"
 #include "SDL.h"
 #include "imgui.h"
+#include "ChessNetworking.h"
 
 #define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
 
@@ -25,7 +26,7 @@ enum TextureIndices : Uint32
 private:
 
     ChessApp();//called before main() and thus also inits the board and the pieces before main()
-    static ChessApp s_theApplication;   
+    static ChessApp s_theApplication;
 
 public:
 
@@ -64,21 +65,24 @@ public:
 
 private:
 
-    //methods that are called at the begin and end of renderAllTheThings() 
-    void endFrame();
-    void beginFrame();
     void renderAllTheThings();
-    bool processEvents();
-    void flipBoard();
+
+    //methods for drawing stuff called in renderAllTheThings()
     void drawSquares();
     void drawPiecesNotOnMouse();
     void drawPieceOnMouse();
     void drawMoveIndicatorCircles();
+    void drawColorEditorWindow();
+    bool drawConnectionWindow();//returns true if a successful connection was made
+    void drawPromotionPopup();
+    void drawMenuBar();
+
+    bool processEvents();
+    void flipBoard();
     void initCircleTexture(int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a, SDL_Texture** toInit);
     void loadPieceTexturesFromDisk();
-    void promotionRoutine();
 
-    //called from renderPromotionWnd() when a piece is clicked on
+    //called from drawPromotionPopup() when a piece is clicked on
     template<typename pieceTy> void finalizePromotion(Vec2i const& promotionSquare, bool const wasCapture);
 
     //the only way the promotion window should be closed is via the user clicking on a button to select
@@ -89,8 +93,8 @@ private:
     Uint32 const m_chessBoardWidth;
     Uint32 const m_chessBoardHeight;
     Uint32 m_squareSize;//square size in pixels
-    float  m_menuBarHeight;
-    Window   m_wnd;//my simple wrapper class for SDL window
+    float m_menuBarHeight;
+    Window   m_wnd;//my simple wrapper class for SDL window and imgui stuff
     WavSound m_pieceMoveSound;
     WavSound m_pieceCastleSound;
     WavSound m_pieceCaptureSound;
@@ -102,4 +106,5 @@ private:
     float const  m_pieceTextureScale;
     std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> m_pieceTextures;//the textures for the chess pieces
     std::array<Vec2i,        NUM_OF_PIECE_TEXTURES> m_pieceTextureSizes;//width and height of the above textures
+    P2PChessConnection m_netWork;
 };
