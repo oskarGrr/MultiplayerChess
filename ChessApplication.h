@@ -9,6 +9,16 @@
 
 #define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
 
+enum struct Side : Uint32
+{
+    INVALID, BLACK, WHITE
+};
+
+//a Move type is a Vector 2 that holds where the piece 
+//is moving to and a MoveInfo enum that holds a signal to be 
+//consumed by the board after that move is made
+using Move = std::pair<Vec2i, MoveInfo>;
+
 //singleton chessApp that contains the board (which owns/"holds" the pieces)
 class ChessApp
 {
@@ -39,21 +49,23 @@ public:
     void run();//main application loop
 
     //getter methods
-    inline static ChessApp& getApp(){return s_theApplication;};
-    inline static Board& getBoard(){return s_theApplication.m_board;};
-    inline static Uint32 getSquareSize(){return s_theApplication.m_squareSize;};
+    inline static ChessApp& getApp(){return s_theApplication;}
+    inline static Board& getBoard(){return s_theApplication.m_board;}
+    inline static Uint32 getSquareSize(){return s_theApplication.m_squareSize;}
     inline auto const& getTextures() const {return m_pieceTextures;}
-    inline static SDL_Renderer* getCurrentRenderer(){return s_theApplication.m_wnd.m_renderer;};
+    inline static SDL_Renderer* getCurrentRenderer(){return s_theApplication.m_wnd.m_renderer;}
     inline static bool isPromotionWndOpen(){return s_theApplication.m_wnd.m_promotionWindowIsOpen;}
 
-    //helper methods 
-    inline static int chessPos2Index(Vec2i const pos){return pos.y * 8 + pos.x;};
-    inline static Vec2i index2ChessPos(int const index){return{index % 8,index / 8};};
+    //helper methods
+    inline static int chessPos2Index(Vec2i const pos){return pos.y * 8 + pos.x;}
+    inline static Vec2i index2ChessPos(int const index){return{index % 8, index / 8};}
     static Vec2i chess2ScreenPos(Vec2i const);
     static Vec2i screen2ChessPos(Vec2i const);
-    static bool isScreenPositionOnBoard(Vec2i const);//tells if a screen pos is on the board or if its off the screen/board or is over an imgui window
+    static bool isScreenPositionOnBoard(Vec2i const&);//tells if a screen pos is on the board or if its off the screen/board or is over an imgui window
     static bool inRange(Vec2i const chessPos);//tells if a chess position is within the range of a chess board (0-7 ranks and a-h files)
     static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
+    static std::string getCurrentDateAndTime();
+    inline static bool isUserConnected(){return s_theApplication.m_netWork.isUserConnected();}
 
     //play audio methods
     inline static void playChessMoveSound(){s_theApplication.m_pieceMoveSound.playFullSound();}
@@ -62,6 +74,9 @@ public:
 
     //allow a promotion window to open on the next iteration of the main loop
     inline static void queuePromotionWndToOpen(){s_theApplication.m_wnd.m_promotionWindowIsOpen = true;}
+
+    //wrapper method for sending a move to the other player
+    static void sendMove(Vec2i const& source, Vec2i const& dest, MoveInfo const& info);
 
 private:
 
@@ -73,12 +88,25 @@ private:
     void drawPieceOnMouse();
     void drawMoveIndicatorCircles();
     void drawColorEditorWindow();
-    bool drawConnectionWindow();//returns true if a successful connection was made
+    void drawConnectionWindow();//returns true if a successful connection was made
     void drawPromotionPopup();
     void drawMenuBar();
+    void drawResetButtonErrorPopup();
+    void drawNewConnectionPopup();
+
+    friend void P2PChessConnection::connect2Server(std::string_view);
+    friend void P2PChessConnection::waitForClient2Connect(long, long);
+
+    void onNewConnection();//called from inside P2PChessConnection::connect2Server and waitForClient2connect once a connection is established
+    void networkingRoutine();//called at the top of ChessApp::run()
+
+    //handle the different kinds of messages that can be sent to the other player (P2PChessConnection::NetMessageType)
+    void handleMoveMessage(std::string_view msg);
+    void handleResignMessage();
+    void handleDrawOfferMessage();
+    void handleWhichSideMessage(std::string_view msg);
 
     bool processEvents();
-    void flipBoard();
     void initCircleTexture(int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a, SDL_Texture** toInit);
     void loadPieceTexturesFromDisk();
 

@@ -12,7 +12,10 @@ Piece::Piece(Side const side, Vec2i const chessPos)
       m_whichTexture(ChessApp::TextureIndices::INVALID), m_type(PieceType::INVALID), 
       m_locationOfPiecePinningThis{-1, -1}
 {
+}
 
+Piece::~Piece()
+{
 }
 
 Pawn::Pawn(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
@@ -59,11 +62,6 @@ King::King(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 
     if(side == Side::WHITE) s_wKingPos = m_chessPos;
     else s_bKingPos = m_chessPos;
-}
-
-Piece::~Piece()
-{
-    //nothing to do here. Its just good practice to remember to include a virtual dtor in classes with vtables
 }
 
 //used by queens & rooks impl of virtual void updatePseudoLegalAndAttacked()=0; 
@@ -452,8 +450,8 @@ bool Piece::doesNonKingMoveResolveCheck
 
     //direction from the king location to the piece putting it in check
     Vec2i direction{posOfCheckingPiece - kingPos};
-    direction.x = direction.x == 0 ? 0 : direction.x/abs(direction.x);//extra checks for integer div by 0
-    direction.y = direction.y == 0 ? 0 : direction.y/abs(direction.y);
+    direction.x = direction.x == 0 ? 0 : direction.x/std::abs(direction.x);//extra checks for integer div by 0
+    direction.y = direction.y == 0 ? 0 : direction.y/std::abs(direction.y);
 
     for(auto offsetPos{kingPos + direction}; ; offsetPos += direction)
     {
@@ -489,7 +487,7 @@ bool Pawn::doesEnPassantLeaveKingInCheck(Vec2i const enPassantMove) const
         return false;
         
     int xDirection = enPassantMove.x - kingPos.x;
-    xDirection /= xDirection;//either -1 or 1 in the direction of the pawns D and P
+    xDirection /= std::abs(xDirection);//either -1 or 1 in the direction of the pawns D and P
     auto const& b = ChessApp::getBoard();
 
     //start one square past the king in the x direction and continue until we reach
@@ -550,12 +548,26 @@ void Pawn::updateLegalMoves()
         //capture of the piece pinning us to our king
         for(auto const& [move, moveType] : m_pseudoLegals)
         {
-            //if the move doesnt break the pin because the
-            // move is along the same "line" and the pinning piece
-            if(areSquaresOnSameDiagonal(move, m_locationOfPiecePinningThis) ||
-               areSquaresOnSameRankOrFile(move, m_locationOfPiecePinningThis))
+            if(areSquaresOnSameDiagonal(m_chessPos, m_locationOfPiecePinningThis))
             {
-                m_legalMoves.emplace_back(move, moveType);
+                if(m_locationOfPiecePinningThis == move)//if we are capturing the pinning piece
+                {
+                    m_legalMoves.emplace_back(move, moveType);
+                }
+                else//if the move isnt capturing the pinning piece
+                {
+                    //and the move is an en passant on the same diagonal as the pinning piece
+                    if(moveType == MoveInfo::ENPASSANT &&
+                        areSquaresOnSameDiagonal(move, m_locationOfPiecePinningThis))
+                    {
+                        m_legalMoves.emplace_back(move, moveType);
+                    }
+                }
+            }   
+            else//if the pinning piece is on the same rank/file
+            {
+                if(areSquaresOnSameRankOrFile(move, m_chessPos))
+                    m_legalMoves.emplace_back(move, moveType);
             }
         }
     }
@@ -857,8 +869,8 @@ void King::updateLegalMoves()
 
 bool Piece::areSquaresOnSameDiagonal(Vec2i const pos0, Vec2i const pos1)
 {
-    int const xDistance = abs(pos0.x - pos1.x);
-    int const yDistance = abs(pos0.y - pos1.y);
+    int const xDistance = std::abs(pos0.x - pos1.x);
+    int const yDistance = std::abs(pos0.y - pos1.y);
     return (yDistance == xDistance);
 }
 
@@ -888,8 +900,8 @@ void Piece::updatePinnedInfo()
     Vec2i const kingToThis = m_chessPos - kingPos;//direction from the king to *this
     Vec2i const direction//a vector for which direction to look to see if *this is pinned by another piece
     {
-        (kingToThis.x == 0) ? 0 : kingToThis.x/abs(kingToThis.x),//conditional checks to make sure no divide by 0 happens
-        (kingToThis.y == 0) ? 0 : kingToThis.y/abs(kingToThis.y)
+        (kingToThis.x == 0) ? 0 : kingToThis.x/std::abs(kingToThis.x),//conditional checks to make sure no divide by 0 happens
+        (kingToThis.y == 0) ? 0 : kingToThis.y/std::abs(kingToThis.y)
     };
     Vec2i offsetPosition = kingPos;//start at the king
 

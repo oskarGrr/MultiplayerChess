@@ -9,32 +9,6 @@ class Board;
 
 #define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
 
-enum struct Side : Uint32
-{
-    BLACK, WHITE
-};
-
-//a signal to be stored with moves that the board 
-//listens to after a move is made
-enum struct MoveInfo : Uint32
-{
-    NORMAL,
-    NORMAL_CAPTURE, //a capture that inst an en passant or rook capture
-    DOUBLE_PUSH,    //a double pawn push move
-    ENPASSANT,      //an en passant capture move
-    PROMOTION,      //a pawn promotion move
-    CASTLE,         //a castling move
-    ROOK_MOVE,
-    KING_MOVE,
-    ROOK_CAPTURE,
-    ROOK_CAPTURE_AND_PROMOTION, //case where a pawn catures a rook and promotes
-};
-
-//a Move type is now a Vector 2 that holds where the piece 
-//is moving to and a MoveInfo enum that holds a signal to be 
-//consumed by the board after that move is made
-using Move = std::pair<Vec2i, MoveInfo>;
-
 //this class isnt responsible for ownership
 //of the Pieces. the ChessApp::_Board is, because the board "holds" the pieces.
 //This abstract Piece class is meant to serve as a base class for
@@ -55,7 +29,7 @@ public:
 protected:
 
     inline static std::shared_ptr<Piece> s_pieceOnMouse{nullptr};//the piece the mouse is holding otherwise nullptr
-
+    
     std::vector<Move> m_pseudoLegals; //all of the pseudo legal moves a piece has and their types
     std::vector<Move> m_legalMoves;   //all of the fully legal moves a piece has and their types
 
@@ -77,6 +51,7 @@ public:
     inline bool isPiecePinned() const {return m_locationOfPiecePinningThis != Vec2i{-1, -1};};//if m_locationOfPiecePinningThis is == -1, -1 then there isnt a piece pinning *this to its king
     inline static auto getPieceOnMouse(){return s_pieceOnMouse;}
     inline static void setPieceOnMouse(std::shared_ptr<Piece> const& updateTo = nullptr){s_pieceOnMouse = updateTo;}
+    inline static void putPieceOnMouseDown(){s_pieceOnMouse.reset();}
     void setChessPosition(Vec2i const setChessPosition);
     inline Vec2i getChessPosition() const {return m_chessPos;}
     inline Side getSide() const {return m_side;}

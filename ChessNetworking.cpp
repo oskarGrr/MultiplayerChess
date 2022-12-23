@@ -1,32 +1,29 @@
 #include "ChessNetworking.h"
 #include "ChessApplication.h"
-#include <fstream>
-#include <iostream>
-#include <cassert>
-
 
 //(the person who is the "server" will need to port forward to 
 //accept a connection from the person typing in an ip to try to connect to)
+//until I make a server instead so no one has to port forward
 #define SERVER_PORT 54000 //the port that the person who is the "server" should listen on 
 
-P2PChessConnection::P2PChessConnection() 
-    : m_netType(NetType::INVALID), m_winSockData{}, m_connectionSocket(INVALID_SOCKET)
+//the max size of ipv4 address as a string plus '\0'
+#define IPV4_ADDR_SIZE 16
+
+P2PChessConnection::P2PChessConnection()
+    : m_connectType(ConnectionType::INVALID), m_winSockData{}, 
+      m_connectionSocket(INVALID_SOCKET), m_ipv4OfPeer{}
 {
     //init winsock2
     if(WSAStartup(MAKEWORD(2, 2), &m_winSockData))
     {
-        std::ofstream ofs("log.txt");
-        std::cerr << "WSAStartup() failed with error: "
-                  << WSAGetLastError() << ". error logged in log.txt" << '\n';
-        ofs << "WSAStartup() failed with error: " << WSAGetLastError() << '\n';
+        std::string msg("WSAStartup() failed with error: ");
+        throw networkException(msg.append(std::to_string(WSAGetLastError())));
     }
 
     if((m_connectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
     {
-        std::ofstream ofs("log.txt");
-        std::cerr << "socket() failed with error: "
-                  << WSAGetLastError() << ". error logged in log.txt\n";
-        ofs << "socket() failed with error: " << WSAGetLastError() << '\n';
+        std::string msg("socket() failed with error: ");
+        throw networkException(msg.append(std::to_string(WSAGetLastError())));
     }
 }
 
@@ -36,79 +33,73 @@ P2PChessConnection::~P2PChessConnection()
     WSACleanup();
 }
 
-//if this function returns a string with a success message to be displayed,
-//then the connection was successful. otherwise the function will throw an string as an error
-std::string P2PChessConnection::connect2Server(std::string_view targetIP)
+void P2PChessConnection::connect2Server(std::string_view targetIP)
 {   
-    m_netType = NetType::CLIENT;
-
     sockaddr_in targetAddrInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)};
     auto ptonResult = inet_pton(AF_INET, targetIP.data(), &targetAddrInfo.sin_addr);
 
     if(ptonResult == 0)
     {
-        m_netType = NetType::INVALID;
-        return std::string("the address entered is not a valid IPv4 dotted-decimal string\n"
-                           "a correct IPv4 example: 147.202.234.122");
+        throw networkException("the address entered is not a valid IPv4 dotted-decimal string\n"
+            "a correct IPv4 example: 192.0.2.146");
     }
-    else if(ptonResult < 0) 
+    else if(ptonResult < 0)
     {
-        std::string ret("inet_pton() failed with error ");
-        ret.append(std::to_string(WSAGetLastError()));
-        m_netType = NetType::INVALID;
-        return ret;
+        std::string msg("inet_pton() failed with error ");
+        int winsockError = WSAGetLastError();
+        msg.append(std::to_string(winsockError));
+        throw networkException(msg, winsockError);
     }
 
     if(connect(m_connectionSocket, reinterpret_cast<sockaddr*>(&targetAddrInfo),
         static_cast<int>(sizeof targetAddrInfo)) == SOCKET_ERROR)
     {
-        std::string ret("connect() failed with error: ");
-        ret.append(std::to_string(WSAGetLastError()));
-        m_netType = NetType::INVALID;
-        return ret;
+        std::string msg("connect() failed with error: ");
+        int winsockError = WSAGetLastError();
+        msg.append(std::to_string(winsockError));
+        throw networkException(msg, winsockError);
     }
 
-    std::string successMsg("successfully connected to ");
-    successMsg.append(targetIP);
-    return successMsg;
+    m_connectType = ConnectionType::CLIENT;
+    m_ipv4OfPeer = targetIP;
+    auto& app = ChessApp::getApp();
+    app.onNewConnection();
 }
 
-//this will be started up in another thread
-std::string P2PChessConnection::waitForClient2Connect()
+//wait for the client to connect for the given amount of time before timing out
+void P2PChessConnection::waitForClient2Connect(long seconds, long ms)
 {
-    m_netType = NetType::SERVER;
-
     SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, 0);
     if(listenSocket == SOCKET_ERROR)
     {
-        std::string ret("socket() failed with error ");
-        ret.append(std::to_string(WSAGetLastError()));
-        m_netType = NetType::INVALID;
-        return ret;
+        std::string msg("socket() failed with error ");
+        int winsockError = WSAGetLastError();
+        msg.append(std::to_string(winsockError));
+        throw networkException(msg, winsockError);
     }
 
     sockaddr_in hints{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)};
-    hints.sin_addr.S_un.S_addr = INADDR_ANY;
+    hints.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
     if(bind(listenSocket, reinterpret_cast<sockaddr*>(&hints), sizeof hints) == SOCKET_ERROR)
     {
-        std::string ret("bind() failed with error ");
-        ret.append(std::to_string(WSAGetLastError()));
+        std::string msg("bind() failed with error ");
+        int winsockError = WSAGetLastError();
+        msg.append(std::to_string(winsockError));
         closesocket(listenSocket);
-        m_netType = NetType::INVALID;
-        return ret;
+        throw networkException(msg, winsockError);
     }
 
     if(listen(listenSocket, SOMAXCONN) == SOCKET_ERROR)
     {
-        std::string ret("listen() failed with error ");
-        ret.append(std::to_string(WSAGetLastError()));
+        std::string msg("listen() failed with error ");
+        int winsockError = WSAGetLastError();
+        msg.append(std::to_string(winsockError));
         closesocket(listenSocket);
-        m_netType = NetType::INVALID;
-        return ret;
+        throw networkException(msg, winsockError);
     }
 
     fd_set listenSet;
-    timeval acceptWaitTime{.tv_sec = 20};
+    timeval acceptWaitTime{.tv_sec = seconds, .tv_usec = ms};
     FD_ZERO(&listenSet);
     FD_SET(listenSocket, &listenSet);
     sockaddr_in clientInfo{};
@@ -116,72 +107,72 @@ std::string P2PChessConnection::waitForClient2Connect()
 
     if(selectResult == SOCKET_ERROR)
     {
-        std::string ret("select() failed with error ");
-        ret.append(std::to_string(WSAGetLastError()));
+        std::string msg("select() failed with error ");
+        int winsockError = WSAGetLastError();
+        msg.append(std::to_string(winsockError));
         closesocket(listenSocket);
-        m_netType = NetType::INVALID;
-        return ret;
+        throw networkException(msg, winsockError);
     }
     else if(selectResult == 0)//select timed out meaning there is no client trying to connect
     {
         closesocket(listenSocket);
-        m_netType = NetType::INVALID;
-        return std::string("there is no client trying to connect currently");
+        throw networkException("there is no client trying to connect currently");
     }
     else//select indicated that a call to accept() will not block and there is a client ready to connect
     {
         if((m_connectionSocket = accept(listenSocket, reinterpret_cast<sockaddr*>(&clientInfo), 
             nullptr)) == SOCKET_ERROR)
         {
-            std::string ret("accept() failed with error ");
-            ret.append(std::to_string(WSAGetLastError()));
+            std::string msg("accept() failed with error ");
+            int winsockError = WSAGetLastError();
+            msg.append(std::to_string(winsockError));
             closesocket(listenSocket);
-            m_netType = NetType::INVALID;
-            return ret;
+            throw networkException(msg, winsockError);
         }
     }
 
-    std::string clientIP;
-    clientIP.resize(256);
-    if(inet_ntop(AF_INET, &clientInfo.sin_addr, clientIP.data(), clientIP.size()))
-    { 
-        std::string ret("client successfully connected from ");
-        ret.append(clientIP);
-        return ret;
-    }
+    m_connectType = ConnectionType::SERVER;
+    auto& app = ChessApp::getApp();
+    m_ipv4OfPeer.resize(IPV4_ADDR_SIZE);
+    m_ipv4OfPeer = inet_ntop(AF_INET, &clientInfo.sin_addr, m_ipv4OfPeer.data(), IPV4_ADDR_SIZE);
+    app.onNewConnection();
 }
 
-void P2PChessConnection::sendMessage(NetMessageTy messageType, std::string_view message)
+//this method with NOT add the NetMessageType to the beginining of the message. that repsonsiblility
+//is that of the callee of this method. so at the point that the string view is passed to this method,
+//it should already have the whole tcp payload in the right order in memeory ready to be sent.
+void P2PChessConnection::sendMessage(NetMessageType messageType, std::string_view message)
 {
-    char sendBuffer[s_messageSize];
-    std::memset(sendBuffer, 0, s_messageSize);
+    using NMT = NetMessageType;
+    if(messageType == NMT::MOVE && message.size() != s_moveMessageSize)
+        throw networkException("incorrect message size passed to P2PChessConnection::sendMessage()");
+    else if(messageType == NMT::RESIGN && message.size() != s_ResignMessageSize)
+        throw networkException("incorrect message size passed to P2PChessConnection::sendMessage()");
+    else if(messageType == NMT::DRAW_OFFER && message.size() != s_DrawOfferMessageSize)
+        throw networkException("incorrect message size passed to P2PChessConnection::sendMessage()");
 
-    //copy the message type into the send buffer
-    std::memcpy(sendBuffer, &messageType, sizeof NetMessageTy);
-
-    //copy the message into the send buffer. "step" over the message type in the buffer and then copy
-    //exactly s_messageSize - the sizeof a message type bytes (5 bytes) from the view into the send buffer
-    std::memcpy(sendBuffer + sizeof NetMessageTy, message.data(), s_messageSize - sizeof NetMessageTy);
-
-    send(m_connectionSocket, sendBuffer, s_messageSize, 0);
+    send(m_connectionSocket, message.data(), message.size(), 0);
 }
 
-//will throw a string with a helpful message and (if applicable) a winsock error message.
-//returns the message received as a std::string if there is a message ready to be read on the
-//connection socket otherwise returns an empty optional (std::nullopt)
-std::optional<std::string> P2PChessConnection::recieveMessageIfAvailable()
+//returns an string if there is a message ready to be read on the connection socket, otherwise
+//returns std::nullopt if there is not a message ready to be read yet. will throw a networkException
+//(defined in ChessNetworking.h) if an error occurs or if the connection has been gracefully closed.
+//the seconds and ms is the time that this function should wait for a message to be available to be read
+//on the connection socket (the amount of time select() waits for). 
+std::optional<std::string> P2PChessConnection::recieveMessageIfAvailable(long seconds, long ms)
 {
     fd_set sockSet;
     FD_ZERO(&sockSet);
     FD_SET(m_connectionSocket, &sockSet);
-    timeval selectWaitTime{};//tell select() to wait the minimum amount of time
+    timeval selectWaitTime{.tv_sec = seconds, .tv_usec = ms};
     int selectResult = select(0, &sockSet, nullptr, nullptr, &selectWaitTime);
 
     if(selectResult == SOCKET_ERROR)
     {
         std::string ret("select() failed with error ");
-        ret.append(std::to_string(WSAGetLastError()));
-        throw ret;
+        int winsockErr = WSAGetLastError();
+        ret.append(std::to_string(winsockErr));
+        throw networkException(ret, winsockErr);
     }
     else if(selectResult == 0)//select has timed out meaning there is no message to read yet
     {
@@ -190,8 +181,8 @@ std::optional<std::string> P2PChessConnection::recieveMessageIfAvailable()
     else//select has indicated that there is a message on the connection socket ready to be read...
     {
         std::string receivedMessage;
-        receivedMessage.resize(s_messageSize);
-        int recvResult = recv(m_connectionSocket, receivedMessage.data(), s_messageSize, 0);
+        receivedMessage.resize(s_moveMessageSize);//always try to recv the max num of bytes
+        int recvResult = recv(m_connectionSocket, receivedMessage.data(), s_moveMessageSize, 0);
 
         if(recvResult > 0)//recv successfully got a message of recvResult number of bytes
         {
@@ -200,11 +191,13 @@ std::optional<std::string> P2PChessConnection::recieveMessageIfAvailable()
         else if(recvResult == SOCKET_ERROR)
         {
             std::string throwMsg("recv() failed with error ");
-            throw throwMsg.append(std::to_string(WSAGetLastError()));
+            int winsockErr = WSAGetLastError();
+            throw networkException(throwMsg.append(std::to_string(winsockErr)), winsockErr);
         }
         else//if recvResult was 0 that means the connection has been gracefully closed
         {
-            m_netType = NetType::INVALID;
-        }   
+            m_connectType = ConnectionType::INVALID;//set the connection type to invalid
+            return std::nullopt;
+        }
     }
 }

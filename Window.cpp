@@ -9,7 +9,9 @@ Window::Window(int const width, int const height,
                Uint32 const SDL_windowFlags)
     : m_renderer(nullptr), m_window(nullptr), m_width(width), m_height(height),
       m_ColorEditorWindowIsOpen(false), m_demoWindowIsOpen(false), 
-      m_promotionWindowIsOpen(false), m_connectWindowIsOpen(false)
+      m_promotionWindowIsOpen(false), m_connectWindowIsOpen(false), 
+      m_resetBoardPopupIsOpen(false), m_newConnectionPopupIsOpen(false),
+      m_winLossPopupIsOpen(false)
 {
     SDL_Init(SDL_subsystems);
     SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &m_window, &m_renderer);//set m_window && m_renderer
@@ -17,7 +19,7 @@ Window::Window(int const width, int const height,
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui::StyleColorsDark();   
+    ImGui::StyleColorsLight();   
     ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
     ImGui_ImplSDLRenderer_Init(m_renderer);
 

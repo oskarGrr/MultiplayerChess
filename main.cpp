@@ -1,6 +1,6 @@
 #include "ChessApplication.h"
 #include <exception>//std::exception
-#include <fstream>//ofstream
+#include <fstream>//std::ofstream
 
 int main(int argCount, char* arguments[])
 {    
@@ -11,24 +11,17 @@ int main(int argCount, char* arguments[])
     }
     catch(std::exception& e)
     {
-        std::ofstream ofs;
-        ofs.open("log.txt");
-        ofs << e.what() << '\n';
-        ofs.close();
+        std::ofstream ofs("log.txt", std::ios_base::app);
+        ofs << "exception thrown at "
+            << ChessApp::getCurrentDateAndTime() << ": " 
+            << e.what() << "\n\n\n";
         return EXIT_FAILURE;
-    }
-    catch(char const* msg)//for catching instances where I just throw a string message
-    {
-        std::ofstream ofs("log.txt");
-        ofs << msg << '\n';
-        ofs.close();
     }
     catch(...)
     {
-        std::ofstream ofs("log.txt");
-        ofs << "Unandled exception of unknown type"
-            << "(not deriving from std::exception or a simple const char*)\n";
-        ofs.close();
+        std::ofstream ofs("log.txt", std::ios_base::app);
+        ofs << "exception of unknown type thrown at " 
+            << ChessApp::getCurrentDateAndTime();
     }
 
     return EXIT_SUCCESS;

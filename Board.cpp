@@ -7,14 +7,17 @@
 #include <fstream>
 #include <cassert>
 
+#define STARTING_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 Board::Board()
     : m_pieces{}, m_lastCapturedPiece{}, m_checkState(CheckState::INVALID),
       m_locationOfCheckingPiece{-1,-1}, m_locationOfSecondCheckingPiece{-1, -1},
       m_enPassantPosition{-1,-1}, m_sideOfWhosTurnItIs(Side::WHITE),
-      m_castlingRights{CastleRights::NONE}, m_viewingPerspective(Side::WHITE)
+      m_castlingRights(CastleRights::NONE), m_viewingPerspective(Side::WHITE),
+      m_sideUserIsPlayingAs(Side::INVALID), m_winLossDrawState(WinLossDrawTypes::INVALID)
 {
     //load the board with the fen string
-    std::string const startingFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); 
+    std::string const startingFEN(STARTING_FEN); 
     loadFENIntoBoard(startingFEN);
 
     //update the pieces internal legal moves
@@ -26,10 +29,34 @@ Board::~Board()
     //the references to the pieces on the heap are managed by shared_ptr's so nothing to do here
 }
 
+void Board::flipBoardViewingPerspective()
+{
+    setBoardViewingPerspective(m_viewingPerspective == 
+        Side::WHITE ? Side::BLACK : Side::WHITE);
+}
+
+//reset to starting position
+void Board::resetBoard()
+{
+    //if any pieces are in the middle of the board
+    for(int i = 16; i < 48; ++i)
+        capturePiece(ChessApp::index2ChessPos(i));
+
+    setLastCapturedPiece(nullptr);
+
+    std::string const startingFEN(STARTING_FEN);
+    loadFENIntoBoard(startingFEN);
+
+    resetEnPassant();
+
+    updateLegalMoves();
+}
+
 //factory method for placing a piece at the specified location on the board
 template<typename ConcreteTy>
 void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
 {
+    //if there is a piece at pos then capture it first
     if(getPieceAt(pos)) 
         capturePiece(pos);
 
@@ -72,9 +99,8 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         else//if c is an upper or lowercase letter
         {
             Side side = isupper(*it) ? Side::WHITE : Side::BLACK;
-            char c = tolower(*it);
 
-            switch(c)
+            switch(tolower(*it))
             {
             case 'p': makeNewPieceAt<Pawn>  ({file, rank}, side); break;
             case 'n': makeNewPieceAt<Knight>({file, rank}, side); break;
@@ -185,7 +211,8 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || Piece::getPieceOnMouse())
         return;
 
-    //if(getWhosTurnItIs() != Side::)
+    if(ChessApp::isUserConnected() && getWhosTurnItIs() != getSideUserIsPlayingAs())
+        return;
 
     Vec2i screenPos = {mouseEvent.button.x, mouseEvent.button.y};
 
@@ -200,7 +227,7 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
         Piece::setPieceOnMouse(p);
 }
 
-auto Board::requestMove(Vec2i requestedPosition)
+auto Board::requestMove(Vec2i const& requestedPosition)
 {
     auto const pom = Piece::getPieceOnMouse();
     auto const beg = pom->getLegalMoves().cbegin();
@@ -231,11 +258,11 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
 
     if(!ChessApp::isScreenPositionOnBoard(screenPos))
     { 
-        Piece::setPieceOnMouse(nullptr);//put the piece down
+        Piece::putPieceOnMouseDown();
         return;
     }
 
-    const auto it = requestMove(ChessApp::screen2ChessPos(screenPos));
+    auto const it = requestMove(ChessApp::screen2ChessPos(screenPos));
     if(it != pom->getLegalMoves().end())
     {
         if(it->second == MoveInfo::PROMOTION || 
@@ -243,22 +270,23 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
         {
             movePiece(Piece::getPieceOnMouse()->getChessPosition(), it->first);
             ChessApp::queuePromotionWndToOpen();
-            return;//leave without commiting the move or putting the piece down
+            return;//leave without commiting the move (ChessApp::finalizePromotion() will commit the move)
         }
 
-        movePiece(Piece::getPieceOnMouse()->getChessPosition(), it->first);
-        postMoveUpdate(*it);
+        Vec2i oldChessPos = Piece::getPieceOnMouse()->getChessPosition();
+        movePiece(oldChessPos, it->first);
+        postMoveUpdate(*it, oldChessPos);
     }
 
-    Piece::setPieceOnMouse(nullptr);//put the piece down
+    Piece::putPieceOnMouseDown();
 }
 
-std::shared_ptr<Piece> Board::getPieceAt(Vec2i const chessPos) const
+std::shared_ptr<Piece> Board::getPieceAt(Vec2i const& chessPos) const
 {
     return m_pieces[ChessApp::chessPos2Index(chessPos)];
 }
 
-void Board::handleKingMove(Vec2i const newKingPos)
+void Board::handleKingMove(Vec2i const& newKingPos)
 {
     auto const king = getPieceAt(newKingPos);
     bool const wasKingWhite = king->getSide() == Side::WHITE;
@@ -292,7 +320,7 @@ void Board::handleRookCapture()
     }
 }
 
-void Board::handleRookMove(Vec2i const newRookPos)
+void Board::handleRookMove(Vec2i const& newRookPos)
 {
     auto const rook = std::dynamic_pointer_cast<Rook>(getPieceAt(newRookPos));
     assert(rook);
@@ -304,7 +332,7 @@ void Board::handleRookMove(Vec2i const newRookPos)
     //if the rook moved already then we can just leave
     if(rook->getHasMoved() || koqs == NEITHER) return;
 
-    if(koqs == KING_SIDE) 
+    if(koqs == KING_SIDE)
     {
         removeCastlingRights(isRookWhite ? 
             CastleRights::WSHORT : CastleRights::BSHORT);
@@ -319,7 +347,7 @@ void Board::handleRookMove(Vec2i const newRookPos)
     rook->setKingOrQueenSide(NEITHER);
 }
 
-void Board::handleDoublePushMove(Vec2i const doublePushPosition)
+void Board::handleDoublePushMove(Vec2i const& doublePushPosition)
 {
     Vec2i const newEnPassantTarget
     {
@@ -331,7 +359,7 @@ void Board::handleDoublePushMove(Vec2i const doublePushPosition)
 }
 
 //castle square is the location of where the king lands after a castle.
-void Board::handleCastleMove(Vec2i const castleSquare)
+void Board::handleCastleMove(Vec2i const& castleSquare)
 {   
     //the king is on the castlesquare but the rook has yet to be updated
 
@@ -406,42 +434,40 @@ void Board::playCorrectMoveAudio(Move const& recentMove)
     }
 }
 
-void Board::postMoveUpdate(Move const& newMove)
+void Board::postMoveUpdate(Move const& move, Vec2i const& sourceSquare)
 {
-    const auto& [move, moveType] = newMove;
+    const auto& b = ChessApp::getBoard();
+    const auto& [destinationSquare, moveType] = move;
     using enum MoveInfo;
 
     switch(moveType)
     {
-    case DOUBLE_PUSH:   handleDoublePushMove(move); break;
+    case DOUBLE_PUSH:   handleDoublePushMove(destinationSquare); break;
     case ENPASSANT:     handleEnPassantMove();      break;
-    case CASTLE:        handleCastleMove(move);     break;
-    case ROOK_MOVE:     handleRookMove(move);       break;
+    case CASTLE:        handleCastleMove(destinationSquare);     break;
+    case ROOK_MOVE:     handleRookMove(destinationSquare);       break;
     case ROOK_CAPTURE:  handleRookCapture();        break;//when a rook gets captured
-    case KING_MOVE:     handleKingMove(move);       break;
-    case ROOK_CAPTURE_AND_PROMOTION://when a pawn captures a rook on the first or eighth rank 
-    {
-        handleRookCapture();
-        break;
-    }
+    case KING_MOVE:     handleKingMove(destinationSquare);       break;
+    case ROOK_CAPTURE_AND_PROMOTION: handleRookCapture();//when a pawn captures a rook on the first or eighth rank 
     }
 
     if(moveType != DOUBLE_PUSH)
         resetEnPassant();
 
-    //if the move type was a promotion then the user still needs to decide which piece 
-    //to pick in the newly rendered promotion window. once a piece is picked 
-    if(moveType == PROMOTION)
-        return;
+    playCorrectMoveAudio(move);
 
-    playCorrectMoveAudio(newMove);
+    if(ChessApp::isUserConnected() && b.getWhosTurnItIs() == getSideUserIsPlayingAs())
+        ChessApp::sendMove(sourceSquare, destinationSquare, moveType);
+
     toggleTurn();
-    setLastCapturedPiece(nullptr);//if there was a last captured piece it was consumed. so set it to null
+
+    //if there was a last captured piece it was consumed. so set it to null
+    setLastCapturedPiece(nullptr);
 
     updateLegalMoves();
 }
 
-void Board::updateEnPassant(Vec2i const newLocation)
+void Board::updateEnPassant(Vec2i const& newLocation)
 {
     m_enPassantPosition = ChessApp::inRange(newLocation) ? newLocation : Vec2i{-1, -1};
 }
@@ -549,18 +575,15 @@ void Board::updateLegalMoves()
     }
 }
 
-void Board::capturePiece(Vec2i const location)
+void Board::capturePiece(Vec2i const& location)
 {  
     assert(ChessApp::inRange(location));
-    auto const pieceToCapture = getPieceAt(location);
-    if(!pieceToCapture) return;//if there isnt a piece here just leave   
-
     m_lastCapturedPiece = getPieceAt(location);
-    m_pieces[ChessApp::chessPos2Index(location)] = nullptr;
+    m_pieces[ChessApp::chessPos2Index(location)].reset();
 }
 
 //all piece moves should go through this method
-void Board::movePiece(Vec2i const source, Vec2i const destination)
+void Board::movePiece(Vec2i const& source, Vec2i const& destination)
 {   
     //if there is a piece at the destination move it to the array of captured pieces
     if(getPieceAt(destination))
@@ -570,7 +593,7 @@ void Board::movePiece(Vec2i const source, Vec2i const destination)
     int const isource = ChessApp::chessPos2Index(source);
 
     m_pieces[idest] = m_pieces[isource];
-    m_pieces[isource] = nullptr;
+    m_pieces[isource].reset();
 
     m_pieces[idest]->setChessPosition(destination);
 }
