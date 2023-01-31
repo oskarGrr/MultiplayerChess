@@ -14,10 +14,11 @@ Board::Board()
       m_locationOfCheckingPiece{-1,-1}, m_locationOfSecondCheckingPiece{-1, -1},
       m_enPassantPosition{-1,-1}, m_sideOfWhosTurnItIs(Side::WHITE),
       m_castlingRights(CastleRights::NONE), m_viewingPerspective(Side::WHITE),
-      m_sideUserIsPlayingAs(Side::INVALID), m_winLossDrawState(WinLossDrawTypes::INVALID)
+      m_sideUserIsPlayingAs(Side::INVALID), m_winLossDrawState(WinLossDrawTypes::INVALID),
+      m_lastMoveMade{}
 {
     //load the board with the fen string
-    std::string const startingFEN(STARTING_FEN); 
+    std::string const startingFEN(STARTING_FEN);
     loadFENIntoBoard(startingFEN);
 
     //update the pieces internal legal moves
@@ -31,7 +32,7 @@ Board::~Board()
 
 void Board::flipBoardViewingPerspective()
 {
-    setBoardViewingPerspective(m_viewingPerspective == 
+    setBoardViewingPerspective(m_viewingPerspective ==
         Side::WHITE ? Side::BLACK : Side::WHITE);
 }
 
@@ -42,14 +43,11 @@ void Board::resetBoard()
     for(int i = 16; i < 48; ++i)
         capturePiece(ChessApp::index2ChessPos(i));
 
-    setLastCapturedPiece(nullptr);
-
     std::string const startingFEN(STARTING_FEN);
     loadFENIntoBoard(startingFEN);
-
-    resetEnPassant();
-
+    setLastCapturedPiece(nullptr);
     updateLegalMoves();
+    m_lastMoveMade = Move();
 }
 
 //factory method for placing a piece at the specified location on the board
@@ -73,6 +71,10 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
     }
 }
 
+//loads up a fen string into the board. 
+//makes some assumptions that the given string is a valid fen string.
+//in the future I will probably make a seperate class for loading the 
+//different portions of a fen string in order to break up this method which is a little lengthy
 void Board::loadFENIntoBoard(std::string const& FEN)
 {   
     int file = 0, rank = 7;
@@ -140,7 +142,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         case 'K'://if the FEN string has white king side castling encoded into it
         {   
             auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(h1));
-            assert(unmovedRook);
+            assert(unmovedRook);//if white can castle short there should be a rook here
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::KING_SIDE);
             unmovedRook->setIfRookHasMoved(false);
             m_castlingRights |= WSHORT; 
@@ -149,7 +151,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         case 'Q':
         {
             auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(a1));
-            assert(unmovedRook);   
+            assert(unmovedRook);//if white can castle long there should be a rook here
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::QUEEN_SIDE);
             unmovedRook->setIfRookHasMoved(false);
             m_castlingRights |= WLONG;
@@ -158,7 +160,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         case 'k':
         {   
             auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(h8));
-            assert(unmovedRook);
+            assert(unmovedRook);//if black can castle short there should be a rook here
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::KING_SIDE);
             unmovedRook->setIfRookHasMoved(false);
             m_castlingRights |= BSHORT;
@@ -167,7 +169,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
         case 'q':
         {   
             auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(a8));
-            assert(unmovedRook);
+            assert(unmovedRook);//if black can castle long there should be a rook here
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::QUEEN_SIDE);
             unmovedRook->setIfRookHasMoved(false);
             m_castlingRights |= BLONG;
@@ -227,17 +229,16 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
         Piece::setPieceOnMouse(p);
 }
 
-auto Board::requestMove(Vec2i const& requestedPosition)
+//called from piecePutDownRoutine() to see if the move being requested
+//is in the vector of fully legal moves for the piece on the mouse
+auto Board::requestMove(Vec2i const& destinationSquare)
 {
-    auto const pom = Piece::getPieceOnMouse();
-    auto const beg = pom->getLegalMoves().cbegin();
-    auto const end = pom->getLegalMoves().cend();
-    
-    if(!pom) return end;
+    auto pom = Piece::getPieceOnMouse();
 
-    for(auto it = beg; it != end; ++it)
+    auto end = pom->getLegalMoves().end();
+    for(auto it = pom->getLegalMoves().begin(); it != end; ++it)
     {
-        if(it->first == requestedPosition)
+        if(it->m_dest == destinationSquare)
             return it;
     }
 
@@ -262,20 +263,18 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
         return;
     }
 
-    auto const it = requestMove(ChessApp::screen2ChessPos(screenPos));
-    if(it != pom->getLegalMoves().end())
+    if(auto it = requestMove(ChessApp::screen2ChessPos(screenPos));
+        it != pom->getLegalMoves().end())
     {
-        if(it->second == MoveInfo::PROMOTION || 
-           it->second == MoveInfo::ROOK_CAPTURE_AND_PROMOTION)
+        movePiece(*it);
+        if(it->m_moveType == MoveInfo::PROMOTION || 
+           it->m_moveType == MoveInfo::ROOK_CAPTURE_AND_PROMOTION)
         {
-            movePiece(Piece::getPieceOnMouse()->getChessPosition(), it->first);
-            ChessApp::queuePromotionWndToOpen();
-            return;//leave without commiting the move (ChessApp::finalizePromotion() will commit the move)
+            ChessApp::openPromotionPopup();
+            return;
         }
 
-        Vec2i oldChessPos = Piece::getPieceOnMouse()->getChessPosition();
-        movePiece(oldChessPos, it->first);
-        postMoveUpdate(*it, oldChessPos);
+        postMoveUpdate(*it);
     }
 
     Piece::putPieceOnMouseDown();
@@ -358,30 +357,29 @@ void Board::handleDoublePushMove(Vec2i const& doublePushPosition)
     updateEnPassant(newEnPassantTarget);
 }
 
-//castle square is the location of where the king lands after a castle.
-void Board::handleCastleMove(Vec2i const& castleSquare)
+void Board::handleCastleMove(Move const& castleMove)
 {   
-    //the king is on the castlesquare but the rook has yet to be updated
+    //the king is on the castlesquare but the rook has yet to be moved
 
-    bool const wasLongCastle = castleSquare.x == 2;
+    bool const wasLongCastle = castleMove.m_dest.x == 2;
 
     //where is the rook (before we put it on the other side of the king)
-    Vec2i const oldRookPosition
+    Vec2i const preCastleRookPos
     {   
-        .x = wasLongCastle ? (castleSquare.x - 2) : (castleSquare.x + 1),
-        .y = castleSquare.y
+        .x = wasLongCastle ? (castleMove.m_dest.x - 2) : (castleMove.m_dest.x + 1),
+        .y = castleMove.m_dest.y
     };
 
-    auto rookToBeMoved = getPieceAt(oldRookPosition);
+    auto rookToBeMoved = getPieceAt(preCastleRookPos);
     bool wasRookWhite = rookToBeMoved->getSide() == Side::WHITE;
 
-    Vec2i const newRookPosition
+    Vec2i const postCastleRookPos
     {
-        .x = castleSquare.x + (wasLongCastle ? 1 : -1),
-        .y = castleSquare.y
+        .x = castleMove.m_dest.x + (wasLongCastle ? 1 : -1),
+        .y = castleMove.m_dest.y
     };
 
-    movePiece(oldRookPosition, newRookPosition);
+    movePiece(Move(preCastleRookPos, postCastleRookPos, MoveInfo::CASTLE));
 
     using enum CastleRights;     
     auto const bitMask = wasRookWhite ? (WLONG | WSHORT) : (BLONG | BSHORT);
@@ -402,12 +400,11 @@ void Board::handleEnPassantMove()
 
 //to be called in postMoveUpdate() after the correct above single ha
 //method was called and before m_lastCapturedPiece is reset to null
-void Board::playCorrectMoveAudio(Move const& recentMove)
+void Board::playCorrectMoveAudio(MoveInfo recentMoveInfo)
 {
-    const auto& [move, moveType] = recentMove;
-    switch(moveType)
-    {
     using enum MoveInfo;
+    switch(recentMoveInfo)
+    {
     //move sounds
     case DOUBLE_PUSH: [[fallthrough]];
     case ROOK_MOVE:   [[fallthrough]];
@@ -434,36 +431,45 @@ void Board::playCorrectMoveAudio(Move const& recentMove)
     }
 }
 
-void Board::postMoveUpdate(Move const& move, Vec2i const& sourceSquare)
+//whichPromoType is defaulted to PromoType::INVALID to indicate no promotion. otherwise
+//whichPromoType will indicate the type of piece being promoted to
+void Board::postMoveUpdate(Move const& move, PromoType whichPromoType)
 {
     const auto& b = ChessApp::getBoard();
-    const auto& [destinationSquare, moveType] = move;
-    using enum MoveInfo;
+    Side whosTurnIsIt = b.getWhosTurnItIs();
 
-    switch(moveType)
+    switch(move.m_moveType)
     {
-    case DOUBLE_PUSH:   handleDoublePushMove(destinationSquare); break;
-    case ENPASSANT:     handleEnPassantMove();      break;
-    case CASTLE:        handleCastleMove(destinationSquare);     break;
-    case ROOK_MOVE:     handleRookMove(destinationSquare);       break;
-    case ROOK_CAPTURE:  handleRookCapture();        break;//when a rook gets captured
-    case KING_MOVE:     handleKingMove(destinationSquare);       break;
-    case ROOK_CAPTURE_AND_PROMOTION: handleRookCapture();//when a pawn captures a rook on the first or eighth rank 
+    case MoveInfo::DOUBLE_PUSH:   handleDoublePushMove(move.m_dest); break;
+    case MoveInfo::ENPASSANT:     handleEnPassantMove();             break;
+    case MoveInfo::CASTLE:        handleCastleMove(move);            break;
+    case MoveInfo::ROOK_MOVE:     handleRookMove(move.m_dest);       break;
+    case MoveInfo::ROOK_CAPTURE:  handleRookCapture();               break;//when a rook gets captured
+    case MoveInfo::KING_MOVE:     handleKingMove(move.m_dest);       break;
+    case MoveInfo::ROOK_CAPTURE_AND_PROMOTION: handleRookCapture(); [[fallthrough]];
+    case MoveInfo::PROMOTION:
+    {
+        capturePiece(move.m_dest);//capture the pawn before we make the new piece
+        using enum PromoType;
+        assert(whichPromoType != INVALID);
+        if(whichPromoType == QUEEN_PROMOTION) makeNewPieceAt<Queen>(move.m_dest, whosTurnIsIt);
+        else if(whichPromoType == ROOK_PROMOTION) makeNewPieceAt<Rook>(move.m_dest, whosTurnIsIt);
+        else if(whichPromoType == KNIGHT_PROMOTION) makeNewPieceAt<Knight>(move.m_dest, whosTurnIsIt);
+        else makeNewPieceAt<Bishop>(move.m_dest, whosTurnIsIt);
+        Piece::putPieceOnMouseDown();
+    }
     }
 
-    if(moveType != DOUBLE_PUSH)
+    if(move.m_moveType != MoveInfo::DOUBLE_PUSH)
         resetEnPassant();
 
-    playCorrectMoveAudio(move);
+    playCorrectMoveAudio(move.m_moveType);
 
-    if(ChessApp::isUserConnected() && b.getWhosTurnItIs() == getSideUserIsPlayingAs())
-        ChessApp::sendMove(sourceSquare, destinationSquare, moveType);
+    if(ChessApp::isUserConnected() && whosTurnIsIt == getSideUserIsPlayingAs())
+        ChessApp::sendMove(move, whichPromoType);
 
     toggleTurn();
-
-    //if there was a last captured piece it was consumed. so set it to null
-    setLastCapturedPiece(nullptr);
-
+    setLastCapturedPiece(nullptr);//if there was a last captured piece it was consumed. so set it to null
     updateLegalMoves();
 }
 
@@ -583,17 +589,19 @@ void Board::capturePiece(Vec2i const& location)
 }
 
 //all piece moves should go through this method
-void Board::movePiece(Vec2i const& source, Vec2i const& destination)
+void Board::movePiece(Move const& move)
 {   
     //if there is a piece at the destination move it to the array of captured pieces
-    if(getPieceAt(destination))
-        capturePiece(destination);
+    if(getPieceAt(move.m_dest))
+        capturePiece(move.m_dest);
 
-    int const idest   = ChessApp::chessPos2Index(destination);
-    int const isource = ChessApp::chessPos2Index(source);
+    int const idest   = ChessApp::chessPos2Index(move.m_dest);
+    int const isource = ChessApp::chessPos2Index(move.m_source);
 
     m_pieces[idest] = m_pieces[isource];
     m_pieces[isource].reset();
 
-    m_pieces[idest]->setChessPosition(destination);
+    m_pieces[idest]->setChessPosition(move.m_dest);
+    
+    m_lastMoveMade = move;
 }

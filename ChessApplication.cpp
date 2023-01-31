@@ -12,6 +12,8 @@
 
 ChessApp ChessApp::s_theApplication{};
 
+#define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
+
 ChessApp::ChessApp() try :
       m_chessBoardWidth(896u), m_chessBoardHeight(896u),
       m_squareSize(m_chessBoardWidth / 8), m_menuBarHeight(0.0f),
@@ -260,6 +262,7 @@ void ChessApp::drawNewConnectionPopup()
 
 void ChessApp::drawMenuBar()
 {
+    ImGui::StyleColorsLight();//light menu bar
     if(ImGui::BeginMainMenuBar()) [[unlikely]]
     {
         if(ImGui::BeginMenu("options"))
@@ -298,19 +301,22 @@ void ChessApp::drawMenuBar()
     
         ImGui::EndMainMenuBar();
     }
+    ImGui::StyleColorsDark();//light menu bar
 }
 
-void ChessApp::sendMove(Vec2i const& source, Vec2i const& dest, MoveInfo const& info)
+//pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. otherwise
+//it will send a value to indicate that a promotion took place and which piece to promote to
+void ChessApp::sendMove(Move const& move, PromoType pt)
 {
-    //first pack all of the information into a string
+    //pack all of the information into a string
     using enum P2PChessConnection::NetMessageType;
     std::string netMessage;
     netMessage.resize(P2PChessConnection::s_moveMessageSize);
     netMessage[0] = static_cast<char>(MOVE);
-    netMessage[1] = source.x; netMessage[2] = source.y;
-    netMessage[3] = dest.x;   netMessage[4] = dest.y;
-    netMessage[5] = static_cast<char>(info);
-
+    netMessage[1] = move.m_source.x; netMessage[2] = move.m_source.y;
+    netMessage[3] = move.m_dest.x;   netMessage[4] = move.m_dest.y;
+    netMessage[5] = static_cast<char>(pt);
+    netMessage[6] = static_cast<char>(move.m_moveType);
     s_theApplication.m_netWork.sendMessage(MOVE, netMessage);
 }
 
@@ -383,6 +389,7 @@ void ChessApp::onNewConnection()
         if(auto result = m_netWork.recieveMessageIfAvailable(2, 0))
         { 
             auto& msg = result.value();   
+            assert(static_cast<NMT>(msg.at(0)) == NMT::WHICH_SIDE);
             whiteOrBlack = static_cast<Side>(msg.at(1)) == 
                 Side::BLACK ? Side::WHITE : Side::BLACK;
 
@@ -396,23 +403,14 @@ void ChessApp::onNewConnection()
     m_wnd.m_connectWindowIsOpen = false;
 }
 
-//not called from networkRoutine() like the other handle message moves are.
-//this method is called from ChessApp::onNewConnection() if the user is the "server"
-void ChessApp::handleWhichSideMessage(std::string_view msg)
-{
-    assert(m_netWork.isUserServerOrClient() == P2PChessConnection::ConnectionType::SERVER);
-    assert(msg.size() == P2PChessConnection::s_WhichSideMessageSize);
-    m_board.setSideUserIsPlayingAs(static_cast<Side>(msg.at(1)));
-}
-
 void ChessApp::handleMoveMessage(std::string_view msg)
 {
-    assert(msg.size() != P2PChessConnection::s_moveMessageSize);
-    Vec2i source{msg.at(1), msg.at(2)};
-    Vec2i destination{msg.at(3), msg.at(4)};
-    MoveInfo moveInfo = static_cast<MoveInfo>(msg.at(5));
-    m_board.movePiece(source, destination);
-    m_board.postMoveUpdate({destination, moveInfo}, source);
+    assert(msg.size() == P2PChessConnection::s_moveMessageSize);
+    MoveInfo moveType = static_cast<MoveInfo>(msg.at(6));
+    Move move = {{msg.at(1), msg.at(2)}, {msg.at(3), msg.at(4)}, moveType};
+    PromoType pt = static_cast<PromoType>(msg.at(5));
+    m_board.movePiece(move);
+    m_board.postMoveUpdate(move, pt);
 }
 
 void ChessApp::handleResignMessage()
@@ -450,6 +448,7 @@ void ChessApp::networkingRoutine()
     {
         //if we are no longer connected...
         m_board.resetBoard();
+        m_board.setBoardViewingPerspective(Side::WHITE);
         m_wnd.m_winLossPopupIsOpen = true;
     }
 }
@@ -460,28 +459,13 @@ bool ChessApp::inRange(Vec2i const chessPos)
     return chessPos.x <= 7 && chessPos.x >= 0 && chessPos.y <= 7 && chessPos.y >= 0;
 }
 
-//called from drawPromotionPopup() when a piece is clicked on
-template<typename pieceTy> 
-void ChessApp::finalizePromotion(Vec2i const& promotionSquare, bool const wasCapture)
-{
-    auto pom = Piece::getPieceOnMouse();
-    m_board.makeNewPieceAt<pieceTy>(promotionSquare, pom->getSide());
-    m_board.toggleTurn();
-    m_board.updateLegalMoves();
-    closePromotionWindow();
-    Piece::putPieceOnMouseDown();
-    if(wasCapture) playChessCaptureSound();
-    else playChessMoveSound();
-}
-
 void ChessApp::drawPromotionPopup()
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {1.0f, 1.0f});
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,   {0.0f, 0.0f});
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,  {0.0f, 1.0f});
-    ImGui::StyleColorsDark();
-
+    
     ImGui::Begin("pick a piece!", nullptr,
         ImGuiWindowFlags_NoResize    |
         ImGuiWindowFlags_NoMove      |
@@ -490,34 +474,47 @@ void ChessApp::drawPromotionPopup()
         ImGuiWindowFlags_NoTitleBar  |
         ImGuiWindowFlags_NoBackground);
 
-    auto pom = Piece::getPieceOnMouse(), lastCapturedPiece = m_board.getLastCapturedPiece();
-    assert(pom);
-    bool const wasPawnWhite = pom->getSide() == Side::WHITE;
-
-    Vec2i promotionSquare = lastCapturedPiece ? lastCapturedPiece->getChessPosition() : pom->getChessPosition();
+    bool wasPromoACapture = !!m_board.getLastCapturedPiece();
+    Move promoMove = m_board.getLastMove();//get the move made by the pawn to promote
+    assert(promoMove.m_moveType == MoveInfo::PROMOTION || 
+        promoMove.m_moveType == MoveInfo::ROOK_CAPTURE_AND_PROMOTION);
+    Vec2i promotionSquare = promoMove.m_dest;
     Vec2i promotionScreenPos = chess2ScreenPos(promotionSquare);
-    promotionScreenPos.x -= m_squareSize / 2; promotionScreenPos.y -= m_squareSize / 2;
-    if(m_board.getViewingPerspective() != pom->getSide()) promotionScreenPos.y -= m_squareSize * 3;
+    promotionScreenPos.x -= m_squareSize * 0.5f; promotionScreenPos.y -= m_squareSize * 0.5f;
+    if(m_board.getViewingPerspective() != m_board.getWhosTurnItIs())
+        promotionScreenPos.y -= m_squareSize * 3;
+
     ImGui::SetWindowPos(promotionScreenPos);
 
-    auto indecies = (pom->getSide() == Side::WHITE) ? std::array{WQUEEN, WROOK, WKNIGHT, WBISHOP} :
+    auto indecies = (m_board.getWhosTurnItIs() == Side::WHITE) ? std::array{WQUEEN, WROOK, WKNIGHT, WBISHOP} :
         std::array{BQUEEN, BROOK, BKNIGHT, BBISHOP};
 
-    if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[0]]), m_pieceTextureSizes[indecies[0]], 
-        {0,0}, {1,1}, -1, {0,0,0,0}, {1,1,1,0.25f}))
-        finalizePromotion<Queen>(promotionSquare,  !!lastCapturedPiece);
+    if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[0]]), m_pieceTextureSizes[indecies[0]],
+       {0, 0}, {1, 1}, -1, {0, 0, 0, 0}, {1, 1, 1, 0.25f}))
+    {
+        m_board.postMoveUpdate(promoMove, PromoType::QUEEN_PROMOTION);
+        m_wnd.m_promotionWindowIsOpen = false;
+    }
     if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[1]]), m_pieceTextureSizes[indecies[1]],
-        {0,0}, {1,1}, -1, {0,0,0,0}, {1,1,1,0.25f}))
-        finalizePromotion<Rook>(promotionSquare,   !!lastCapturedPiece);
+       {0, 0}, {1, 1}, -1, {0, 0, 0, 0}, {1, 1, 1, 0.25f}))
+    {
+        m_board.postMoveUpdate(promoMove, PromoType::ROOK_PROMOTION);
+        m_wnd.m_promotionWindowIsOpen = false;
+    }
     if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[2]]), m_pieceTextureSizes[indecies[2]],
-        {0,0}, {1,1}, -1, {0,0,0,0}, {1,1,1,0.25f}))
-        finalizePromotion<Knight>(promotionSquare, !!lastCapturedPiece);
+       {0, 0}, {1, 1}, -1, {0, 0, 0, 0}, {1, 1, 1, 0.25f}))
+    {
+        m_board.postMoveUpdate(promoMove, PromoType::KNIGHT_PROMOTION);
+        m_wnd.m_promotionWindowIsOpen = false;
+    }
     if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[3]]), m_pieceTextureSizes[indecies[3]],
-        {0,0}, {1,1}, -1, {0,0,0,0}, {1,1,1,0.25f}))
-        finalizePromotion<Bishop>(promotionSquare, !!lastCapturedPiece);
+       {0, 0}, {1, 1}, -1, {0, 0, 0, 0}, {1, 1, 1, 0.25f}))
+    {
+        m_board.postMoveUpdate(promoMove, PromoType::BISHOP_PROMOTION);
+        m_wnd.m_promotionWindowIsOpen = false;
+    }
 
     ImGui::End();
-    ImGui::StyleColorsLight();
     ImGui::PopStyleVar(4);
 }
 
@@ -590,14 +587,12 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
     return ret;
 }
 
-//TODO MAKE THIS ALSO RETURN FALSE FOR MOUSE BEING OVER IMGUI MENU
+//return if the position is on the board (false if over an imgui window)
+//in the future I will add a border with the rank file indicators around the board
+//and this func will also return false when the mouse is over that border.
 bool ChessApp::isScreenPositionOnBoard(Vec2i const& screenPosition)
 {
-    auto const& app = s_theApplication;//shorter name
-    return screenPosition.x > 0 && 
-           static_cast<Uint32>(screenPosition.x) < app.m_chessBoardWidth &&
-           screenPosition.y > app.m_menuBarHeight &&
-           screenPosition.y < app.m_wnd.m_height;
+    return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
 }
 
 void ChessApp::drawMoveIndicatorCircles()
@@ -610,9 +605,9 @@ void ChessApp::drawMoveIndicatorCircles()
     SDL_Rect circleSource{};
     SDL_QueryTexture(m_circleTexture, nullptr, nullptr, &circleSource.w, &circleSource.h);
 
-    for(auto const& [move, moveType] : pom->getLegalMoves())
+    for(auto const& move : pom->getLegalMoves())
     {
-        Vec2i const circlePos{ChessApp::chess2ScreenPos(move)};
+        Vec2i const circlePos{ChessApp::chess2ScreenPos(move.m_dest)};
         SDL_Rect const circleDest
         {
             static_cast<int>(circlePos.x - circleSource.w * 0.5f),
@@ -622,9 +617,9 @@ void ChessApp::drawMoveIndicatorCircles()
         };
 
         //if there is an enemy piece or enPassant square draw red circle instead
-        auto const piece = m_board.getPieceAt(move);
+        auto const piece = m_board.getPieceAt(move.m_dest);
         if(piece && piece->getSide() != m_board.getWhosTurnItIs() || 
-           move == m_board.getEnPassantIndex())
+            move.m_dest == m_board.getEnPassantIndex())
         {
             SDL_RenderCopy(renderer, m_redCircleTexture, &circleSource, &circleDest);
             continue;

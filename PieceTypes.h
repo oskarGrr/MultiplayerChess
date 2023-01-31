@@ -4,10 +4,7 @@
 #include "ChessApplication.h"
 #include <vector>
 #include <array>
-
-class Board;
-
-#define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
+#include <type_traits>
 
 //this class isnt responsible for ownership
 //of the Pieces. the ChessApp::_Board is, because the board "holds" the pieces.
@@ -66,11 +63,11 @@ private:
 
 protected:
 
-    enum struct PieceType : Uint32 {INVALID = 0, PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING};
-    PieceType m_type;//the type of the concrete piece extending this abstract class
+    enum struct PieceTypes : Uint32 {INVALID = 0, PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING};
+    PieceTypes m_type;//the type of the concrete piece extending this abstract class
 
     //here so pieces can see the m_type of other pieces instead of using dynamic_cast
-    inline static PieceType getType(Piece const& other) {return other.m_type;}
+    inline static PieceTypes getType(Piece const& other) {return other.m_type;}
 
     Vec2i m_locationOfPiecePinningThis;//the location of the piece (if there is one otherwise -1, -1) pinning *this to its king
 
@@ -83,7 +80,7 @@ protected:
 
     //this function assumes Board::m_checkState is equal to SINGLE_CHECK.
     //called by the concrete implementations of virtual void updateLegalMoves()=0;
-    static bool doesNonKingMoveResolveCheck(Move const&, Vec2i const posOfCheckingPiece);
+    static bool doesNonKingMoveResolveCheck(Move const&, Vec2i const& posOfCheckingPiece);
 
     static bool areSquaresOnSameDiagonal(Vec2i const, Vec2i const);
     static bool areSquaresOnSameRankOrFile(Vec2i const, Vec2i const);

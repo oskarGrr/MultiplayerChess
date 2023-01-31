@@ -2,7 +2,7 @@
 #include <exception>//std::exception
 #include <fstream>//std::ofstream
 
-int main(int argCount, char* arguments[])
+int main(int argCount, char** arguments)
 {    
     try
     {

@@ -60,14 +60,15 @@ public:
     enum struct ConnectionType : uint8_t {INVALID = 0, SERVER, CLIENT};
 
     //the layout of the NetMessageType::MOVE type of message: 
-    // |1|2|3|4|5|6|
-    //byte 1 will be the NetMessageType
-    //byte 2 will be the file (0-7) of the square where the piece is that will be moving
-    //byte 3 will be the rank (0-7) of the square where the piece is that will be moving
-    //byte 4 will be the file (0-7) of the square where the piece will be moving to
-    //byte 5 will be the rank (0-7) of the square where the piece will be moving to
+    // |0|1|2|3|4|5|6|
+    //byte 0 will be the NetMessageType
+    //byte 1 will be the file (0-7) of the square where the piece is that will be moving
+    //byte 2 will be the rank (0-7) of the square where the piece is that will be moving
+    //byte 3 will be the file (0-7) of the square where the piece will be moving to
+    //byte 4 will be the rank (0-7) of the square where the piece will be moving to
+    //byte 5 will be the PromoType (defined in board.h) of the promotion if there is one
     //byte 6 will be the MoveInfo (defined in board.h) of the move that is happening
-    static constexpr std::size_t s_moveMessageSize      {sizeof(NetMessageType) + 5};
+    static constexpr std::size_t s_moveMessageSize      {sizeof(NetMessageType) + 6};
     static constexpr std::size_t s_ResignMessageSize    {sizeof(NetMessageType)};
     static constexpr std::size_t s_DrawOfferMessageSize {sizeof(NetMessageType)};
     static constexpr std::size_t s_WhichSideMessageSize {sizeof(NetMessageType) + 1};

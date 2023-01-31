@@ -7,13 +7,13 @@
 #include <memory>//std::shared_ptr
 
 class Piece;
-
 enum struct Side : Uint32;
 
 //a signal to be stored with moves that the board 
 //listens to after a move is made
 enum struct MoveInfo : Uint32
 {
+    INVALID,
     NORMAL,
     NORMAL_CAPTURE, //a capture that inst an en passant or rook capture
     DOUBLE_PUSH,    //a double pawn push move
@@ -26,6 +26,31 @@ enum struct MoveInfo : Uint32
     ROOK_CAPTURE_AND_PROMOTION, //case where a pawn catures a rook and promotes
 };
 
+//the types of pieces you can promote a pawn to
+enum struct PromoType : Uint32
+{
+    INVALID, //invalid means no promotion
+    QUEEN_PROMOTION,
+    ROOK_PROMOTION,
+    KNIGHT_PROMOTION,
+    BISHOP_PROMOTION
+};
+
+//a move is a vec2 of where the piece moves to, where it moved from, and the type of move
+struct Move
+{
+    Vec2i    m_source; //where the piece is moving to
+    Vec2i    m_dest;   //where the piece moved from
+    MoveInfo m_moveType; //the type of the move
+    inline Move() : m_source{-1, -1}, m_dest{-1, -1}, m_moveType{MoveInfo::INVALID} {}
+    inline Move(Vec2i const& source, Vec2i const& dest, MoveInfo const& moveType) :
+        m_source{source}, m_dest{dest}, m_moveType{moveType} {}
+    inline bool operator==(Move const& rhs) const 
+    {
+        return m_source == rhs.m_source && m_dest == rhs.m_dest && m_moveType == rhs.m_moveType;
+    }
+};
+
 enum struct WinLossDrawTypes : Uint32
 {
     INVALID, //if the sate of m_winLossDrawType is INVALID the game is still in progress
@@ -34,8 +59,6 @@ enum struct WinLossDrawTypes : Uint32
     GAME_ABANDONMENT, //win from the other player abandoning game
     DRAW_AGREEMENT
 };
-
-using Move = std::pair<Vec2i, MoveInfo>;
 
 //bit masks to indicate what castling rights are available.
 enum CastleRights : Uint32
@@ -84,11 +107,13 @@ public:
     template<typename ConcreteTy> 
     void makeNewPieceAt(Vec2i const& pos, Side const side);
 
+    //the two main methods called inside ChessApp::processEvents()
+    void piecePickUpRoutine(SDL_Event const&) const;
+    void piecePutDownRoutine(SDL_Event const&);
+
     void resetBoard();//reset to starting position
     bool hasCastleRights(const CastleRights cr) const;//supply with one of the enums above and will respond with true or false
     void removeCastlingRights(const CastleRights cr);
-    void piecePickUpRoutine(SDL_Event const&) const;
-    void piecePutDownRoutine(SDL_Event const&);
     std::shared_ptr<Piece> getPieceAt(Vec2i const& chessPos) const;
     void updateEnPassant(Vec2i const& newPostition);
     inline bool isThereEnPassantAvailable() const {return m_enPassantPosition != Vec2i{-1, -1};}
@@ -102,7 +127,8 @@ public:
     inline void setLastCapturedPiece(auto p){m_lastCapturedPiece = p;}
     inline void setSideUserIsPlayingAs(Side s){m_sideUserIsPlayingAs = s;}
     inline Side getSideUserIsPlayingAs() const {return m_sideUserIsPlayingAs;}
-    inline auto& getPieces() {return m_pieces;}
+    inline auto const& getPieces() const {return m_pieces;}
+    inline Move const& getLastMove() const {return m_lastMoveMade;}
 
     enum struct CheckState{INVALID = 0, NO_CHECK, SINGLE_CHECK, DOUBLE_CHECK};
     inline CheckState getCheckState() const {return m_checkState;}
@@ -113,26 +139,18 @@ public:
     void updatePinnedPieces();
     void updatePseudoLegalsAndAttackedSquares();//update the pieces _PseudoLegals and get a vector of all attacked squares for the side that just made a move
     void updateCheckState();//update m_checkState
-    void movePiece(Vec2i const& source, Vec2i const& destination);//all piece moves should go through this method
-    void loadFENIntoBoard(std::string const&);
-
-    //methods called inside of postMoveUpdate() for handling certain special move types
-    void handleDoublePushMove(Vec2i const& doublePushPosition);
-    void handleCastleMove(Vec2i const& castleSquare);
-    void handleEnPassantMove();
-    void handleRookMove(Vec2i const& newRookPos);
-    void handleRookCapture();
-    void handleKingMove(Vec2i const& newKingPos);
+    void movePiece(Move const& move);//all piece moves should go through this method
 
     //to be called in postMoveUpdate() after the correct above single hanlde 
     //method was called and before m_lastCapturedPiece is reset to null
-    void playCorrectMoveAudio(Move const&);
-
-    auto requestMove(Vec2i const& requestedPosition);
-    void commitMove(Move const& newMove);
-    void postMoveUpdate(Move const& newMove, Vec2i const& postMoveUpdate);
+    void playCorrectMoveAudio(MoveInfo);
 
     void toggleTurn();//change whos turn it is to move
+
+    //whichPromoType is defaulted to PromoType::INVALID to indicate no promotion. otherwise
+    //whichPromoType will indicate the type of piece being promoted to
+    void postMoveUpdate(Move const& newMove, PromoType whichPromoType = PromoType::INVALID);
+
     void flipBoardViewingPerspective();
     inline void setBoardViewingPerspective(Side s) {m_viewingPerspective = s;}
 
@@ -150,4 +168,23 @@ private:
     Side             m_viewingPerspective;            //the side (white or black) that the player is viewing the board from
     Side             m_sideUserIsPlayingAs;           //the side the user is playing (only used when connected to another player)
     WinLossDrawTypes m_winLossDrawState;              //the current state of the game in terms of if the game is a win/loss/draw (INVALID means the game is ongoing)
+    Move             m_lastMoveMade;                  //the last move that was made (is updated after movePiece() not postMoveUpdate())
+
+    //methods called inside of postMoveUpdate() for handling certain special move types
+    void handleDoublePushMove(Vec2i const& doublePushPosition);
+    void handleCastleMove(Move const& castleMove);
+    void handleEnPassantMove();
+    void handleRookMove(Vec2i const& newRookPos);
+    void handleRookCapture();
+    void handleKingMove(Vec2i const& newKingPos);
+
+    //called from piecePutDownRoutine() to see if the move being requested
+    //is in the vector of fully legal moves for the piece on the mouse
+    auto requestMove(Vec2i const& destinationSquare);
+
+    //loads up a fen string into the board. 
+    //makes some assumptions that the given string is a valid fen string.
+    //in the future I will probably make a seperate class for loading the 
+    //different portions of a fen string in order to break up this method which is a little lengthy
+    void loadFENIntoBoard(std::string const&);
 };

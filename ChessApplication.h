@@ -14,11 +14,6 @@ enum struct Side : Uint32
     INVALID, BLACK, WHITE
 };
 
-//a Move type is a Vector 2 that holds where the piece 
-//is moving to and a MoveInfo enum that holds a signal to be 
-//consumed by the board after that move is made
-using Move = std::pair<Vec2i, MoveInfo>;
-
 //singleton chessApp that contains the board (which owns/"holds" the pieces)
 class ChessApp
 {
@@ -73,10 +68,11 @@ public:
     inline static void playChessCaptureSound(){s_theApplication.m_pieceCaptureSound.playFullSound();}
 
     //allow a promotion window to open on the next iteration of the main loop
-    inline static void queuePromotionWndToOpen(){s_theApplication.m_wnd.m_promotionWindowIsOpen = true;}
+    inline static void openPromotionPopup(){s_theApplication.m_wnd.m_promotionWindowIsOpen = true;}
 
-    //wrapper method for sending a move to the other player
-    static void sendMove(Vec2i const& source, Vec2i const& dest, MoveInfo const& info);
+    //pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. otherwise
+    //it will send a value to indicate that a promotion took place and which piece to promote to
+    static void sendMove(Move const& move, PromoType pt = PromoType::INVALID);
 
 private:
 
@@ -104,7 +100,7 @@ private:
     void handleMoveMessage(std::string_view msg);
     void handleResignMessage();
     void handleDrawOfferMessage();
-    void handleWhichSideMessage(std::string_view msg);
+    //there is no handle WHICH_SIDE message. that just happens inline inside of onNewConnection() 
 
     bool processEvents();
     void initCircleTexture(int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a, SDL_Texture** toInit);
@@ -112,11 +108,6 @@ private:
 
     //called from drawPromotionPopup() when a piece is clicked on
     template<typename pieceTy> void finalizePromotion(Vec2i const& promotionSquare, bool const wasCapture);
-
-    //the only way the promotion window should be closed is via the user clicking on a button to select
-    //a piece to promote to then that move will be completed. so this should only be called when one
-    //of the buttons in the promotion window is clicked on.
-    inline void closePromotionWindow(){s_theApplication.m_wnd.m_promotionWindowIsOpen = false;}
 
     Uint32 const m_chessBoardWidth;
     Uint32 const m_chessBoardHeight;
