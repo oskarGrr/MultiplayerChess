@@ -14,8 +14,7 @@ Board::Board()
       m_locationOfCheckingPiece{-1,-1}, m_locationOfSecondCheckingPiece{-1, -1},
       m_enPassantPosition{-1,-1}, m_sideOfWhosTurnItIs(Side::WHITE),
       m_castlingRights(CastleRights::NONE), m_viewingPerspective(Side::WHITE),
-      m_sideUserIsPlayingAs(Side::INVALID), m_winLossDrawState(WinLossDrawTypes::INVALID),
-      m_lastMoveMade{}
+      m_sideUserIsPlayingAs(Side::INVALID), m_lastMoveMade{}
 {
     //load the board with the fen string
     std::string const startingFEN(STARTING_FEN);
@@ -471,6 +470,9 @@ void Board::postMoveUpdate(Move const& move, PromoType whichPromoType)
     toggleTurn();
     setLastCapturedPiece(nullptr);//if there was a last captured piece it was consumed. so set it to null
     updateLegalMoves();
+
+    //check for checkmate or stalemate
+
 }
 
 void Board::updateEnPassant(Vec2i const& newLocation)

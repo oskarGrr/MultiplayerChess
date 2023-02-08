@@ -14,6 +14,16 @@ enum struct Side : Uint32
     INVALID, BLACK, WHITE
 };
 
+enum struct GameState : Uint32
+{
+    INVALID,
+    IN_PROGRESS,
+    CHECKMATE,
+    STALEMATE,
+    GAME_ABANDONMENT,//win from the other player abandoning game
+    DRAW_AGREEMENT
+};
+
 //singleton chessApp that contains the board (which owns/"holds" the pieces)
 class ChessApp
 {
@@ -39,17 +49,21 @@ public:
     ChessApp(ChessApp&&)=delete;
     ChessApp& operator=(ChessApp const&)=delete;
     ChessApp& operator=(ChessApp&&)=delete;
+
     ~ChessApp();
 
     void run();//main application loop
+
+    inline void setGameState(GameState gs){m_gameState = gs;}
 
     //getter methods
     inline static ChessApp& getApp(){return s_theApplication;}
     inline static Board& getBoard(){return s_theApplication.m_board;}
     inline static Uint32 getSquareSize(){return s_theApplication.m_squareSize;}
-    inline auto const& getTextures() const {return m_pieceTextures;}
+    inline static auto const& getTextures(){return s_theApplication.m_pieceTextures;}
     inline static SDL_Renderer* getCurrentRenderer(){return s_theApplication.m_wnd.m_renderer;}
     inline static bool isPromotionWndOpen(){return s_theApplication.m_wnd.m_promotionWindowIsOpen;}
+    inline static auto getGameState() {return s_theApplication.m_gameState;}
 
     //helper methods
     inline static int chessPos2Index(Vec2i const pos){return pos.y * 8 + pos.x;}
@@ -73,6 +87,7 @@ public:
     //pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. otherwise
     //it will send a value to indicate that a promotion took place and which piece to promote to
     static void sendMove(Move const& move, PromoType pt = PromoType::INVALID);
+
 
 private:
 
@@ -109,6 +124,7 @@ private:
     //called from drawPromotionPopup() when a piece is clicked on
     template<typename pieceTy> void finalizePromotion(Vec2i const& promotionSquare, bool const wasCapture);
 
+    GameState m_gameState;
     Uint32 const m_chessBoardWidth;
     Uint32 const m_chessBoardHeight;
     Uint32 m_squareSize;//square size in pixels

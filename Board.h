@@ -23,7 +23,7 @@ enum struct MoveInfo : Uint32
     ROOK_MOVE,
     KING_MOVE,
     ROOK_CAPTURE,
-    ROOK_CAPTURE_AND_PROMOTION, //case where a pawn catures a rook and promotes
+    ROOK_CAPTURE_AND_PROMOTION //case where a pawn catures a rook and promotes
 };
 
 //the types of pieces you can promote a pawn to
@@ -49,15 +49,6 @@ struct Move
     {
         return m_source == rhs.m_source && m_dest == rhs.m_dest && m_moveType == rhs.m_moveType;
     }
-};
-
-enum struct WinLossDrawTypes : Uint32
-{
-    INVALID, //if the sate of m_winLossDrawType is INVALID the game is still in progress
-    CHECKMATE,
-    STALEMATE,
-    GAME_ABANDONMENT, //win from the other player abandoning game
-    DRAW_AGREEMENT
 };
 
 //bit masks to indicate what castling rights are available.
@@ -167,7 +158,6 @@ private:
     CastleRights     m_castlingRights;                //bitwise & with the CastleRights enumerations
     Side             m_viewingPerspective;            //the side (white or black) that the player is viewing the board from
     Side             m_sideUserIsPlayingAs;           //the side the user is playing (only used when connected to another player)
-    WinLossDrawTypes m_winLossDrawState;              //the current state of the game in terms of if the game is a win/loss/draw (INVALID means the game is ongoing)
     Move             m_lastMoveMade;                  //the last move that was made (is updated after movePiece() not postMoveUpdate())
 
     //methods called inside of postMoveUpdate() for handling certain special move types

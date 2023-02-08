@@ -15,7 +15,7 @@ ChessApp ChessApp::s_theApplication{};
 #define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
 
 ChessApp::ChessApp() try :
-      m_chessBoardWidth(896u), m_chessBoardHeight(896u),
+      m_gameState{GameState::INVALID}, m_chessBoardWidth(896u), m_chessBoardHeight(896u),
       m_squareSize(m_chessBoardWidth / 8), m_menuBarHeight(0.0f),
       m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0u), m_board{},
       m_pieceMoveSound("sounds/woodChessMove.wav"), m_pieceCastleSound("sounds/woodChessCastle.wav"),

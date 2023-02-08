@@ -19,7 +19,7 @@ Window::Window(int const width, int const height,
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui::StyleColorsDark();   
+    ImGui::StyleColorsDark();
     ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
     ImGui_ImplSDLRenderer_Init(m_renderer);
 
