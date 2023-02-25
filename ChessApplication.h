@@ -17,17 +17,20 @@ enum struct Side : Uint32
 enum struct GameState : Uint32
 {
     INVALID,
-    IN_PROGRESS,
+    GAME_IN_PROGRESS,
     CHECKMATE,
     STALEMATE,
-    GAME_ABANDONMENT,//win from the other player abandoning game
-    DRAW_AGREEMENT
+    GAME_ABANDONMENT,//when the connection is lost/opponent closes game
+    DRAW_AGREEMENT,
+    BLACK_RESIGNED,
+    WHITE_RESIGNED
 };
 
 //singleton chessApp that contains the board (which owns/"holds" the pieces)
 class ChessApp
 {
 public:
+
 //indecies into the array of SDL textures for the different pieces.
 //scoped to ChessApp but is an unscoped enum to allow for convenient 
 //implicit conversion to the underlying type 
@@ -54,18 +57,16 @@ public:
 
     void run();//main application loop
 
-    inline void setGameState(GameState gs){m_gameState = gs;}
-
     //getter methods
     inline static ChessApp& getApp(){return s_theApplication;}
     inline static Board& getBoard(){return s_theApplication.m_board;}
-    inline static Uint32 getSquareSize(){return s_theApplication.m_squareSize;}
-    inline static auto const& getTextures(){return s_theApplication.m_pieceTextures;}
-    inline static SDL_Renderer* getCurrentRenderer(){return s_theApplication.m_wnd.m_renderer;}
-    inline static bool isPromotionWndOpen(){return s_theApplication.m_wnd.m_promotionWindowIsOpen;}
-    inline static auto getGameState() {return s_theApplication.m_gameState;}
+    inline Uint32 getSquareSize(){return m_squareSize;}
+    inline auto const& getTextures(){return m_pieceTextures;}
+    inline SDL_Renderer* getCurrentRenderer(){return m_wnd.m_renderer;}
+    inline bool isPromotionWndOpen() const {return m_wnd.m_promotionWindowIsOpen;}
+    inline GameState getGameState() const {return m_gameState;}
 
-    //helper methods
+    //helper static methods
     inline static int chessPos2Index(Vec2i const pos){return pos.y * 8 + pos.x;}
     inline static Vec2i index2ChessPos(int const index){return{index % 8, index / 8};}
     static Vec2i chess2ScreenPos(Vec2i const);
@@ -77,19 +78,29 @@ public:
     inline static bool isUserConnected(){return s_theApplication.m_netWork.isUserConnected();}
 
     //play audio methods
-    inline static void playChessMoveSound(){s_theApplication.m_pieceMoveSound.playFullSound();}
-    inline static void playChessCastleSound(){s_theApplication.m_pieceCastleSound.playFullSound();}
-    inline static void playChessCaptureSound(){s_theApplication.m_pieceCaptureSound.playFullSound();}
+    inline void playChessMoveSound(){m_pieceMoveSound.playFullSound();}
+    inline void playChessCastleSound(){m_pieceCastleSound.playFullSound();}
+    inline void playChessCaptureSound(){m_pieceCaptureSound.playFullSound();}
 
-    //allow a promotion window to open on the next iteration of the main loop
-    inline static void openPromotionPopup(){s_theApplication.m_wnd.m_promotionWindowIsOpen = true;}
+    //open/close imgui windows/popups on the next iteration of main loop
+    inline void openPromotionPopup(){m_wnd.m_promotionWindowIsOpen = true;}
+    inline void closePromotionPopup(){m_wnd.m_promotionWindowIsOpen = false;}
+    inline void openWinLossDrawPopup(){m_wnd.m_winLossDrawPopupIsOpen = true;}
+    inline void closeWinLossDrawPopup(){m_wnd.m_winLossDrawPopupIsOpen = false;}
 
-    //pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. otherwise
-    //it will send a value to indicate that a promotion took place and which piece to promote to
-    static void sendMove(Move const& move, PromoType pt = PromoType::INVALID);
+    //pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. Otherwise
+    //it will hold a value that indicates that a promotion took place and which piece to promote to.
+    void sendMove(Move const& move, PromoType pt = PromoType::INVALID);
 
+    //There are lots of messages that just consist of the message type.
+    //This method is for telling m_network to send one of those simple message types.
+    void send1ByteMessage(P2PChessConnection::NetMessageType NMT);
+
+    void setGameState(GameState gs) {m_gameState = gs;}
 
 private:
+
+    void checkForDisconnect();
 
     void renderAllTheThings();
 
@@ -104,25 +115,34 @@ private:
     void drawMenuBar();
     void drawResetButtonErrorPopup();
     void drawNewConnectionPopup();
+    void drawWinLossDrawPopup();
+    void drawRematchRequestWindow();
 
-    friend void P2PChessConnection::connect2Server(std::string_view);
-    friend void P2PChessConnection::waitForClient2Connect(long, long);
+    friend void P2PChessConnection::connect2Server(std::string_view targetIP);
+    friend void P2PChessConnection::waitForClient2Connect(long const, long const);
 
     void onNewConnection();//called from inside P2PChessConnection::connect2Server and waitForClient2connect once a connection is established
-    void networkingRoutine();//called at the top of ChessApp::run()
+    void processIncomingMessages();//called at the top of ChessApp::run()
 
-    //handle the different kinds of messages that can be sent to the other player (P2PChessConnection::NetMessageType)
-    void handleMoveMessage(std::string_view msg);
+    //handle the different kinds of messages that can be sent to/from the other player
+    void handleMoveMessage(std::string_view msg);//handle the incomming move message from the opponent
     void handleResignMessage();
     void handleDrawOfferMessage();
+    void handleRematchRequestMessage();
+    void handleRematchAcceptMessage();
     //there is no handle WHICH_SIDE message. that just happens inline inside of onNewConnection() 
 
     bool processEvents();
     void initCircleTexture(int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a, SDL_Texture** toInit);
     void loadPieceTexturesFromDisk();
 
-    //called from drawPromotionPopup() when a piece is clicked on
-    template<typename pieceTy> void finalizePromotion(Vec2i const& promotionSquare, bool const wasCapture);
+    //looks for a file in the same path as the .exe called squareColorData.txt.
+    //if it cant find it, then it will throw an exception.
+    void deserializeAndLoadSquareColorData();
+    void serializeSquareColorData();
+
+    inline void openRematchRequestWindow()  {m_wnd.m_rematchRequestWindowIsOpen = true;}
+    inline void closeRematchRequestWindow() {m_wnd.m_rematchRequestWindowIsOpen = false;}
 
     GameState m_gameState;
     Uint32 const m_chessBoardWidth;
@@ -133,8 +153,8 @@ private:
     WavSound m_pieceMoveSound;
     WavSound m_pieceCastleSound;
     WavSound m_pieceCaptureSound;
-    std::array<Uint8, 4> m_lightSquareColor;
-    std::array<Uint8, 4> m_darkSquareColor;
+    std::array<Uint32, 4> m_lightSquareColor;
+    std::array<Uint32, 4> m_darkSquareColor;
     Board  m_board;//the singleton board composed here as part of the ChessApp instance
     SDL_Texture* m_circleTexture;
     SDL_Texture* m_redCircleTexture;

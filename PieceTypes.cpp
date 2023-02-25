@@ -10,12 +10,13 @@ Piece::Piece(Side const side, Vec2i const chessPos)
     : m_pseudoLegals{}, m_legalMoves{}, m_side(side),
       m_chessPos(chessPos), m_attackedSquares{},
       m_whichTexture(ChessApp::TextureIndices::INVALID), m_type(PieceTypes::INVALID), 
-      m_locationOfPiecePinningThis{-1, -1}
+      m_locationOfPiecePinningThis{INVALID_VEC2I}
 {
 }
 
 Piece::~Piece()
 {
+    //the pieces themselves dont own any resources to free :)
 }
 
 Pawn::Pawn(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
@@ -884,14 +885,14 @@ bool Piece::areSquaresOnSameRankOrFile(Vec2i const square0, Vec2i const square1)
 
 //updates *this's internal m_squareOfPiecePinningThis variable to hold
 //the location of the square pinning *this. If no piece is pinning
-//*this to its king then m_squareOfPiecePinningThis will be -1, -1
+//*this to its king then m_squareOfPiecePinningThis will be INVALID_VEC2I (-1, -1)
 void Piece::updatePinnedInfo()
 {
     if(m_type == PieceTypes::KING)
         return;
 
     auto const& b = ChessApp::getBoard();
-    resetLocationOfPiecePinningThis();//reset m_locationOfPiecePinningThis back to -1, -1
+    resetLocationOfPiecePinningThis();//reset m_locationOfPiecePinningThis back to INVALID_VEC2I (-1, -1)
     Vec2i const kingPos = m_side == Side::WHITE ?
         King::getWhiteKingPos() : King::getBlackKingPos();
 
@@ -911,7 +912,7 @@ void Piece::updatePinnedInfo()
     {
         offsetPosition += direction;//make a step...
 
-        assert(ChessApp::inRange(offsetPosition) && "loop ran off the board somehow " && __LINE__ && __FILE__);
+        assert(ChessApp::inRange(offsetPosition));
 
         auto const p = b.getPieceAt(offsetPosition);
         if(p)//if there is a piece at offsetPosition
@@ -943,13 +944,13 @@ void Piece::updatePinnedInfo()
             if(isDiagonal)//if *this is on the same diagonal as the king
             {
                 m_locationOfPiecePinningThis = p->m_type == QUEEN || p->m_type == BISHOP
-                    ? p->m_chessPos : Vec2i{-1, -1};
+                    ? p->m_chessPos : INVALID_VEC2I;
                 return;
             }
             else//if *this is on the same rank or file as the king
             {
                 m_locationOfPiecePinningThis = p->m_type == QUEEN || p->m_type == ROOK
-                    ? p->m_chessPos : Vec2i{-1,-1};
+                    ? p->m_chessPos : INVALID_VEC2I;
                 return;
             }
         }

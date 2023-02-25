@@ -26,5 +26,6 @@ private:
     bool m_connectWindowIsOpen;
     bool m_resetBoardPopupIsOpen;
     bool m_newConnectionPopupIsOpen;
-    bool m_winLossPopupIsOpen;
+    bool m_winLossDrawPopupIsOpen;
+    bool m_rematchRequestWindowIsOpen;
 };

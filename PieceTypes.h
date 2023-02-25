@@ -39,9 +39,10 @@ public:
 
     virtual void updatePseudoLegalAndAttacked()=0;//updates a piece's m_pseudoLegals and m_attackedSquares   
 
-    //updates the full legal moves for a given concrete piece.
-    //after the pieces pseudo legal moves pinned pieces and the board check 
-    //state have been updated then this method can be used
+    //updates the fullly legal moves for a given concrete piece.
+    //after the pieces pseudo legal moves, pinned pieces, and the board check 
+    //state have been updated (and the opposite sides attacked squares)
+    //then this method should be used.
     virtual void updateLegalMoves()=0;
 
     void updatePinnedInfo();//updates a pieces m_locationOfPiecePinningThis

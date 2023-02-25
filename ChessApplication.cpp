@@ -13,6 +13,7 @@
 ChessApp ChessApp::s_theApplication{};
 
 #define NUM_OF_PIECE_TEXTURES 12 //6 types of pieces * 2 for both sides
+#define SQUARE_COLOR_DATA_FILENAME "squareColorData.txt"
 
 ChessApp::ChessApp() try :
       m_gameState{GameState::INVALID}, m_chessBoardWidth(896u), m_chessBoardHeight(896u),
@@ -20,14 +21,15 @@ ChessApp::ChessApp() try :
       m_wnd(m_chessBoardWidth, m_chessBoardHeight, "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0u), m_board{},
       m_pieceMoveSound("sounds/woodChessMove.wav"), m_pieceCastleSound("sounds/woodChessCastle.wav"),
       m_pieceCaptureSound("sounds/woodCaptureMove.wav"),
-      m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},
+      m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},//default square colors
       m_circleTexture(nullptr), m_redCircleTexture(nullptr),
       m_pieceTextureScale(1.0f), m_pieceTextures{}, m_netWork{}
 {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
-    initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);    
+    initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);
     loadPieceTexturesFromDisk();
+    deserializeAndLoadSquareColorData();
 }
 catch(std::exception& e)
 {
@@ -47,18 +49,24 @@ catch(...)
 
 ChessApp::~ChessApp()
 {
+    //free textures
     SDL_DestroyTexture(m_circleTexture);
     SDL_DestroyTexture(m_redCircleTexture);
-    for(auto* t : m_pieceTextures) SDL_DestroyTexture(t);
+    for(auto t : m_pieceTextures) SDL_DestroyTexture(t);
+
+    //save the square colors
+    serializeSquareColorData();
 }
 
 void ChessApp::run()
 {
+    setGameState(GameState::GAME_IN_PROGRESS);
     bool shouldQuit = false;
     while(!shouldQuit)
-    {   
-        networkingRoutine();
+    {
+        processIncomingMessages();
         shouldQuit = processEvents();
+        checkForDisconnect();
         renderAllTheThings();
         SDL_Delay(10);
     }
@@ -69,8 +77,8 @@ bool ChessApp::processEvents()
 {
     SDL_Event event;
     while(SDL_PollEvent(&event))
-    {   
-        //allow imgui to proccess its own events and update the IO state
+    {
+        //allow imgui to process its own events and update the IO state
         ImGui_ImplSDL2_ProcessEvent(&event);
 
         switch(event.type)
@@ -88,7 +96,7 @@ bool ChessApp::processEvents()
 void ChessApp::initCircleTexture
 (int radius, Uint8 RR, Uint8 GG, Uint8 BB, Uint8 AA, SDL_Texture** toInit)
 {
-//make sure the ordering of the RGBA bytes will be the same 
+//make sure the ordering of the RGBA bytes will be the same
 //regarless of endianess of the target platform
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
     Uint32 rMask = 0xFF000000;
@@ -131,14 +139,72 @@ void ChessApp::initCircleTexture
          rMask, gMask, bMask, aMask
     );
    
-    if(!surface)
-    {
-        std::cerr << SDL_GetError();
-        std::terminate();
-    }
+    if(!surface) throw std::exception(SDL_GetError());
 
     *toInit = SDL_CreateTextureFromSurface(getCurrentRenderer(), surface);
     SDL_FreeSurface(surface);
+}
+
+//looks for a file in the same path as the .exe called squareColorData.txt.
+//if it cant find it, then it will throw an exception.
+void ChessApp::deserializeAndLoadSquareColorData()
+{
+    std::ifstream ifs(SQUARE_COLOR_DATA_FILENAME);
+
+    //if squareColorData.txt cant be found
+    if(!ifs)
+    {
+        //ChessApp ctor already initialized the square colors to the default colors
+        std::ofstream ofs("log.txt");
+        ofs << "Could not find squareColorData.txt. Using default square colors instead.\n";
+        return;
+    }
+
+    //else load the colors...
+
+    //a comment will start with a '#' character
+    //light squares will start with L, then a space, then the 3
+    //R G B numbers as 0-255 integers with spaces in between.
+    //dark squares are the same but start with D.
+    for(std::string currentLine; std::getline(ifs, currentLine);)
+    {
+        if(currentLine[0] == '#') continue;       
+
+        //else the line represents light or dark square colors...
+
+        std::stringstream ss(currentLine);
+        char LDchar{};
+        ss >> LDchar;//store the first 'L' or 'D'
+
+        for(int i = 0; i < 4; ++i)
+        {
+            Uint32 RGB{};
+            ss >> RGB;
+            if(LDchar == 'L') m_lightSquareColor[i] = RGB;//if the current line is light square colors
+            else m_darkSquareColor[i] = RGB;//else if the current line is dark square colors
+        }
+    }
+}
+
+void ChessApp::serializeSquareColorData()
+{
+    std::ofstream ofs("squareColorData.txt");//dont append, but replace
+
+    ofs << "#this is just a file for saving the color of the squares\n"
+           "#'L' or 'D' means the next 3 numbers are space seperated 0-255 R G B colors\n"
+           "#the L means the light square colors and the D means the dark square colors\n\n";
+
+    //save the light square color
+    ofs << "L ";
+    for(auto const& i : m_lightSquareColor)
+        ofs << i << ' ';
+
+    ofs << '\n';
+
+    //save the dark square color
+    ofs << "D ";
+    for(auto const& i : m_darkSquareColor) 
+        ofs << i << ' ';
 }
 
 void ChessApp::drawColorEditorWindow()
@@ -150,10 +216,10 @@ void ChessApp::drawColorEditorWindow()
     
     ImVec4 f_lightSquares{};//a float (0-1) version of the light squares
     ImVec4 f_darkSquares{};//a float (0-1) version of the dark squares
-    for(std::size_t i = 0; i < 4; ++i)
+    for(int i = 0; i < 4; ++i)
     {
         f_lightSquares[i] = m_lightSquareColor[i] / 255.0f;
-        f_darkSquares[i] = m_darkSquareColor[i] / 255.0f;
+        f_darkSquares[i]  = m_darkSquareColor[i]  / 255.0f;
     }
     
     ImGui::ColorPicker3("light squares", &f_lightSquares[0]);
@@ -161,13 +227,28 @@ void ChessApp::drawColorEditorWindow()
     ImGui::TextUnformatted("dark squares");
     ImGui::ColorPicker3("dark squares", &f_darkSquares[0]);
     
-    for(std::size_t i = 0; i < 4; ++i)
+    for(int i = 0; i < 4; ++i)
     {
         m_lightSquareColor[i] = static_cast<Uint8>(f_lightSquares[i] * 255);
         m_darkSquareColor[i] = static_cast<Uint8>(f_darkSquares[i] * 255);
     }
     
     ImGui::End();
+}
+
+//called after process events in the main loop because the game state needs to be updated
+//to checkmate or stalemate first if there was one
+void ChessApp::checkForDisconnect()
+{
+    if(m_netWork.wasConnectionClosedOrLost())
+    {
+        //if the game was still in progress when we lost connection
+        if(getGameState() == GameState::GAME_IN_PROGRESS)
+            setGameState(GameState::GAME_ABANDONMENT);
+
+        openWinLossDrawPopup();
+        m_netWork.resetWasConnectionLostBool();
+    }
 }
 
 //returns true if a successful connection was made
@@ -179,7 +260,7 @@ void ChessApp::drawConnectionWindow()
     std::string targetIP;
     targetIP.resize(46);
 
-    ImGui::TextUnformatted("enter an IPv4 address and then press enter");  
+    ImGui::TextUnformatted("enter an IPv4 address and then press enter");
     if(ImGui::InputText("IP address", targetIP.data(), targetIP.size(),
         ImGuiInputTextFlags_EnterReturnsTrue))
     {
@@ -190,6 +271,7 @@ void ChessApp::drawConnectionWindow()
         catch(networkException& ne)
         {
             (void)ne;
+            //todo.. error handling lol
         }
     }
     
@@ -206,6 +288,7 @@ void ChessApp::drawConnectionWindow()
         catch(networkException& ne)
         {
             (void)ne;
+            //todo.. error handling lol
         }
     }
 
@@ -224,7 +307,7 @@ void ChessApp::drawResetButtonErrorPopup()
     {
         ImGui::TextUnformatted("can't reset board when connected with another player!");
         if(ImGui::Button("okay"))
-        { 
+        {
             ImGui::CloseCurrentPopup();
             m_wnd.m_resetBoardPopupIsOpen = false;
         }
@@ -243,7 +326,7 @@ void ChessApp::drawNewConnectionPopup()
     if(ImGui::BeginPopup("successfully connected"))
     {
         std::string whichPieces("you are playing with the ");
-        whichPieces.append(m_board.getSideUserIsPlayingAs() == 
+        whichPieces.append(m_board.getSideUserIsPlayingAs() ==
             Side::WHITE ? "white " : "black ");
         whichPieces.append("pieces");
 
@@ -304,20 +387,109 @@ void ChessApp::drawMenuBar()
     ImGui::StyleColorsDark();//light menu bar
 }
 
-//pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. otherwise
-//it will send a value to indicate that a promotion took place and which piece to promote to
+void ChessApp::drawWinLossDrawPopup()
+{
+    //always center this window when appearing
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    ImGui::Begin("game over", &m_wnd.m_winLossDrawPopupIsOpen,
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
+    
+    using enum GameState;
+    auto gs = getGameState();
+    assert(gs != GAME_IN_PROGRESS);
+    auto whosTurnIsIt = m_board.getWhosTurnItIs();
+    std::string msg{};
+
+    if(!(gs == DRAW_AGREEMENT || gs == STALEMATE))
+    {
+        //if game state is game abandonment, then the user is already disconnected at this point
+        if(isUserConnected())
+        {
+            msg = "you";
+            switch(gs)
+            {
+            case CHECKMATE:
+            {
+                msg.append(whosTurnIsIt == m_board.getSideUserIsPlayingAs() ? " lost" : " won");
+                msg.append(" by checkmate");
+                break;
+            }
+            case BLACK_RESIGNED:
+            {
+                msg.append(whosTurnIsIt != Side::BLACK ? "lost: " : "won: ");
+                msg.append("black resigned");
+                break;
+            }
+            case WHITE_RESIGNED:
+            {
+                msg.append("white resgined");
+                break;
+            }
+            }
+        }
+        else if(gs == GAME_ABANDONMENT) msg = "connection was lost or opponent closed their game";
+        else//if not a draw (and if offline but not game abandonment) then the type is win or loss by checkmate
+        {
+            msg = whosTurnIsIt == Side::BLACK ? "black" : "white";
+            msg.append(" lost by checkmate");
+        }
+    }
+    else msg = gs == DRAW_AGREEMENT ? "draw by agreement" : "draw by stalemate";//else game was a draw
+
+    ImGui::TextUnformatted(msg.data());
+
+    if(isUserConnected())
+    {
+        if(ImGui::Button("request rematch"))
+            send1ByteMessage(P2PChessConnection::NetMessageType::REMATCH_REQUEST);
+    }
+    else//if playing offline
+    {
+        if(ImGui::Button("okay"))
+            m_board.resetBoard();
+    }
+
+    ImGui::End();
+}
+
+//pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. Otherwise
+//it will hold a value that indicates that a promotion took place and which piece to promote to.
 void ChessApp::sendMove(Move const& move, PromoType pt)
 {
     //pack all of the information into a string
     using enum P2PChessConnection::NetMessageType;
     std::string netMessage;
     netMessage.resize(P2PChessConnection::s_moveMessageSize);
+
+    //the layout of the NetMessageType::MOVE type of message: 
+    //|0|1|2|3|4|5|6|
+    //byte 0 will be the NetMessageType
+    //byte 1 will be the file (0-7) of the square where the piece is that will be moving
+    //byte 2 will be the rank (0-7) of the square where the piece is that will be moving
+    //byte 3 will be the file (0-7) of the square where the piece will be moving to
+    //byte 4 will be the rank (0-7) of the square where the piece will be moving to
+    //byte 5 will be the PromoType (enum defined in board.h) of the promotion if there is one
+    //byte 6 will be the MoveInfo (enum defined in board.h) of the move that is happening
     netMessage[0] = static_cast<char>(MOVE);
-    netMessage[1] = move.m_source.x; netMessage[2] = move.m_source.y;
-    netMessage[3] = move.m_dest.x;   netMessage[4] = move.m_dest.y;
+    netMessage[1] = move.m_source.x;
+    netMessage[2] = move.m_source.y;
+    netMessage[3] = move.m_dest.x;
+    netMessage[4] = move.m_dest.y;
     netMessage[5] = static_cast<char>(pt);
     netMessage[6] = static_cast<char>(move.m_moveType);
-    s_theApplication.m_netWork.sendMessage(MOVE, netMessage);
+
+    m_netWork.sendMessage(MOVE, netMessage);
+}
+
+void ChessApp::send1ByteMessage(P2PChessConnection::NetMessageType NMT)
+{
+    using enum P2PChessConnection::NetMessageType;
+    std::string msg{};
+    msg.resize(1);
+    msg[0] = static_cast<char>(NMT);
+    m_netWork.sendMessage(NMT, msg.data());
 }
 
 //called once per frame in ChessApp::run() to render everything 
@@ -327,23 +499,29 @@ void ChessApp::renderAllTheThings()
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    if(m_wnd.m_connectWindowIsOpen) [[unlikely]]
+    if(m_wnd.m_connectWindowIsOpen)        [[unlikely]]
         drawConnectionWindow();
 
-    if(m_wnd.m_ColorEditorWindowIsOpen) [[unlikely]]
+    if(m_wnd.m_ColorEditorWindowIsOpen)    [[unlikely]]
         drawColorEditorWindow();     
     
-    if(m_wnd.m_demoWindowIsOpen) [[unlikely]]
+    if(m_wnd.m_demoWindowIsOpen)           [[unlikely]]
         ImGui::ShowDemoWindow();
     
-    if(m_wnd.m_promotionWindowIsOpen) [[unlikely]]
+    if(m_wnd.m_promotionWindowIsOpen)      [[unlikely]]
         drawPromotionPopup();
         
-    if(m_wnd.m_resetBoardPopupIsOpen) [[unlikely]]
+    if(m_wnd.m_resetBoardPopupIsOpen)      [[unlikely]]
         drawResetButtonErrorPopup();
 
-    if(m_wnd.m_newConnectionPopupIsOpen) [[unlikely]]
+    if(m_wnd.m_newConnectionPopupIsOpen)   [[unlikely]]
         drawNewConnectionPopup();
+
+    if(m_wnd.m_winLossDrawPopupIsOpen)     [[unlikely]]
+        drawWinLossDrawPopup();
+
+    if(m_wnd.m_rematchRequestWindowIsOpen) [[unlikely]]
+        drawRematchRequestWindow();
 
     drawMenuBar();
 
@@ -352,7 +530,7 @@ void ChessApp::renderAllTheThings()
     drawSquares();
     drawPiecesNotOnMouse();
     if(!isPromotionWndOpen()) [[likely]]
-    { 
+    {
         drawMoveIndicatorCircles();
         drawPieceOnMouse();
     }
@@ -376,7 +554,7 @@ void ChessApp::onNewConnection()
     //later I will add the ability to pick which pieces the users want to play as instead
     //of it being random
     if(m_netWork.isUserServerOrClient() == CT::CLIENT)
-    { 
+    {
         whiteOrBlack = (std::rand() & 1) ? Side::WHITE : Side::BLACK;
         m_board.setSideUserIsPlayingAs(whiteOrBlack);
         std::string sideMsg;
@@ -387,8 +565,8 @@ void ChessApp::onNewConnection()
     else//the user is the "server"
     {
         if(auto result = m_netWork.recieveMessageIfAvailable(2, 0))
-        { 
-            auto& msg = result.value();   
+        {
+            auto& msg = result.value();
             assert(static_cast<NMT>(msg.at(0)) == NMT::WHICH_SIDE);
             whiteOrBlack = static_cast<Side>(msg.at(1)) == 
                 Side::BLACK ? Side::WHITE : Side::BLACK;
@@ -403,6 +581,7 @@ void ChessApp::onNewConnection()
     m_wnd.m_connectWindowIsOpen = false;
 }
 
+//handle the incomming move message from the opponent
 void ChessApp::handleMoveMessage(std::string_view msg)
 {
     assert(msg.size() == P2PChessConnection::s_moveMessageSize);
@@ -413,32 +592,50 @@ void ChessApp::handleMoveMessage(std::string_view msg)
     m_board.postMoveUpdate(move, pt);
 }
 
+//no resign button or draw offer button yet
 void ChessApp::handleResignMessage()
 {
     
 }
-
 void ChessApp::handleDrawOfferMessage()
 {
     
 }
 
+void ChessApp::handleRematchRequestMessage()
+{
+    if(!m_wnd.m_rematchRequestWindowIsOpen)
+        openRematchRequestWindow();
+}
+
+void ChessApp::handleRematchAcceptMessage()
+{
+    m_board.resetBoard();
+    
+}
+
 //called once per frame at the beginning of the frame in ChessApp::run()
-void ChessApp::networkingRoutine()
+void ChessApp::processIncomingMessages()
 {
     if(!m_netWork.isUserConnected())
         return;
 
     if(auto result = m_netWork.recieveMessageIfAvailable())
-    {        
+    {
         auto& msg = result.value();
-        P2PChessConnection::NetMessageType messageType = static_cast<decltype(messageType)>(msg.at(0));
+        using NMT = P2PChessConnection::NetMessageType;
 
-        switch(messageType)
+        //the first byte of a message sent is the type of message sent. 
+        //it is expressed as one of the P2PChessConnection::NetMessageType enumerations
+        NMT msgType = static_cast<NMT>(msg.at(0));
+
+        switch(msgType)
         {
-        case P2PChessConnection::NetMessageType::MOVE:       handleMoveMessage(msg);   break;
-        case P2PChessConnection::NetMessageType::RESIGN:     handleResignMessage();    break;
-        case P2PChessConnection::NetMessageType::DRAW_OFFER: handleDrawOfferMessage();
+        case NMT::MOVE:             handleMoveMessage(msg);       break;
+        case NMT::RESIGN:           handleResignMessage();        break;
+        case NMT::DRAW_OFFER:       handleDrawOfferMessage();     break;
+        case NMT::REMATCH_ACCEPT:   handleRematchAcceptMessage(); break;
+        case NMT::REMATCH_REQUEST:  handleRematchRequestMessage();
         }
     }
 
@@ -449,7 +646,6 @@ void ChessApp::networkingRoutine()
         //if we are no longer connected...
         m_board.resetBoard();
         m_board.setBoardViewingPerspective(Side::WHITE);
-        m_wnd.m_winLossPopupIsOpen = true;
     }
 }
 
@@ -492,30 +688,46 @@ void ChessApp::drawPromotionPopup()
     if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[0]]), m_pieceTextureSizes[indecies[0]],
        {0, 0}, {1, 1}, -1, {0, 0, 0, 0}, {1, 1, 1, 0.25f}))
     {
-        m_board.postMoveUpdate(promoMove, PromoType::QUEEN_PROMOTION);
-        m_wnd.m_promotionWindowIsOpen = false;
+        m_board.postMoveUpdate(promoMove, PromoType::QUEEN_PROMOTION); closePromotionPopup();
     }
     if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[1]]), m_pieceTextureSizes[indecies[1]],
        {0, 0}, {1, 1}, -1, {0, 0, 0, 0}, {1, 1, 1, 0.25f}))
     {
-        m_board.postMoveUpdate(promoMove, PromoType::ROOK_PROMOTION);
-        m_wnd.m_promotionWindowIsOpen = false;
+        m_board.postMoveUpdate(promoMove, PromoType::ROOK_PROMOTION); closePromotionPopup();
     }
     if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[2]]), m_pieceTextureSizes[indecies[2]],
        {0, 0}, {1, 1}, -1, {0, 0, 0, 0}, {1, 1, 1, 0.25f}))
     {
-        m_board.postMoveUpdate(promoMove, PromoType::KNIGHT_PROMOTION);
-        m_wnd.m_promotionWindowIsOpen = false;
+        m_board.postMoveUpdate(promoMove, PromoType::KNIGHT_PROMOTION); closePromotionPopup();
     }
     if(ImGui::ImageButton(static_cast<ImTextureID>(m_pieceTextures[indecies[3]]), m_pieceTextureSizes[indecies[3]],
        {0, 0}, {1, 1}, -1, {0, 0, 0, 0}, {1, 1, 1, 0.25f}))
     {
-        m_board.postMoveUpdate(promoMove, PromoType::BISHOP_PROMOTION);
-        m_wnd.m_promotionWindowIsOpen = false;
+        m_board.postMoveUpdate(promoMove, PromoType::BISHOP_PROMOTION); closePromotionPopup();
     }
 
     ImGui::End();
     ImGui::PopStyleVar(4);
+}
+
+void ChessApp::drawRematchRequestWindow()
+{
+    ImGui::Begin("opponent has requested rematch", &m_wnd.m_rematchRequestWindowIsOpen);
+
+    ImGui::TextUnformatted("your opponent has requested a rematch");
+
+    if(ImGui::Button("accept"))
+    {
+        m_board.resetBoard();
+        send1ByteMessage(P2PChessConnection::NetMessageType::REMATCH_ACCEPT);
+    }
+
+    if(ImGui::Button("decline and disconnect"))
+    {
+        
+    }
+
+    ImGui::End();
 }
 
 //tells wether mouse position is over a given rectangle

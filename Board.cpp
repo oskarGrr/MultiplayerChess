@@ -11,8 +11,8 @@
 
 Board::Board()
     : m_pieces{}, m_lastCapturedPiece{}, m_checkState(CheckState::INVALID),
-      m_locationOfCheckingPiece{-1,-1}, m_locationOfSecondCheckingPiece{-1, -1},
-      m_enPassantPosition{-1,-1}, m_sideOfWhosTurnItIs(Side::WHITE),
+      m_locationOfCheckingPiece{INVALID_VEC2I}, m_locationOfSecondCheckingPiece{INVALID_VEC2I},
+      m_enPassantPosition{INVALID_VEC2I}, m_sideOfWhosTurnItIs(Side::WHITE),
       m_castlingRights(CastleRights::NONE), m_viewingPerspective(Side::WHITE),
       m_sideUserIsPlayingAs(Side::INVALID), m_lastMoveMade{}
 {
@@ -47,6 +47,9 @@ void Board::resetBoard()
     setLastCapturedPiece(nullptr);
     updateLegalMoves();
     m_lastMoveMade = Move();
+    auto& app = ChessApp::getApp();
+    app.setGameState(GameState::GAME_IN_PROGRESS);
+    app.closeWinLossDrawPopup();
 }
 
 //factory method for placing a piece at the specified location on the board
@@ -246,18 +249,19 @@ auto Board::requestMove(Vec2i const& destinationSquare)
 
 void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
 {  
+    auto& app = ChessApp::getApp();
     auto const pom = Piece::getPieceOnMouse();
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || !pom)
         return;
 
     //case where the promotion window is open and the user has yet to choose a piece
-    if(ChessApp::isPromotionWndOpen())
+    if(app.isPromotionWndOpen())
         return;
         
     Vec2i screenPos{mouseEvent.button.x, mouseEvent.button.y};
 
     if(!ChessApp::isScreenPositionOnBoard(screenPos))
-    { 
+    {
         Piece::putPieceOnMouseDown();
         return;
     }
@@ -266,10 +270,10 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
         it != pom->getLegalMoves().end())
     {
         movePiece(*it);
-        if(it->m_moveType == MoveInfo::PROMOTION || 
+        if(it->m_moveType == MoveInfo::PROMOTION ||
            it->m_moveType == MoveInfo::ROOK_CAPTURE_AND_PROMOTION)
         {
-            ChessApp::openPromotionPopup();
+            app.openPromotionPopup();
             return;
         }
 
@@ -308,12 +312,12 @@ void Board::handleRookCapture()
 
     if(koqs == KING_SIDE)
     {
-        removeCastlingRights(wasRookWhite ? 
+        removeCastlingRights(wasRookWhite ?
             CastleRights::WSHORT : CastleRights::BSHORT);
     }
     else//if queen side rook
     {
-        removeCastlingRights(wasRookWhite ? 
+        removeCastlingRights(wasRookWhite ?
             CastleRights::WLONG : CastleRights::BLONG);
     }
 }
@@ -401,41 +405,41 @@ void Board::handleEnPassantMove()
 //method was called and before m_lastCapturedPiece is reset to null
 void Board::playCorrectMoveAudio(MoveInfo recentMoveInfo)
 {
-    using enum MoveInfo;
+    auto& app = ChessApp::getApp();
     switch(recentMoveInfo)
     {
+    using enum MoveInfo;
     //move sounds
     case DOUBLE_PUSH: [[fallthrough]];
     case ROOK_MOVE:   [[fallthrough]];
-    case NORMAL: ChessApp::playChessMoveSound(); break;
+    case NORMAL: app.playChessMoveSound(); break;
 
     //capture sounds
     case ENPASSANT: [[fallthrough]];
     case ROOK_CAPTURE: [[fallthrough]];
     case ROOK_CAPTURE_AND_PROMOTION: [[fallthrough]];
-    case NORMAL_CAPTURE: ChessApp::playChessCaptureSound(); break;
+    case NORMAL_CAPTURE: app.playChessCaptureSound(); break;
 
     //capture or move sound 
     case PROMOTION:   [[fallthrough]];
     case KING_MOVE:
     {
-        auto& b = ChessApp::getBoard();
+        auto& b = app.getBoard();
         if(b.getLastCapturedPiece())//if the king move captured a piece
-            ChessApp::playChessCaptureSound();
+            app.playChessCaptureSound();
         else
-            ChessApp::playChessMoveSound();
+            app.playChessMoveSound();
         break;
     }
-    case CASTLE: ChessApp::playChessCastleSound();
+    case CASTLE: app.playChessCastleSound();
     }
 }
 
 //whichPromoType is defaulted to PromoType::INVALID to indicate no promotion. otherwise
-//whichPromoType will indicate the type of piece being promoted to
+//whichPromoType should indicate the type of piece being promoted to
 void Board::postMoveUpdate(Move const& move, PromoType whichPromoType)
 {
-    const auto& b = ChessApp::getBoard();
-    Side whosTurnIsIt = b.getWhosTurnItIs();
+    auto const whosTurn = getWhosTurnItIs();
 
     switch(move.m_moveType)
     {
@@ -443,18 +447,18 @@ void Board::postMoveUpdate(Move const& move, PromoType whichPromoType)
     case MoveInfo::ENPASSANT:     handleEnPassantMove();             break;
     case MoveInfo::CASTLE:        handleCastleMove(move);            break;
     case MoveInfo::ROOK_MOVE:     handleRookMove(move.m_dest);       break;
-    case MoveInfo::ROOK_CAPTURE:  handleRookCapture();               break;//when a rook gets captured
+    case MoveInfo::ROOK_CAPTURE:  handleRookCapture();               break;
     case MoveInfo::KING_MOVE:     handleKingMove(move.m_dest);       break;
-    case MoveInfo::ROOK_CAPTURE_AND_PROMOTION: handleRookCapture(); [[fallthrough]];
+    case MoveInfo::ROOK_CAPTURE_AND_PROMOTION: handleRookCapture();  [[fallthrough]];
     case MoveInfo::PROMOTION:
     {
         capturePiece(move.m_dest);//capture the pawn before we make the new piece
         using enum PromoType;
         assert(whichPromoType != INVALID);
-        if(whichPromoType == QUEEN_PROMOTION) makeNewPieceAt<Queen>(move.m_dest, whosTurnIsIt);
-        else if(whichPromoType == ROOK_PROMOTION) makeNewPieceAt<Rook>(move.m_dest, whosTurnIsIt);
-        else if(whichPromoType == KNIGHT_PROMOTION) makeNewPieceAt<Knight>(move.m_dest, whosTurnIsIt);
-        else makeNewPieceAt<Bishop>(move.m_dest, whosTurnIsIt);
+        if(whichPromoType == QUEEN_PROMOTION) makeNewPieceAt<Queen>(move.m_dest, whosTurn);
+        else if(whichPromoType == ROOK_PROMOTION) makeNewPieceAt<Rook>(move.m_dest, whosTurn);
+        else if(whichPromoType == KNIGHT_PROMOTION) makeNewPieceAt<Knight>(move.m_dest, whosTurn);
+        else makeNewPieceAt<Bishop>(move.m_dest, whosTurn);
         Piece::putPieceOnMouseDown();
     }
     }
@@ -464,20 +468,39 @@ void Board::postMoveUpdate(Move const& move, PromoType whichPromoType)
 
     playCorrectMoveAudio(move.m_moveType);
 
-    if(ChessApp::isUserConnected() && whosTurnIsIt == getSideUserIsPlayingAs())
-        ChessApp::sendMove(move, whichPromoType);
+    if(ChessApp::isUserConnected() && whosTurn == getSideUserIsPlayingAs())
+    {
+        auto& app = ChessApp::getApp();
+        app.sendMove(move, whichPromoType);
+    }
 
     toggleTurn();
-    setLastCapturedPiece(nullptr);//if there was a last captured piece it was consumed. so set it to null
+    setLastCapturedPiece(nullptr);//if there was a last captured piece it was consumed already. so set it to null
     updateLegalMoves();
+    checkForCheckOrStaleM8(getWhosTurnItIs());
+}
 
-    //check for checkmate or stalemate
-
+//will check for stale or check mate. if either one is true then update the game state to that.
+void Board::checkForCheckOrStaleM8(Side const sideToCheck)
+{
+    for(auto const& p : m_pieces)
+    {
+        if(p && p->getSide() == sideToCheck)
+        {
+            if(p->getLegalMoves().size() > 0) return;
+        }
+    }
+    
+    auto cs = getCheckState();
+    bool isInCheck = cs == CheckState::DOUBLE_CHECK || cs == CheckState::SINGLE_CHECK;
+    auto& app = ChessApp::getApp();
+    app.setGameState(isInCheck ? GameState::CHECKMATE : GameState::STALEMATE);
+    app.openWinLossDrawPopup();
 }
 
 void Board::updateEnPassant(Vec2i const& newLocation)
 {
-    m_enPassantPosition = ChessApp::inRange(newLocation) ? newLocation : Vec2i{-1, -1};
+    m_enPassantPosition = ChessApp::inRange(newLocation) ? newLocation : INVALID_VEC2I;
 }
 
 void Board::toggleTurn()
@@ -492,10 +515,11 @@ void Board::updatePseudoLegalsAndAttackedSquares()
     {   
         if(p)
         {
-            //theoretically we should only need to get the pseudo legal moves for
-            //the side that is about to move and the attacked squares for the side that just moved.
-            //but since they are combined into one function for DRY reasons,
-            //It would be much easier to just update both sides every move.
+            //since the below method is two methods in one for DRY reasons,
+            //its easier to just update both sides every move. This is basically
+            //the same amount of work as updating the side that just moved attacked squares,
+            //then the side that is about to move psuedo legal moves since it has to do the same
+            //work for both of those at once.
             p->updatePseudoLegalAndAttacked();
         }
     }
@@ -534,8 +558,8 @@ void Board::updatePinnedPieces()
 void Board::updateCheckState()
 {       
     m_checkState = CheckState::NO_CHECK;//reset m_checkState
-    m_locationOfCheckingPiece = {-1, -1};//reset m_locationOfCheckingPiece
-    m_locationOfSecondCheckingPiece = {-1, -1};
+    m_locationOfCheckingPiece = INVALID_VEC2I;//reset m_locationOfCheckingPiece
+    m_locationOfSecondCheckingPiece = INVALID_VEC2I;
     Vec2i const kingPos = m_sideOfWhosTurnItIs == Side::WHITE ?
         King::getWhiteKingPos() : King::getBlackKingPos();
 

@@ -2,6 +2,9 @@
 #include <iostream>
 #include "imgui.h"
 
+//used for various things such as an invalid/null chess position
+#define INVALID_VEC2I Vec2i{-1, -1}
+
 //inline vector2 struct used for chess positions (0-7)
 struct Vec2i
 {

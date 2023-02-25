@@ -11,7 +11,8 @@
 
 P2PChessConnection::P2PChessConnection()
     : m_connectType(ConnectionType::INVALID), m_winSockData{}, 
-      m_connectionSocket(INVALID_SOCKET), m_ipv4OfPeer{}
+      m_connectionSocket(INVALID_SOCKET), m_ipv4OfPeer{},
+      m_wasConnectionLostOrClosed(false)
 {
     //init winsock2
     if(WSAStartup(MAKEWORD(2, 2), &m_winSockData))
@@ -67,7 +68,7 @@ void P2PChessConnection::connect2Server(std::string_view targetIP)
 }
 
 //wait for the client to connect for the given amount of time before timing out
-void P2PChessConnection::waitForClient2Connect(long seconds, long ms)
+void P2PChessConnection::waitForClient2Connect(long const seconds, long const ms)
 {
     SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, 0);
     if(listenSocket == SOCKET_ERROR)
@@ -141,17 +142,18 @@ void P2PChessConnection::waitForClient2Connect(long seconds, long ms)
 //this method with NOT add the NetMessageType to the beginining of the message. that repsonsiblility
 //is that of the callee of this method. so at the point that the string view is passed to this method,
 //it should already have the whole tcp payload in the right order in memeory ready to be sent.
-void P2PChessConnection::sendMessage(NetMessageType messageType, std::string_view message)
+void P2PChessConnection::sendMessage(NetMessageType msgType, std::string_view msg)
 {
-    using NMT = NetMessageType;
-    if(messageType == NMT::MOVE && message.size() != s_moveMessageSize)
-        throw networkException("incorrect message size passed to P2PChessConnection::sendMessage()");
-    else if(messageType == NMT::RESIGN && message.size() != s_ResignMessageSize)
-        throw networkException("incorrect message size passed to P2PChessConnection::sendMessage()");
-    else if(messageType == NMT::DRAW_OFFER && message.size() != s_DrawOfferMessageSize)
-        throw networkException("incorrect message size passed to P2PChessConnection::sendMessage()");
+    using enum NetMessageType;
+    assert(msgType != INVALID);
+    auto throwExcept = []{throw networkException("incorrect message size passed to P2PChessConnection::sendMessage()");};
+    if(msgType == MOVE && msg.size() != s_moveMessageSize) throwExcept();
+    else if(msgType == RESIGN && msg.size() != s_ResignMessageSize) throwExcept();
+    else if(msgType == DRAW_OFFER && msg.size() != s_DrawOfferMessageSize) throwExcept();
+    else if((msgType == REMATCH_REQUEST || msgType == REMATCH_ACCEPT) && msg.size() != s_rematchMessageSize) throwExcept();
+    else if(msgType == WHICH_SIDE && msg.size() != s_WhichSideMessageSize) throwExcept();
 
-    send(m_connectionSocket, message.data(), message.size(), 0);
+    send(m_connectionSocket, msg.data(), msg.size(), 0);
 }
 
 //returns an string if there is a message ready to be read on the connection socket, otherwise
@@ -197,6 +199,7 @@ std::optional<std::string> P2PChessConnection::recieveMessageIfAvailable(long se
         else//if recvResult was 0 that means the connection has been gracefully closed
         {
             m_connectType = ConnectionType::INVALID;//set the connection type to invalid
+            m_wasConnectionLostOrClosed = true;
             return std::nullopt;
         }
     }
