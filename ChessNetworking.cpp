@@ -1,6 +1,8 @@
 #include "ChessNetworking.h"
 #include "ChessApplication.h"
 
+//this is a very crude peer to peer set up for now until I make a server.
+
 //(the person who is the "server" will need to port forward to 
 //accept a connection from the person typing in an ip to try to connect to)
 //until I make a server instead so no one has to port forward
@@ -10,8 +12,8 @@
 #define IPV4_ADDR_SIZE 16
 
 P2PChessConnection::P2PChessConnection()
-    : m_connectType(ConnectionType::INVALID), m_winSockData{}, 
-      m_connectionSocket(INVALID_SOCKET), m_ipv4OfPeer{},
+    : m_connectType(ConnectionType::INVALID), m_winSockData{},
+      m_socket(INVALID_SOCKET), m_ipv4OfPeer{},
       m_wasConnectionLostOrClosed(false)
 {
     //init winsock2
@@ -21,23 +23,30 @@ P2PChessConnection::P2PChessConnection()
         throw networkException(msg.append(std::to_string(WSAGetLastError())));
     }
 
-    if((m_connectionSocket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
+    if((m_socket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
     {
         std::string msg("socket() failed with error: ");
         throw networkException(msg.append(std::to_string(WSAGetLastError())));
     }
 }
 
+void P2PChessConnection::disconnect()
+{
+    closesocket(m_socket);
+    m_connectType = ConnectionType::INVALID;
+    //WSAcleanup() called in dtor
+}
+
 P2PChessConnection::~P2PChessConnection()
 {
-    closesocket(m_connectionSocket);
+    closesocket(m_socket);
     WSACleanup();
 }
 
 void P2PChessConnection::connect2Server(std::string_view targetIP)
 {   
     sockaddr_in targetAddrInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)};
-    auto ptonResult = inet_pton(AF_INET, targetIP.data(), &targetAddrInfo.sin_addr);
+    auto ptonResult = inet_pton(AF_INET, targetIP.data(), &targetAddrInfo.sin_addr); 
 
     if(ptonResult == 0)
     {
@@ -52,7 +61,7 @@ void P2PChessConnection::connect2Server(std::string_view targetIP)
         throw networkException(msg, winsockError);
     }
 
-    if(connect(m_connectionSocket, reinterpret_cast<sockaddr*>(&targetAddrInfo),
+    if(connect(m_socket, reinterpret_cast<sockaddr*>(&targetAddrInfo),
         static_cast<int>(sizeof targetAddrInfo)) == SOCKET_ERROR)
     {
         std::string msg("connect() failed with error: ");
@@ -117,11 +126,11 @@ void P2PChessConnection::waitForClient2Connect(long const seconds, long const ms
     else if(selectResult == 0)//select timed out meaning there is no client trying to connect
     {
         closesocket(listenSocket);
-        throw networkException("there is no client trying to connect currently");
+        return;
     }
     else//select indicated that a call to accept() will not block and there is a client ready to connect
     {
-        if((m_connectionSocket = accept(listenSocket, reinterpret_cast<sockaddr*>(&clientInfo), 
+        if((m_socket = accept(listenSocket, reinterpret_cast<sockaddr*>(&clientInfo), 
             nullptr)) == SOCKET_ERROR)
         {
             std::string msg("accept() failed with error ");
@@ -153,7 +162,7 @@ void P2PChessConnection::sendMessage(NetMessageType msgType, std::string_view ms
     else if((msgType == REMATCH_REQUEST || msgType == REMATCH_ACCEPT) && msg.size() != s_rematchMessageSize) throwExcept();
     else if(msgType == WHICH_SIDE && msg.size() != s_WhichSideMessageSize) throwExcept();
 
-    send(m_connectionSocket, msg.data(), msg.size(), 0);
+    send(m_socket, msg.data(), msg.size(), 0);
 }
 
 //returns an string if there is a message ready to be read on the connection socket, otherwise
@@ -165,7 +174,7 @@ std::optional<std::string> P2PChessConnection::recieveMessageIfAvailable(long se
 {
     fd_set sockSet;
     FD_ZERO(&sockSet);
-    FD_SET(m_connectionSocket, &sockSet);
+    FD_SET(m_socket, &sockSet);
     timeval selectWaitTime{.tv_sec = seconds, .tv_usec = ms};
     int selectResult = select(0, &sockSet, nullptr, nullptr, &selectWaitTime);
 
@@ -184,7 +193,7 @@ std::optional<std::string> P2PChessConnection::recieveMessageIfAvailable(long se
     {
         std::string receivedMessage;
         receivedMessage.resize(s_moveMessageSize);//always try to recv the max num of bytes
-        int recvResult = recv(m_connectionSocket, receivedMessage.data(), s_moveMessageSize, 0);
+        int recvResult = recv(m_socket, receivedMessage.data(), s_moveMessageSize, 0);
 
         if(recvResult > 0)//recv successfully got a message of recvResult number of bytes
         {

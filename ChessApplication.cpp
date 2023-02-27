@@ -604,8 +604,8 @@ void ChessApp::handleDrawOfferMessage()
 
 void ChessApp::handleRematchRequestMessage()
 {
-    if(!m_wnd.m_rematchRequestWindowIsOpen)
-        openRematchRequestWindow();
+    openRematchRequestWindow();
+    closeWinLossDrawPopup();
 }
 
 void ChessApp::handleRematchAcceptMessage()
@@ -625,8 +625,8 @@ void ChessApp::processIncomingMessages()
         auto& msg = result.value();
         using NMT = P2PChessConnection::NetMessageType;
 
-        //the first byte of a message sent is the type of message sent. 
-        //it is expressed as one of the P2PChessConnection::NetMessageType enumerations
+        //the first byte of a message sent is always the type of
+        //the message encoded as a P2PChessConnection::NetMessageType enum.
         NMT msgType = static_cast<NMT>(msg.at(0));
 
         switch(msgType)
@@ -720,12 +720,11 @@ void ChessApp::drawRematchRequestWindow()
     {
         m_board.resetBoard();
         send1ByteMessage(P2PChessConnection::NetMessageType::REMATCH_ACCEPT);
+        closeRematchRequestWindow();
     }
 
     if(ImGui::Button("decline and disconnect"))
-    {
-        
-    }
+        m_netWork.disconnect();
 
     ImGui::End();
 }

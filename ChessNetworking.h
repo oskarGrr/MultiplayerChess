@@ -60,6 +60,7 @@ public:
         REMATCH_ACCEPT
     };
 
+    //ConnectionType::INVALID is used when not connected to anyone
     enum struct ConnectionType : uint8_t {INVALID = 0, SERVER, CLIENT};
 
     //the layout of the NetMessageType::MOVE type of message: 
@@ -78,7 +79,9 @@ public:
     //for sending a rematch request and used for accepting a rematch request
     static constexpr std::size_t s_rematchMessageSize {sizeof(NetMessageType)};
 
-    //layout of s_WhichSideMessageSize: byte 0 is the NetMessageType
+    //layout of s_WhichSideMessageSize:
+    //|0|1|
+    //byte 0 is the NetMessageType
     //byte 1 is the Side (an enum defined in ChessApplication.h)
     static constexpr std::size_t s_WhichSideMessageSize {sizeof(NetMessageType) + 1};
 
@@ -86,7 +89,7 @@ private:
 
     ConnectionType m_connectType;
     WSADATA m_winSockData;
-    SOCKET  m_connectionSocket;//used by both peers (server and client) to send and recv chess moves
+    SOCKET  m_socket;//used by both peers (server and client) to send and recv chess moves
     std::string m_ipv4OfPeer;
     bool m_wasConnectionLostOrClosed;
 
@@ -101,4 +104,5 @@ public:
     inline std::string const& getIpv4OfPeer() const {return m_ipv4OfPeer;}
     inline bool wasConnectionClosedOrLost() const {return m_wasConnectionLostOrClosed;}
     inline void resetWasConnectionLostBool() {m_wasConnectionLostOrClosed = false;}
+    void disconnect();
 };
