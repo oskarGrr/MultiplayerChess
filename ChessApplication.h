@@ -22,8 +22,8 @@ enum struct GameState : Uint32
     STALEMATE,
     GAME_ABANDONMENT,//when the connection is lost/opponent closes game
     DRAW_AGREEMENT,
-    BLACK_RESIGNED,
-    WHITE_RESIGNED
+    OPPONENT_RESIGNED,
+    YOU_RESIGNED
 };
 
 //singleton chessApp that contains the board (which owns/"holds" the pieces)

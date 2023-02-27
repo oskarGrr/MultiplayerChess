@@ -367,6 +367,13 @@ void ChessApp::drawMenuBar()
 
         if(m_netWork.isUserConnected())
         {
+            if(ImGui::Button("resign", {48, 20}))
+            {
+                send1ByteMessage(P2PChessConnection::NetMessageType::RESIGN);
+                setGameState(GameState::YOU_RESIGNED);
+                openWinLossDrawPopup();
+            }
+
             ImGui::TextUnformatted("connected to");
             ImGui::TextUnformatted(m_netWork.getIpv4OfPeer().data());
         }
@@ -402,38 +409,37 @@ void ChessApp::drawWinLossDrawPopup()
     auto whosTurnIsIt = m_board.getWhosTurnItIs();
     std::string msg{};
 
+    //TODO move string creation to a different function so it doesnt have to do it every frame the window is open
     if(!(gs == DRAW_AGREEMENT || gs == STALEMATE))
     {
         //if game state is game abandonment, then the user is already disconnected at this point
         if(isUserConnected())
         {
-            msg = "you";
+            msg = "you ";
             switch(gs)
             {
             case CHECKMATE:
             {
-                msg.append(whosTurnIsIt == m_board.getSideUserIsPlayingAs() ? " lost" : " won");
-                msg.append(" by checkmate");
+                msg.append(whosTurnIsIt == m_board.getSideUserIsPlayingAs() ? "lost" : "won");
+                msg.append("by checkmate");
                 break;
             }
-            case BLACK_RESIGNED:
+            case OPPONENT_RESIGNED: 
             {
-                msg.append(whosTurnIsIt != Side::BLACK ? "lost: " : "won: ");
-                msg.append("black resigned");
+                msg.append("won (opponent resigned)"); 
                 break;
             }
-            case WHITE_RESIGNED:
+            case YOU_RESIGNED:
             {
-                msg.append("white resgined");
-                break;
+                msg.append("lost (you resgined)");
             }
             }
         }
         else if(gs == GAME_ABANDONMENT) msg = "connection was lost or opponent closed their game";
         else//if not a draw (and if offline but not game abandonment) then the type is win or loss by checkmate
         {
-            msg = whosTurnIsIt == Side::BLACK ? "black" : "white";
-            msg.append(" lost by checkmate");
+            msg = whosTurnIsIt == Side::BLACK ? "black " : "white ";
+            msg.append("lost by checkmate");
         }
     }
     else msg = gs == DRAW_AGREEMENT ? "draw by agreement" : "draw by stalemate";//else game was a draw
@@ -444,6 +450,12 @@ void ChessApp::drawWinLossDrawPopup()
     {
         if(ImGui::Button("request rematch"))
             send1ByteMessage(P2PChessConnection::NetMessageType::REMATCH_REQUEST);
+
+        if(ImGui::Button("disconnect"))
+        {
+            m_netWork.disconnect();
+            m_board.resetBoard();
+        }
     }
     else//if playing offline
     {
@@ -592,11 +604,13 @@ void ChessApp::handleMoveMessage(std::string_view msg)
     m_board.postMoveUpdate(move, pt);
 }
 
-//no resign button or draw offer button yet
 void ChessApp::handleResignMessage()
 {
-    
+    setGameState(GameState::OPPONENT_RESIGNED);
+    openWinLossDrawPopup();
 }
+
+//no draw offer button yet
 void ChessApp::handleDrawOfferMessage()
 {
     
@@ -611,7 +625,6 @@ void ChessApp::handleRematchRequestMessage()
 void ChessApp::handleRematchAcceptMessage()
 {
     m_board.resetBoard();
-    
 }
 
 //called once per frame at the beginning of the frame in ChessApp::run()
@@ -724,7 +737,11 @@ void ChessApp::drawRematchRequestWindow()
     }
 
     if(ImGui::Button("decline and disconnect"))
+    {
         m_netWork.disconnect();
+        m_board.resetBoard();
+        closeRematchRequestWindow();
+    }
 
     ImGui::End();
 }
