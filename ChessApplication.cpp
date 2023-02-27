@@ -23,7 +23,7 @@ ChessApp::ChessApp() try :
       m_pieceCaptureSound("sounds/woodCaptureMove.wav"),
       m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},//default square colors
       m_circleTexture(nullptr), m_redCircleTexture(nullptr),
-      m_pieceTextureScale(1.0f), m_pieceTextures{}, m_netWork{}
+      m_pieceTextureScale(1.0f), m_pieceTextures{}, m_netWork{}, m_winLossDrawPopupMessage{}
 {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
@@ -378,14 +378,17 @@ void ChessApp::drawMenuBar()
             ImGui::TextUnformatted(m_netWork.getIpv4OfPeer().data());
         }
 
+        ImGui::TextUnformatted(m_board.getWhosTurnItIs() == Side::WHITE ? 
+            "it's white's turn" : "it's black's turn");
+
         static bool needMenuBarSize = true;
         if(needMenuBarSize) [[unlikely]]
-        {   
+        {
             m_menuBarHeight = ImGui::GetWindowSize().y;
     
             SDL_SetWindowSize(m_wnd.m_window, m_wnd.m_width,
                 static_cast<int>(m_wnd.m_height + m_menuBarHeight));
-    
+
             needMenuBarSize = false;
         }
     
@@ -394,8 +397,55 @@ void ChessApp::drawMenuBar()
     ImGui::StyleColorsDark();//light menu bar
 }
 
+//called inside of openWinLossDrawPopup() 
+//in order to update m_winLossDrawPopupMessage before drawing the win loss draw popup
+void ChessApp::updateWinLossDrawMessage()
+{
+    using enum GameState;
+    auto gs = getGameState();
+    assert(gs != GAME_IN_PROGRESS);
+    auto whosTurnIsIt = m_board.getWhosTurnItIs();
+
+    if(!(gs == DRAW_AGREEMENT || gs == STALEMATE))
+    {
+        //if game state is game abandonment, then the user is already disconnected at this point
+        if(isUserConnected())
+        {
+            m_winLossDrawPopupMessage = "you ";
+            switch(gs)
+            {
+            case CHECKMATE:
+            {
+                m_winLossDrawPopupMessage.append(whosTurnIsIt == m_board.getSideUserIsPlayingAs() ? "lost " : "won ");
+                m_winLossDrawPopupMessage.append("by checkmate");
+                break;
+            }
+            case OPPONENT_RESIGNED:
+            {
+                m_winLossDrawPopupMessage.append("won (opponent resigned)"); 
+                break;
+            }
+            case YOU_RESIGNED: m_winLossDrawPopupMessage.append("lost (you resgined)");
+            }
+        }
+        else if(gs == GAME_ABANDONMENT) m_winLossDrawPopupMessage = "connection was lost or opponent closed their game";
+        else//if not a draw (and if offline but not game abandonment) then the type is win or loss by checkmate
+        {
+            m_winLossDrawPopupMessage = whosTurnIsIt == Side::BLACK ? "black " : "white ";
+            m_winLossDrawPopupMessage.append("lost by checkmate");
+        }
+    }
+    else//if game state is a draw
+    {
+        m_winLossDrawPopupMessage = gs == DRAW_AGREEMENT ? 
+            "draw by agreement" : "draw by stalemate";//else game was a draw
+    }
+}
+
 void ChessApp::drawWinLossDrawPopup()
 {
+    assert(getGameState() != GameState::GAME_IN_PROGRESS);
+
     //always center this window when appearing
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
@@ -403,48 +453,7 @@ void ChessApp::drawWinLossDrawPopup()
     ImGui::Begin("game over", &m_wnd.m_winLossDrawPopupIsOpen,
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
     
-    using enum GameState;
-    auto gs = getGameState();
-    assert(gs != GAME_IN_PROGRESS);
-    auto whosTurnIsIt = m_board.getWhosTurnItIs();
-    std::string msg{};
-
-    //TODO move string creation to a different function so it doesnt have to do it every frame the window is open
-    if(!(gs == DRAW_AGREEMENT || gs == STALEMATE))
-    {
-        //if game state is game abandonment, then the user is already disconnected at this point
-        if(isUserConnected())
-        {
-            msg = "you ";
-            switch(gs)
-            {
-            case CHECKMATE:
-            {
-                msg.append(whosTurnIsIt == m_board.getSideUserIsPlayingAs() ? "lost" : "won");
-                msg.append("by checkmate");
-                break;
-            }
-            case OPPONENT_RESIGNED: 
-            {
-                msg.append("won (opponent resigned)"); 
-                break;
-            }
-            case YOU_RESIGNED:
-            {
-                msg.append("lost (you resgined)");
-            }
-            }
-        }
-        else if(gs == GAME_ABANDONMENT) msg = "connection was lost or opponent closed their game";
-        else//if not a draw (and if offline but not game abandonment) then the type is win or loss by checkmate
-        {
-            msg = whosTurnIsIt == Side::BLACK ? "black " : "white ";
-            msg.append("lost by checkmate");
-        }
-    }
-    else msg = gs == DRAW_AGREEMENT ? "draw by agreement" : "draw by stalemate";//else game was a draw
-
-    ImGui::TextUnformatted(msg.data());
+    ImGui::TextUnformatted(m_winLossDrawPopupMessage.data());
 
     if(isUserConnected())
     {
@@ -844,10 +853,11 @@ void ChessApp::drawMoveIndicatorCircles()
             static_cast<int>(circleSource.h)
         };
 
-        //if there is an enemy piece or enPassant square draw red circle instead
+        //if there is an enemy piece (or enPassant square being targeted by a pawn)
+        //then draw red circle instead of the usual grey circle
         auto const piece = m_board.getPieceAt(move.m_dest);
-        if(piece && piece->getSide() != m_board.getWhosTurnItIs() || 
-            move.m_dest == m_board.getEnPassantIndex())
+        if(piece && piece->getSide() != m_board.getWhosTurnItIs() ||
+            (move.m_dest == m_board.getEnPassantIndex()) && std::dynamic_pointer_cast<Pawn>(pom))
         {
             SDL_RenderCopy(renderer, m_redCircleTexture, &circleSource, &circleDest);
             continue;

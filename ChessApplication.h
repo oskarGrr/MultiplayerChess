@@ -85,7 +85,11 @@ public:
     //open/close imgui windows/popups on the next iteration of main loop
     inline void openPromotionPopup(){m_wnd.m_promotionWindowIsOpen = true;}
     inline void closePromotionPopup(){m_wnd.m_promotionWindowIsOpen = false;}
-    inline void openWinLossDrawPopup(){m_wnd.m_winLossDrawPopupIsOpen = true;}
+    inline void openWinLossDrawPopup()
+    {
+        m_wnd.m_winLossDrawPopupIsOpen = true; 
+        updateWinLossDrawMessage();
+    }
     inline void closeWinLossDrawPopup(){m_wnd.m_winLossDrawPopupIsOpen = false;}
 
     //pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. Otherwise
@@ -117,6 +121,10 @@ private:
     void drawNewConnectionPopup();
     void drawWinLossDrawPopup();
     void drawRematchRequestWindow();
+
+    //called inside of openWinLossDrawPopup() 
+    //in order to update m_winLossDrawPopupMessage before drawing the win loss draw popup
+    void updateWinLossDrawMessage();
 
     friend void P2PChessConnection::connect2Server(std::string_view targetIP);
     friend void P2PChessConnection::waitForClient2Connect(long const, long const);
@@ -162,4 +170,5 @@ private:
     std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> m_pieceTextures;//the textures for the chess pieces
     std::array<Vec2i,        NUM_OF_PIECE_TEXTURES> m_pieceTextureSizes;//width and height of the above textures
     P2PChessConnection m_netWork;
+    std::string m_winLossDrawPopupMessage;//message that gets displayed when the game is over
 };
