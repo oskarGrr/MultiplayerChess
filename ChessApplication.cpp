@@ -374,11 +374,19 @@ void ChessApp::drawMenuBar()
                 openWinLossDrawPopup();
             }
 
-            ImGui::TextUnformatted("connected to");
-            ImGui::TextUnformatted(m_netWork.getIpv4OfPeer().data());
+            std::string connectionInfo{};
+            connectionInfo.append("(connected to ");
+            connectionInfo.append(m_netWork.getIpv4OfPeer().data());
+            connectionInfo.append(" you are playing with the");
+            connectionInfo.append(m_board.getSideUserIsPlayingAs() == Side::WHITE ?
+                " white pieces)" : " black pieces)");
+
+            //std::cout << connectionInfo << std::endl;
+
+            ImGui::TextUnformatted(connectionInfo.data());
         }
 
-        ImGui::TextUnformatted(m_board.getWhosTurnItIs() == Side::WHITE ? 
+        ImGui::TextUnformatted(m_board.getWhosTurnItIs() == Side::WHITE ?
             "it's white's turn" : "it's black's turn");
 
         static bool needMenuBarSize = true;
