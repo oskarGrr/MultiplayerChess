@@ -369,7 +369,7 @@ void ChessApp::drawMenuBar()
         {
             if(ImGui::Button("resign", {48, 20}))
             {
-                send1ByteMessage(P2PChessConnection::NetMessageType::RESIGN);
+                send1ByteMessage(ChessConnection::NetMessageType::RESIGN);
                 setGameState(GameState::YOU_RESIGNED);
                 openWinLossDrawPopup();
             }
@@ -466,7 +466,7 @@ void ChessApp::drawWinLossDrawPopup()
     if(isUserConnected())
     {
         if(ImGui::Button("request rematch"))
-            send1ByteMessage(P2PChessConnection::NetMessageType::REMATCH_REQUEST);
+            send1ByteMessage(ChessConnection::NetMessageType::REMATCH_REQUEST);
 
         if(ImGui::Button("disconnect"))
         {
@@ -488,13 +488,13 @@ void ChessApp::drawWinLossDrawPopup()
 void ChessApp::sendMove(Move const& move, PromoType pt)
 {
     //pack all of the information into a string
-    using enum P2PChessConnection::NetMessageType;
+    using enum ChessConnection::NetMessageType;
     std::string netMessage;
-    netMessage.resize(P2PChessConnection::s_moveMessageSize);
+    netMessage.resize(ChessConnection::s_moveMessageSize);
 
-    //the layout of the NetMessageType::MOVE type of message: 
+    //the layout of the MOVE_MSG
     //|0|1|2|3|4|5|6|
-    //byte 0 will be the NetMessageType
+    //byte 0 will be the MOVE_MSG
     //byte 1 will be the file (0-7) of the square where the piece is that will be moving
     //byte 2 will be the rank (0-7) of the square where the piece is that will be moving
     //byte 3 will be the file (0-7) of the square where the piece will be moving to
@@ -512,9 +512,9 @@ void ChessApp::sendMove(Move const& move, PromoType pt)
     m_netWork.sendMessage(MOVE, netMessage);
 }
 
-void ChessApp::send1ByteMessage(P2PChessConnection::NetMessageType NMT)
+void ChessApp::send1ByteMessage(ChessConnection::NetMessageType NMT)
 {
-    using enum P2PChessConnection::NetMessageType;
+    using enum ChessConnection::NetMessageType;
     std::string msg{};
     msg.resize(1);
     msg[0] = static_cast<char>(NMT);
@@ -572,8 +572,8 @@ void ChessApp::renderAllTheThings()
 //if the TCP connection was successfully established
 void ChessApp::onNewConnection()
 {
-    using CT = P2PChessConnection::ConnectionType;
-    using NMT = P2PChessConnection::NetMessageType;
+    using CT = ChessConnection::ConnectionType;
+    using NMT = ChessConnection::NetMessageType;
     assert(m_netWork.isUserConnected());
     
     Side whiteOrBlack = Side::INVALID;
@@ -613,7 +613,7 @@ void ChessApp::onNewConnection()
 //handle the incomming move message from the opponent
 void ChessApp::handleMoveMessage(std::string_view msg)
 {
-    assert(msg.size() == P2PChessConnection::s_moveMessageSize);
+    assert(msg.size() == ChessConnection::s_moveMessageSize);
     MoveInfo moveType = static_cast<MoveInfo>(msg.at(6));
     Move move = {{msg.at(1), msg.at(2)}, {msg.at(3), msg.at(4)}, moveType};
     PromoType pt = static_cast<PromoType>(msg.at(5));
@@ -650,22 +650,21 @@ void ChessApp::processIncomingMessages()
     if(!m_netWork.isUserConnected())
         return;
 
-    if(auto result = m_netWork.recieveMessageIfAvailable())
+    if(auto result = m_netWork.recieveMessageIfAvailable())//std::optional operator bool() called
     {
         auto& msg = result.value();
-        using NMT = P2PChessConnection::NetMessageType;
 
         //the first byte of a message sent is always the type of
-        //the message encoded as a P2PChessConnection::NetMessageType enum.
-        NMT msgType = static_cast<NMT>(msg.at(0));
+        //the message encoded as a simple integer macro defined in ChessNetworking.h
+        int msgType = static_cast<int>(msg.at(0));
 
         switch(msgType)
         {
-        case NMT::MOVE:             handleMoveMessage(msg);       break;
-        case NMT::RESIGN:           handleResignMessage();        break;
-        case NMT::DRAW_OFFER:       handleDrawOfferMessage();     break;
-        case NMT::REMATCH_ACCEPT:   handleRematchAcceptMessage(); break;
-        case NMT::REMATCH_REQUEST:  handleRematchRequestMessage();
+        case MOVE_MSGTYPE:             handleMoveMessage(msg);       break;
+        case RESIGN_MSGTYPE:           handleResignMessage();        break;
+        case DRAW_OFFER_MSGTYPE:       handleDrawOfferMessage();     break;
+        case REMATCH_ACCEPT_MSGTYPE:   handleRematchAcceptMessage(); break;
+        case PAIR_REQUEST_MSGTYPE:     handleRematchRequestMessage();
         }
     }
 
@@ -749,7 +748,7 @@ void ChessApp::drawRematchRequestWindow()
     if(ImGui::Button("accept"))
     {
         m_board.resetBoard();
-        send1ByteMessage(P2PChessConnection::NetMessageType::REMATCH_ACCEPT);
+        send1ByteMessage(ChessConnection::NetMessageType::REMATCH_ACCEPT);
         closeRematchRequestWindow();
     }
 

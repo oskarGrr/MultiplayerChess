@@ -98,7 +98,7 @@ public:
 
     //There are lots of messages that just consist of the message type.
     //This method is for telling m_network to send one of those simple message types.
-    void send1ByteMessage(P2PChessConnection::NetMessageType NMT);
+    void send1ByteMessage(ChessConnection::NetMessageType NMT);
 
     void setGameState(GameState gs) {m_gameState = gs;}
 
@@ -126,8 +126,8 @@ private:
     //in order to update m_winLossDrawPopupMessage before drawing the win loss draw popup
     void updateWinLossDrawMessage();
 
-    friend void P2PChessConnection::connect2Server(std::string_view targetIP);
-    friend void P2PChessConnection::waitForClient2Connect(long const, long const);
+    friend void ChessConnection::connect2Server(std::string_view targetIP);
+    friend void ChessConnection::waitForClient2Connect(long const, long const);
 
     void onNewConnection();//called from inside P2PChessConnection::connect2Server and waitForClient2connect once a connection is established
     void processIncomingMessages();//called at the top of ChessApp::run()
@@ -169,6 +169,6 @@ private:
     float const  m_pieceTextureScale;
     std::array<SDL_Texture*, NUM_OF_PIECE_TEXTURES> m_pieceTextures;//the textures for the chess pieces
     std::array<Vec2i,        NUM_OF_PIECE_TEXTURES> m_pieceTextureSizes;//width and height of the above textures
-    P2PChessConnection m_netWork;
+    ChessConnection m_netWork;
     std::string m_winLossDrawPopupMessage;//message that gets displayed when the game is over
 };
