@@ -46,7 +46,7 @@ extern "C" {
 /**
  *  This is the timeout value which corresponds to never time out.
  */
-#define SDL_MUTEX_MAXWAIT   (~(Uint32)0)
+#define SDL_MUTEX_MAXWAIT   (~(uint32_t)0)
 
 
 /**
@@ -195,7 +195,7 @@ typedef struct SDL_semaphore SDL_sem;
  * \sa SDL_SemWait
  * \sa SDL_SemWaitTimeout
  */
-extern DECLSPEC SDL_sem *SDLCALL SDL_CreateSemaphore(Uint32 initial_value);
+extern DECLSPEC SDL_sem *SDLCALL SDL_CreateSemaphore(uint32_t initial_value);
 
 /**
  * Destroy a semaphore.
@@ -290,7 +290,7 @@ extern DECLSPEC int SDLCALL SDL_SemTryWait(SDL_sem * sem);
  * \sa SDL_SemValue
  * \sa SDL_SemWait
  */
-extern DECLSPEC int SDLCALL SDL_SemWaitTimeout(SDL_sem * sem, Uint32 ms);
+extern DECLSPEC int SDLCALL SDL_SemWaitTimeout(SDL_sem * sem, uint32_t ms);
 
 /**
  * Atomically increment a semaphore's value and wake waiting threads.
@@ -320,7 +320,7 @@ extern DECLSPEC int SDLCALL SDL_SemPost(SDL_sem * sem);
  *
  * \sa SDL_CreateSemaphore
  */
-extern DECLSPEC Uint32 SDLCALL SDL_SemValue(SDL_sem * sem);
+extern DECLSPEC uint32_t SDLCALL SDL_SemValue(SDL_sem * sem);
 
 /* @} *//* Semaphore functions */
 
@@ -455,7 +455,7 @@ extern DECLSPEC int SDLCALL SDL_CondWait(SDL_cond * cond, SDL_mutex * mutex);
  * \sa SDL_DestroyCond
  */
 extern DECLSPEC int SDLCALL SDL_CondWaitTimeout(SDL_cond * cond,
-                                                SDL_mutex * mutex, Uint32 ms);
+                                                SDL_mutex * mutex, uint32_t ms);
 
 /* @} *//* Condition variable functions */
 

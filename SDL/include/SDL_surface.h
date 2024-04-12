@@ -69,7 +69,7 @@ extern "C" {
  */
 typedef struct SDL_Surface
 {
-    Uint32 flags;               /**< Read-only */
+    uint32_t flags;               /**< Read-only */
     SDL_PixelFormat *format;    /**< Read-only */
     int w, h;                   /**< Read-only */
     int pitch;                  /**< Read-only */
@@ -156,8 +156,8 @@ typedef enum
  * \sa SDL_FreeSurface
  */
 extern DECLSPEC SDL_Surface *SDLCALL SDL_CreateRGBSurface
-    (Uint32 flags, int width, int height, int depth,
-     Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
+    (uint32_t flags, int width, int height, int depth,
+     uint32_t Rmask, uint32_t Gmask, uint32_t Bmask, uint32_t Amask);
 
 
 /* !!! FIXME for 2.1: why does this ask for depth? Format provides that. */
@@ -184,7 +184,7 @@ extern DECLSPEC SDL_Surface *SDLCALL SDL_CreateRGBSurface
  * \sa SDL_FreeSurface
  */
 extern DECLSPEC SDL_Surface *SDLCALL SDL_CreateRGBSurfaceWithFormat
-    (Uint32 flags, int width, int height, int depth, Uint32 format);
+    (uint32_t flags, int width, int height, int depth, uint32_t format);
 
 /**
  * Allocate a new RGB surface with existing pixel data.
@@ -219,10 +219,10 @@ extern DECLSPEC SDL_Surface *SDLCALL SDL_CreateRGBSurfaceFrom(void *pixels,
                                                               int height,
                                                               int depth,
                                                               int pitch,
-                                                              Uint32 Rmask,
-                                                              Uint32 Gmask,
-                                                              Uint32 Bmask,
-                                                              Uint32 Amask);
+                                                              uint32_t Rmask,
+                                                              uint32_t Gmask,
+                                                              uint32_t Bmask,
+                                                              uint32_t Amask);
 
 /* !!! FIXME for 2.1: why does this ask for depth? Format provides that. */
 
@@ -253,7 +253,7 @@ extern DECLSPEC SDL_Surface *SDLCALL SDL_CreateRGBSurfaceFrom(void *pixels,
  * \sa SDL_FreeSurface
  */
 extern DECLSPEC SDL_Surface *SDLCALL SDL_CreateRGBSurfaceWithFormatFrom
-    (void *pixels, int width, int height, int depth, int pitch, Uint32 format);
+    (void *pixels, int width, int height, int depth, int pitch, uint32_t format);
 
 /**
  * Free an RGB surface.
@@ -442,7 +442,7 @@ extern DECLSPEC SDL_bool SDLCALL SDL_HasSurfaceRLE(SDL_Surface * surface);
  * \sa SDL_GetColorKey
  */
 extern DECLSPEC int SDLCALL SDL_SetColorKey(SDL_Surface * surface,
-                                            int flag, Uint32 key);
+                                            int flag, uint32_t key);
 
 /**
  * Returns whether the surface has a color key
@@ -478,7 +478,7 @@ extern DECLSPEC SDL_bool SDLCALL SDL_HasColorKey(SDL_Surface * surface);
  * \sa SDL_SetColorKey
  */
 extern DECLSPEC int SDLCALL SDL_GetColorKey(SDL_Surface * surface,
-                                            Uint32 * key);
+                                            uint32_t * key);
 
 /**
  * Set an additional color value multiplied into blit operations.
@@ -671,7 +671,7 @@ extern DECLSPEC SDL_Surface *SDLCALL SDL_DuplicateSurface(SDL_Surface * surface)
  * \sa SDL_CreateRGBSurface
  */
 extern DECLSPEC SDL_Surface *SDLCALL SDL_ConvertSurface
-    (SDL_Surface * src, const SDL_PixelFormat * fmt, Uint32 flags);
+    (SDL_Surface * src, const SDL_PixelFormat * fmt, uint32_t flags);
 
 /**
  * Copy an existing surface to a new surface of the specified format enum.
@@ -696,7 +696,7 @@ extern DECLSPEC SDL_Surface *SDLCALL SDL_ConvertSurface
  * \sa SDL_CreateRGBSurface
  */
 extern DECLSPEC SDL_Surface *SDLCALL SDL_ConvertSurfaceFormat
-    (SDL_Surface * src, Uint32 pixel_format, Uint32 flags);
+    (SDL_Surface * src, uint32_t pixel_format, uint32_t flags);
 
 /**
  * Copy a block of pixels of one format to another format.
@@ -715,9 +715,9 @@ extern DECLSPEC SDL_Surface *SDLCALL SDL_ConvertSurfaceFormat
  * \since This function is available since SDL 2.0.0.
  */
 extern DECLSPEC int SDLCALL SDL_ConvertPixels(int width, int height,
-                                              Uint32 src_format,
+                                              uint32_t src_format,
                                               const void * src, int src_pitch,
-                                              Uint32 dst_format,
+                                              uint32_t dst_format,
                                               void * dst, int dst_pitch);
 
 /**
@@ -741,9 +741,9 @@ extern DECLSPEC int SDLCALL SDL_ConvertPixels(int width, int height,
  * \since This function is available since SDL 2.0.18.
  */
 extern DECLSPEC int SDLCALL SDL_PremultiplyAlpha(int width, int height,
-                                                 Uint32 src_format,
+                                                 uint32_t src_format,
                                                  const void * src, int src_pitch,
-                                                 Uint32 dst_format,
+                                                 uint32_t dst_format,
                                                  void * dst, int dst_pitch);
 
 /**
@@ -770,7 +770,7 @@ extern DECLSPEC int SDLCALL SDL_PremultiplyAlpha(int width, int height,
  * \sa SDL_FillRects
  */
 extern DECLSPEC int SDLCALL SDL_FillRect
-    (SDL_Surface * dst, const SDL_Rect * rect, Uint32 color);
+    (SDL_Surface * dst, const SDL_Rect * rect, uint32_t color);
 
 /**
  * Perform a fast fill of a set of rectangles with a specific color.
@@ -796,7 +796,7 @@ extern DECLSPEC int SDLCALL SDL_FillRect
  * \sa SDL_FillRect
  */
 extern DECLSPEC int SDLCALL SDL_FillRects
-    (SDL_Surface * dst, const SDL_Rect * rects, int count, Uint32 color);
+    (SDL_Surface * dst, const SDL_Rect * rects, int count, uint32_t color);
 
 /* !!! FIXME: merge this documentation with the wiki */
 /**

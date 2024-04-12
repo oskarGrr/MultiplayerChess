@@ -2,6 +2,9 @@
 #include <exception>//std::exception
 #include <fstream>//std::ofstream
 
+#include "errorLogger.h"
+
+#include <thread>
 int main(int argCount, char** arguments)
 {    
     try
@@ -11,17 +14,15 @@ int main(int argCount, char** arguments)
     }
     catch(std::exception& e)
     {
-        std::ofstream ofs("log.txt", std::ios_base::app);
-        ofs << "exception thrown at "
-            << ChessApp::getCurrentDateAndTime() << ": " 
-            << e.what() << "\n\n\n";
+        std::string errMsg{e.what()};
+        errMsg.append(" caught in main()");
+        FileErrorLogger::get().logErrors(errMsg);
         return EXIT_FAILURE;
     }
     catch(...)
     {
-        std::ofstream ofs("log.txt", std::ios_base::app);
-        ofs << "exception of unknown type thrown at " 
-            << ChessApp::getCurrentDateAndTime();
+        FileErrorLogger::get().logErrors("exception caught of unknown type in main()");
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

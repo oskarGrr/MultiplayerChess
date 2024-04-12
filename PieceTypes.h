@@ -33,7 +33,7 @@ protected:
     Side const m_side;                       //black or white piece
     Vec2i m_chessPos;                        //the file and rank (x,y) of where the piece is (0-7)
     std::vector<Vec2i> m_attackedSquares;    //all the squares being attacked by *this
-    ChessApp::TextureIndices m_whichTexture; //array offset into the array of piece textures owned by ChessApp signifying which texture belongs to this piece              
+    ChessDrawer::TextureIndices m_whichTexture; //array offset into the array of piece textures owned by ChessApp signifying which texture belongs to this piece              
 
 public:
 
@@ -64,7 +64,7 @@ private:
 
 protected:
 
-    enum struct PieceTypes : Uint32 {INVALID = 0, PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING};
+    enum struct PieceTypes : uint32_t {INVALID = 0, PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING};
     PieceTypes m_type;//the type of the concrete piece extending this abstract class
 
     //here so pieces can see the m_type of other pieces instead of using dynamic_cast

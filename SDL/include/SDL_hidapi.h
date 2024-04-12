@@ -174,7 +174,7 @@ extern DECLSPEC int SDLCALL SDL_hid_exit(void);
  *
  * \sa SDL_hid_enumerate
  */
-extern DECLSPEC Uint32 SDLCALL SDL_hid_device_change_count(void);
+extern DECLSPEC uint32_t SDLCALL SDL_hid_device_change_count(void);
 
 /**
  * Enumerate the HID Devices.

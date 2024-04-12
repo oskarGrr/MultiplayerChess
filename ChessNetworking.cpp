@@ -1,21 +1,22 @@
 #include "ChessNetworking.h"
 #include "ChessApplication.h"
+#include "errorLogger.h"
+#include <optional>
+#include <thread>
+#include <fstream>
+#include <string>
 
-//this is a very crude peer to peer set up for now until I make a server.
-
-//(the person who is the "server" will need to port forward to 
-//accept a connection from the person typing in an ip to try to connect to)
-//until I make a server instead so no one has to port forward
-#define SERVER_PORT 54000 //the port that the person who is the "server" should listen on 
-
-//the max size of ipv4 address as a string plus '\0'
-#define IPV4_ADDR_SIZE 16
+#define SERVER_PORT 42069
 
 ChessConnection::ChessConnection()
-    : m_isConnected{false}, m_winSockData{},
-      m_socket{INVALID_SOCKET}, m_ipv4OfPeer{},
-      m_wasConnectionLostOrClosed{false}
+    : m_isConnected2Server{false}, m_isPairedWithOpponent{false}, 
+      m_winSockData{}, m_addressInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)},
+      m_socket{INVALID_SOCKET}, m_opponentIpv4Str{}, m_ipv4OfPotentialOpponentStr{0},
+      m_ipv4OfPotentialOpponent{}
 {
+    m_opponentIpv4Str.resize(INET_ADDRSTRLEN);
+    m_ipv4OfPotentialOpponentStr.resize(INET_ADDRSTRLEN);
+
     //init winsock2
     if(WSAStartup(MAKEWORD(2, 2), &m_winSockData))
     {
@@ -28,6 +29,9 @@ ChessConnection::ChessConnection()
         std::string msg("socket() failed with error: ");
         throw networkException(msg.append(std::to_string(WSAGetLastError())));
     }
+
+    std::thread conn2ServerThread(&ChessConnection::connect2Server, this, "127.0.0.1");
+    conn2ServerThread.detach();//no need to join later :)
 }
 
 ChessConnection::~ChessConnection()
@@ -36,14 +40,19 @@ ChessConnection::~ChessConnection()
     WSACleanup();
 }
 
-void ChessConnection::connect2Server(std::string_view targetIP)
-{   
-    sockaddr_in targetAddrInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)};
-    auto ptonResult = inet_pton(AF_INET, targetIP.data(), &targetAddrInfo.sin_addr); 
+void ChessConnection::disconnectFromServer()
+{
+    closesocket(m_socket);
+    m_isConnected2Server = false;
+    m_isPairedWithOpponent = false;
+}
 
+static void checkPtonReturn(int ptonResult)
+{
     if(ptonResult == 0)
     {
-        throw networkException("the address entered is not a valid IPv4 dotted-decimal string\n"
+        throw networkException("the address entered is not a"
+            "valid IPv4 dotted-decimal string\n"
             "a correct IPv4 example: 192.0.2.146");
     }
     else if(ptonResult < 0)
@@ -53,24 +62,33 @@ void ChessConnection::connect2Server(std::string_view targetIP)
         msg.append(std::to_string(winsockError));
         throw networkException(msg, winsockError);
     }
-
-    if(connect(m_socket, reinterpret_cast<sockaddr*>(&targetAddrInfo),
-        static_cast<int>(sizeof targetAddrInfo)) == SOCKET_ERROR)
-    {
-        std::string msg("connect() failed with error: ");
-        int winsockError = WSAGetLastError();
-        msg.append(std::to_string(winsockError));
-        throw networkException(msg, winsockError);
-    }
-
-    m_ipv4OfPeer = targetIP;
-    auto& app = ChessApp::getApp();
-    app.onNewConnection();
 }
 
-//this method with NOT add the message type to the beginining of the message. that repsonsiblility
-//is that of the callee. so at the point that the string view is passed to this method,
-//it should already have the whole tcp payload in the right order in memeory ready to be sent.
+void ChessConnection::connect2Server(std::string_view serverIp)
+{   
+    assert(!m_isConnected2Server);
+
+    checkPtonReturn(inet_pton(AF_INET, serverIp.data(), &m_addressInfo.sin_addr));
+
+    if(connect(m_socket, reinterpret_cast<sockaddr*>(&m_addressInfo),
+        static_cast<int>(sizeof m_addressInfo)) == SOCKET_ERROR)
+    {
+        std::string errMsg {"connect() failed with winsock error: "};
+        errMsg.append(std::to_string(WSAGetLastError()));
+        FileErrorLogger::get().logErrors(errMsg);
+    }
+    else m_isConnected2Server = true;
+}
+
+void ChessConnection::setPotentialOpponent(in_addr ipv4NwByteOrder)
+{
+    m_ipv4OfPotentialOpponent = ipv4NwByteOrder;
+    inet_ntop(AF_INET, &ipv4NwByteOrder, m_ipv4OfPotentialOpponentStr.data(),
+        m_ipv4OfPotentialOpponentStr.size());
+}
+
+//this method wont prefix the message with the MSGTYPE
+//(MSGTYPE's are defined in chessAppLevelProtocol.h). It just sends msg to the server
 void ChessConnection::sendMessage(std::string_view msg)
 {
     send(m_socket, msg.data(), msg.size(), 0);
@@ -118,7 +136,7 @@ std::optional<std::string> ChessConnection::recieveMessageIfAvailable(long secon
         }
         else//if recvResult is 0 that means the connection has been closed
         {
-            m_wasConnectionLostOrClosed = true;
+            disconnectFromServer();
             return std::nullopt;
         }
     }

@@ -55,7 +55,7 @@ extern "C" {
  *
  * \sa SDL_TICKS_PASSED
  */
-extern DECLSPEC Uint32 SDLCALL SDL_GetTicks(void);
+extern DECLSPEC uint32_t SDLCALL SDL_GetTicks(void);
 
 /**
  * Get the number of milliseconds since SDL library initialization.
@@ -144,7 +144,7 @@ extern DECLSPEC Uint64 SDLCALL SDL_GetPerformanceFrequency(void);
  *
  * \since This function is available since SDL 2.0.0.
  */
-extern DECLSPEC void SDLCALL SDL_Delay(Uint32 ms);
+extern DECLSPEC void SDLCALL SDL_Delay(uint32_t ms);
 
 /**
  * Function prototype for the timer callback function.
@@ -154,7 +154,7 @@ extern DECLSPEC void SDLCALL SDL_Delay(Uint32 ms);
  * passed in, the periodic alarm continues, otherwise a new alarm is
  * scheduled. If the callback returns 0, the periodic alarm is cancelled.
  */
-typedef Uint32 (SDLCALL * SDL_TimerCallback) (Uint32 interval, void *param);
+typedef uint32_t (SDLCALL * SDL_TimerCallback) (uint32_t interval, void *param);
 
 /**
  * Definition of the timer ID type.
@@ -193,7 +193,7 @@ typedef int SDL_TimerID;
  *
  * \sa SDL_RemoveTimer
  */
-extern DECLSPEC SDL_TimerID SDLCALL SDL_AddTimer(Uint32 interval,
+extern DECLSPEC SDL_TimerID SDLCALL SDL_AddTimer(uint32_t interval,
                                                  SDL_TimerCallback callback,
                                                  void *param);
 

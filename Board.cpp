@@ -2,6 +2,7 @@
 #include "SDL.h"
 #include "PieceTypes.h"
 #include "ChessApplication.h"
+#include "errorLogger.h"
 #include <string>
 #include <exception>
 #include <fstream>
@@ -19,7 +20,7 @@ Board::Board()
     //load the board with the fen string
     std::string const startingFEN(STARTING_FEN);
     loadFENIntoBoard(startingFEN);
-
+    
     //update the pieces internal legal moves
     updateLegalMoves();
 }
@@ -35,7 +36,6 @@ void Board::flipBoardViewingPerspective()
         Side::WHITE ? Side::BLACK : Side::WHITE);
 }
 
-//reset to starting position
 void Board::resetBoard()
 {
     //if any pieces are in the middle of the board
@@ -49,7 +49,7 @@ void Board::resetBoard()
     m_lastMoveMade = Move();
     auto& app = ChessApp::getApp();
     app.setGameState(GameState::GAME_IN_PROGRESS);
-    app.closeWinLossDrawPopup();
+    app.closeWinLossDrawWindow();
 }
 
 //factory method for placing a piece at the specified location on the board
@@ -67,9 +67,9 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
     catch(std::bad_alloc const& ba)
     {
         (void)ba;//silences c4101 (unused local variable) (cant use [[maybe unused]] here...)
-        std::ofstream ofs("log.txt");
-        ofs << "problem allocating memory for a " << typeid(ConcreteTy).name();
-        ofs.close();
+        std::string outOfMemMsg{"problem allocating memory for a "};
+        outOfMemMsg.append(typeid(ConcreteTy).name());
+        FileErrorLogger::get().logErrors(outOfMemMsg);
     }
 }
 
@@ -202,7 +202,7 @@ void Board::loadFENIntoBoard(std::string const& FEN)
 
 void Board::removeCastlingRights(CastleRights const cr)
 {
-    m_castlingRights &= static_cast<CastleRights>(~static_cast<Uint32>(cr));
+    m_castlingRights &= static_cast<CastleRights>(~static_cast<uint32_t>(cr));
 }
 
 bool Board::hasCastleRights(CastleRights const cr) const
@@ -215,11 +215,12 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
     if(mouseEvent.button.button != SDL_BUTTON_LEFT || Piece::getPieceOnMouse())
         return;
 
-    if(ChessApp::isUserConnected() && getWhosTurnItIs() != getSideUserIsPlayingAs())
+    auto& app = ChessApp::getApp();
+
+    if(app.isUserPaired() && getWhosTurnItIs() != getSideUserIsPlayingAs())
         return;
 
-    Vec2i screenPos = {mouseEvent.button.x, mouseEvent.button.y};
-
+    Vec2i screenPos{mouseEvent.button.x, mouseEvent.button.y};
     if(!ChessApp::isScreenPositionOnBoard(screenPos))
         return;
 
@@ -255,7 +256,7 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
         return;
 
     //case where the promotion window is open and the user has yet to choose a piece
-    if(app.isPromotionWndOpen())
+    if(app.isPromotionWindowOpen())
         return;
         
     Vec2i screenPos{mouseEvent.button.x, mouseEvent.button.y};
@@ -273,7 +274,7 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
         if(it->m_moveType == MoveInfo::PROMOTION ||
            it->m_moveType == MoveInfo::ROOK_CAPTURE_AND_PROMOTION)
         {
-            app.openPromotionPopup();
+            app.openPromotionWindow();
             return;
         }
 
@@ -468,11 +469,9 @@ void Board::postMoveUpdate(Move const& move, PromoType whichPromoType)
 
     playCorrectMoveAudio(move.m_moveType);
 
-    if(ChessApp::isUserConnected() && whosTurn == getSideUserIsPlayingAs())
-    {
-        auto& app = ChessApp::getApp();
-        app.sendMove(move, whichPromoType);
-    }
+    auto& app = ChessApp::getApp();
+    if(app.isUserPaired() && whosTurn == getSideUserIsPlayingAs())
+        app.buildAndSendMoveMsg(move, whichPromoType);
 
     toggleTurn();
     setLastCapturedPiece(nullptr);//if there was a last captured piece it was consumed already. so set it to null
@@ -495,7 +494,7 @@ void Board::checkForCheckOrStaleM8(Side const sideToCheck)
     bool isInCheck = cs == CheckState::DOUBLE_CHECK || cs == CheckState::SINGLE_CHECK;
     auto& app = ChessApp::getApp();
     app.setGameState(isInCheck ? GameState::CHECKMATE : GameState::STALEMATE);
-    app.openWinLossDrawPopup();
+    app.openWinLossDrawWindow();
 }
 
 void Board::updateEnPassant(Vec2i const& newLocation)

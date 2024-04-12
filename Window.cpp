@@ -5,13 +5,9 @@
 #include "imgui_impl_sdlrenderer.h"
 
 Window::Window(int const width, int const height,
-               char const* title, Uint32 const SDL_subsystems,
-               Uint32 const SDL_windowFlags)
-    : m_renderer(nullptr), m_window(nullptr), m_width(width), m_height(height),
-      m_ColorEditorWindowIsOpen(false), m_demoWindowIsOpen(false),
-      m_promotionWindowIsOpen(false), m_connectWindowIsOpen(false), 
-      m_resetBoardPopupIsOpen(false), m_newConnectionPopupIsOpen(false),
-      m_winLossDrawPopupIsOpen(false), m_rematchRequestWindowIsOpen(false)
+               char const* title, uint32_t const SDL_subsystems,
+               uint32_t const SDL_windowFlags)
+               : m_width(width), m_height(height)
 {
     SDL_Init(SDL_subsystems);
     SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &m_window, &m_renderer);//set m_window && m_renderer

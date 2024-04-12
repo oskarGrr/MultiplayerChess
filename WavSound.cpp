@@ -1,11 +1,12 @@
 #include "WavSound.h"
+#include <exception>
 
 WavSound::WavSound(char const* filePath) 
     : m_spec{}, m_audioBuffer(nullptr), m_deviceID{}, m_audioLength(0u)
 {
-    if(!SDL_LoadWAV(filePath, &m_spec, &m_audioBuffer, &m_audioLength)) throw SDL_GetError();
+    if(!SDL_LoadWAV(filePath, &m_spec, &m_audioBuffer, &m_audioLength)) throw std::exception(SDL_GetError());
     m_deviceID = SDL_OpenAudioDevice(nullptr, 0, &m_spec, nullptr, 0);
-    if(m_deviceID == 0) throw SDL_GetError();
+    if(m_deviceID == 0) throw std::exception(SDL_GetError());
 }
 
 WavSound::~WavSound()

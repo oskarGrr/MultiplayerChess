@@ -159,10 +159,10 @@ char *alloca();
 
 /* Define a four character code as a Uint32 */
 #define SDL_FOURCC(A, B, C, D) \
-    ((SDL_static_cast(Uint32, SDL_static_cast(Uint8, (A))) << 0) | \
-     (SDL_static_cast(Uint32, SDL_static_cast(Uint8, (B))) << 8) | \
-     (SDL_static_cast(Uint32, SDL_static_cast(Uint8, (C))) << 16) | \
-     (SDL_static_cast(Uint32, SDL_static_cast(Uint8, (D))) << 24))
+    ((SDL_static_cast(uint32_t, SDL_static_cast(Uint8, (A))) << 0) | \
+     (SDL_static_cast(uint32_t, SDL_static_cast(Uint8, (B))) << 8) | \
+     (SDL_static_cast(uint32_t, SDL_static_cast(Uint8, (C))) << 16) | \
+     (SDL_static_cast(uint32_t, SDL_static_cast(Uint8, (D))) << 24))
 
 /**
  *  \name Basic data types
@@ -215,8 +215,8 @@ typedef int32_t Sint32;
 /**
  * \brief An unsigned 32-bit integer type.
  */
-#define SDL_MAX_UINT32  ((Uint32)0xFFFFFFFFu)   /* 4294967295 */
-#define SDL_MIN_UINT32  ((Uint32)0x00000000)    /* 0 */
+#define SDL_MAX_UINT32  ((uint32_t)0xFFFFFFFFu)   /* 4294967295 */
+#define SDL_MIN_UINT32  ((uint32_t)0x00000000)    /* 0 */
 typedef uint32_t Uint32;
 
 /**
@@ -381,7 +381,7 @@ SDL_COMPILE_TIME_ASSERT(uint8, sizeof(Uint8) == 1);
 SDL_COMPILE_TIME_ASSERT(sint8, sizeof(Sint8) == 1);
 SDL_COMPILE_TIME_ASSERT(uint16, sizeof(Uint16) == 2);
 SDL_COMPILE_TIME_ASSERT(sint16, sizeof(Sint16) == 2);
-SDL_COMPILE_TIME_ASSERT(uint32, sizeof(Uint32) == 4);
+SDL_COMPILE_TIME_ASSERT(uint32, sizeof(uint32_t) == 4);
 SDL_COMPILE_TIME_ASSERT(sint32, sizeof(Sint32) == 4);
 SDL_COMPILE_TIME_ASSERT(uint64, sizeof(Uint64) == 8);
 SDL_COMPILE_TIME_ASSERT(sint64, sizeof(Sint64) == 8);
@@ -486,7 +486,7 @@ extern DECLSPEC int SDLCALL SDL_isgraph(int x);
 extern DECLSPEC int SDLCALL SDL_toupper(int x);
 extern DECLSPEC int SDLCALL SDL_tolower(int x);
 
-extern DECLSPEC Uint32 SDLCALL SDL_crc32(Uint32 crc, const void *data, size_t len);
+extern DECLSPEC uint32_t SDLCALL SDL_crc32(uint32_t crc, const void *data, size_t len);
 
 extern DECLSPEC void *SDLCALL SDL_memset(SDL_OUT_BYTECAP(len) void *dst, int c, size_t len);
 
@@ -495,7 +495,7 @@ extern DECLSPEC void *SDLCALL SDL_memset(SDL_OUT_BYTECAP(len) void *dst, int c, 
 #define SDL_zeroa(x) SDL_memset((x), 0, sizeof((x)))
 
 /* Note that memset() is a byte assignment and this is a 32-bit assignment, so they're not directly equivalent. */
-SDL_FORCE_INLINE void SDL_memset4(void *dst, Uint32 val, size_t dwords)
+SDL_FORCE_INLINE void SDL_memset4(void *dst, uint32_t val, size_t dwords)
 {
 #ifdef __APPLE__
     memset_pattern4(dst, &val, dwords * 4);
@@ -510,8 +510,8 @@ SDL_FORCE_INLINE void SDL_memset4(void *dst, Uint32 val, size_t dwords)
     );
 #else
     size_t _n = (dwords + 3) / 4;
-    Uint32 *_p = SDL_static_cast(Uint32 *, dst);
-    Uint32 _val = (val);
+    uint32_t *_p = SDL_static_cast(uint32_t *, dst);
+    uint32_t _val = (val);
     if (dwords == 0) {
         return;
     }
@@ -672,7 +672,7 @@ extern DECLSPEC char *SDLCALL SDL_iconv_string(const char *tocode,
                                                size_t inbytesleft);
 #define SDL_iconv_utf8_locale(S)    SDL_iconv_string("", "UTF-8", S, SDL_strlen(S)+1)
 #define SDL_iconv_utf8_ucs2(S)      (Uint16 *)SDL_iconv_string("UCS-2-INTERNAL", "UTF-8", S, SDL_strlen(S)+1)
-#define SDL_iconv_utf8_ucs4(S)      (Uint32 *)SDL_iconv_string("UCS-4-INTERNAL", "UTF-8", S, SDL_strlen(S)+1)
+#define SDL_iconv_utf8_ucs4(S)      (uint32_t *)SDL_iconv_string("UCS-4-INTERNAL", "UTF-8", S, SDL_strlen(S)+1)
 #define SDL_iconv_wchar_utf8(S)     SDL_iconv_string("UTF-8", "WCHAR_T", (char *)S, (SDL_wcslen(S)+1)*sizeof(wchar_t))
 
 /* force builds using Clang's static analysis tools to use literal C runtime

@@ -101,7 +101,7 @@ extern DECLSPEC SDL_Window * SDLCALL SDL_GetMouseFocus(void);
  * \sa SDL_GetRelativeMouseState
  * \sa SDL_PumpEvents
  */
-extern DECLSPEC Uint32 SDLCALL SDL_GetMouseState(int *x, int *y);
+extern DECLSPEC uint32_t SDLCALL SDL_GetMouseState(int *x, int *y);
 
 /**
  * Get the current state of the mouse in relation to the desktop.
@@ -130,7 +130,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_GetMouseState(int *x, int *y);
  *
  * \sa SDL_CaptureMouse
  */
-extern DECLSPEC Uint32 SDLCALL SDL_GetGlobalMouseState(int *x, int *y);
+extern DECLSPEC uint32_t SDLCALL SDL_GetGlobalMouseState(int *x, int *y);
 
 /**
  * Retrieve the relative state of the mouse.
@@ -149,7 +149,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_GetGlobalMouseState(int *x, int *y);
  *
  * \sa SDL_GetMouseState
  */
-extern DECLSPEC Uint32 SDLCALL SDL_GetRelativeMouseState(int *x, int *y);
+extern DECLSPEC uint32_t SDLCALL SDL_GetRelativeMouseState(int *x, int *y);
 
 /**
  * Move the mouse cursor to the given position within the window.

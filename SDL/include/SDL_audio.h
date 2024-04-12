@@ -185,7 +185,7 @@ typedef struct SDL_AudioSpec
     Uint8 silence;              /**< Audio buffer silence value (calculated) */
     Uint16 samples;             /**< Audio buffer size in sample FRAMES (total samples divided by channel count) */
     Uint16 padding;             /**< Necessary for some compile environments */
-    Uint32 size;                /**< Audio buffer size in bytes (calculated) */
+    uint32_t size;                /**< Audio buffer size in bytes (calculated) */
     SDL_AudioCallback callback; /**< Callback that feeds the audio device (NULL to use SDL_QueueAudio()). */
     void *userdata;             /**< Userdata passed to callback (ignored for NULL callbacks). */
 } SDL_AudioSpec;
@@ -416,7 +416,7 @@ extern DECLSPEC int SDLCALL SDL_OpenAudio(SDL_AudioSpec * desired,
  *  for backwards compatibility and when you don't care about multiple,
  *  specific, or capture devices.
  */
-typedef Uint32 SDL_AudioDeviceID;
+typedef uint32_t SDL_AudioDeviceID;
 
 /**
  * Get the number of built-in audio devices.
@@ -833,7 +833,7 @@ extern DECLSPEC SDL_AudioSpec *SDLCALL SDL_LoadWAV_RW(SDL_RWops * src,
                                                       int freesrc,
                                                       SDL_AudioSpec * spec,
                                                       Uint8 ** audio_buf,
-                                                      Uint32 * audio_len);
+                                                      uint32_t * audio_len);
 
 /**
  *  Loads a WAV from a file.
@@ -1105,7 +1105,7 @@ extern DECLSPEC void SDLCALL SDL_FreeAudioStream(SDL_AudioStream *stream);
  * \sa SDL_MixAudioFormat
  */
 extern DECLSPEC void SDLCALL SDL_MixAudio(Uint8 * dst, const Uint8 * src,
-                                          Uint32 len, int volume);
+                                          uint32_t len, int volume);
 
 /**
  * Mix audio data in a specified format.
@@ -1140,7 +1140,7 @@ extern DECLSPEC void SDLCALL SDL_MixAudio(Uint8 * dst, const Uint8 * src,
 extern DECLSPEC void SDLCALL SDL_MixAudioFormat(Uint8 * dst,
                                                 const Uint8 * src,
                                                 SDL_AudioFormat format,
-                                                Uint32 len, int volume);
+                                                uint32_t len, int volume);
 
 /**
  * Queue more audio on non-callback devices.
@@ -1188,7 +1188,7 @@ extern DECLSPEC void SDLCALL SDL_MixAudioFormat(Uint8 * dst,
  * \sa SDL_ClearQueuedAudio
  * \sa SDL_GetQueuedAudioSize
  */
-extern DECLSPEC int SDLCALL SDL_QueueAudio(SDL_AudioDeviceID dev, const void *data, Uint32 len);
+extern DECLSPEC int SDLCALL SDL_QueueAudio(SDL_AudioDeviceID dev, const void *data, uint32_t len);
 
 /**
  * Dequeue more audio on non-callback devices.
@@ -1236,7 +1236,7 @@ extern DECLSPEC int SDLCALL SDL_QueueAudio(SDL_AudioDeviceID dev, const void *da
  * \sa SDL_ClearQueuedAudio
  * \sa SDL_GetQueuedAudioSize
  */
-extern DECLSPEC Uint32 SDLCALL SDL_DequeueAudio(SDL_AudioDeviceID dev, void *data, Uint32 len);
+extern DECLSPEC uint32_t SDLCALL SDL_DequeueAudio(SDL_AudioDeviceID dev, void *data, uint32_t len);
 
 /**
  * Get the number of bytes of still-queued audio.
@@ -1270,7 +1270,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_DequeueAudio(SDL_AudioDeviceID dev, void *dat
  * \sa SDL_QueueAudio
  * \sa SDL_DequeueAudio
  */
-extern DECLSPEC Uint32 SDLCALL SDL_GetQueuedAudioSize(SDL_AudioDeviceID dev);
+extern DECLSPEC uint32_t SDLCALL SDL_GetQueuedAudioSize(SDL_AudioDeviceID dev);
 
 /**
  * Drop any queued audio data waiting to be sent to the hardware.

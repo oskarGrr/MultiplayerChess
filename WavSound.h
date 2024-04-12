@@ -17,5 +17,5 @@ private:
     SDL_AudioSpec m_spec;
     Uint8* m_audioBuffer;
     SDL_AudioDeviceID m_deviceID;
-    Uint32 m_audioLength;
+    uint32_t m_audioLength;
 };

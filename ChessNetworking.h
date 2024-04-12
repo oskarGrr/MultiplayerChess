@@ -4,44 +4,10 @@
 #include <optional>
 #include <exception>
 
-//Network message types sent to the server. 
-//The first byte of every message will be one of these types.
-//The PAIR_REQUEST_MSGTYPE and PAIR_ACCEPT_MSGTYPE 
-//defines are present on the server C source code as well
-#define WHICH_SIDE_MSGTYPE      1
-#define MOVE_MSGTYPE            2
-#define RESIGN_MSGTYPE          3
-#define DRAW_OFFER_MSGTYPE      4
-#define REMATCH_REQUEST_MSGTYPE 5
-#define REMATCH_ACCEPT_MSGTYPE  6
-#define PAIR_REQUEST_MSGTYPE    7
-#define PAIR_ACCEPT_MSGTYPE     8
+#include "chessAppLevelProtocol.h"
 
-//byte 0 is the WHICH_SIDE_MSG. byte 1 is Side::WHTE or Side::BLACK
-#define WHICH_SIDE_MSG_SIZE 2
-
-//the layout of the MOVE_MSG
-//|0|1|2|3|4|5|6|
-//byte 0 will be the MOVE_MSG
-//byte 1 will be the file (0-7) of the square where the piece is that will be moving
-//byte 2 will be the rank (0-7) of the square where the piece is that will be moving
-//byte 3 will be the file (0-7) of the square where the piece will be moving to
-//byte 4 will be the rank (0-7) of the square where the piece will be moving to
-//byte 5 will be the PromoType (enum defined in board.h) of the promotion if there is one
-//byte 6 will be the MoveInfo (enum defined in board.h) of the move that is happening
-#define MOVE_MSG_SIZE 7
-
-//These 1 byte sized messages are just their corresponding MSGTYPE
-//and thats all. No extra information needed.
-#define RESIGN_MSG_SIZE          1
-#define DRAW_OFFER_MSG_SIZE      1
-#define REMATCH_REQUEST_MSG_SIZE 1
-#define REMATCH_ACCEPT_MSG_SIZE  1
-
-//The size of an IPV4 plus the first byte which is 
-//PAIR_REQUEST_MSGTYPE or PAIR_ACCEPT_MSGTYPE respectively.
-#define PAIR_REQUEST_MSG_SIZE    5
-#define PAIR_ACCEPT_MSG_SIZE     5
+//how long (in seconds) the request to pair up will last before timing out
+#define PAIR_REQUEST_TIMEOUT_SECS 10
 
 class networkException : public std::exception
 {
@@ -66,7 +32,7 @@ private:
     bool m_hasValidWinsockError;//not every networkException has to have a winsock error
 };
 
-//a connection to my chess server (a C multithreaded socket server on my github)
+//a connection to my chess server (a C multithreaded BSD socket server on my github)
 class ChessConnection
 {
 public:
@@ -76,19 +42,26 @@ public:
 
 private:
 
-    bool        m_isConnected;
-    bool        m_wasConnectionLostOrClosed;
+    bool        m_isConnected2Server;
+    bool        m_isPairedWithOpponent;
     WSADATA     m_winSockData;
-    SOCKET      m_socket;//used by both peers (server and client) to send and recv chess moves
-    std::string m_ipv4OfPeer;
+    SOCKET      m_socket;
+    sockaddr_in m_addressInfo;
+    std::string m_opponentIpv4Str;
+    std::string m_ipv4OfPotentialOpponentStr;
+    in_addr     m_ipv4OfPotentialOpponent;//in network byte order
+
+    void connect2Server(std::string_view serverIp);
 
 public:
 
-    void sendMessage(std::string_view message);
-    void connect2Server(std::string_view targetIP);
-    std::optional<std::string> recieveMessageIfAvailable(long seconds = 0, long ms = 0);
-    //inline bool isUserConnected() const {return m_connectType != ConnectionType::INVALID;}
-    inline std::string const& getIpv4OfPeer() const {return m_ipv4OfPeer;}
-    inline bool wasConnectionClosedOrLost() const {return m_wasConnectionLostOrClosed;}
-    inline void resetWasConnectionLostBool() {m_wasConnectionLostOrClosed = false;}
+    void disconnectFromServer();
+    void sendMessage(std::string_view msg);
+    std::optional<std::string> recieveMessageIfAvailable(long seconds = 0, long ms = 0);//waits a given time for a msg
+    inline bool isConnectedToServer() const {return m_isConnected2Server;}
+    inline bool isPairedWithOpponent() const {return m_isPairedWithOpponent;}
+    inline void setIsPairedWithOpponent(bool isPaired) {m_isPairedWithOpponent = isPaired;}
+    inline std::string const& getIpv4OfPotentialOpponentStr() const {return m_ipv4OfPotentialOpponentStr;}
+    inline in_addr getIpv4OfPotentialOpponent() const {return m_ipv4OfPotentialOpponent;}
+    void setPotentialOpponent(in_addr ipv4NwByteOrder);
 };

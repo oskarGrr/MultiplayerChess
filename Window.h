@@ -9,7 +9,7 @@ private:
 
     friend class ChessApp;//only chess app should make windows
     Window(int const width, int const height, 
-        char const* title, Uint32 const SDL_subsystems, Uint32 const SDL_windowFlags);
+        char const* title, uint32_t const SDL_subsystems, uint32_t const SDL_windowFlags);
     ~Window();//cleanup SDL and imGui
 
     Window(Window const&)=delete;
@@ -17,15 +17,7 @@ private:
     Window& operator=(Window const&)=delete;
     Window& operator=(Window&&)=delete;
 
-    SDL_Renderer* m_renderer;
-    SDL_Window* m_window;
+    SDL_Renderer* m_renderer {nullptr};
+    SDL_Window*   m_window   {nullptr};
     int const m_width, m_height;
-    bool m_ColorEditorWindowIsOpen;
-    bool m_demoWindowIsOpen;
-    bool m_promotionWindowIsOpen;
-    bool m_connectWindowIsOpen;
-    bool m_resetBoardPopupIsOpen;
-    bool m_newConnectionPopupIsOpen;
-    bool m_winLossDrawPopupIsOpen;
-    bool m_rematchRequestWindowIsOpen;
 };

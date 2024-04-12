@@ -93,7 +93,7 @@ typedef struct SDL_RWops
      */
     int (SDLCALL * close) (struct SDL_RWops * context);
 
-    Uint32 type;
+    uint32_t type;
     union
     {
 #if defined(__ANDROID__)
@@ -666,7 +666,7 @@ extern DECLSPEC Uint16 SDLCALL SDL_ReadBE16(SDL_RWops * src);
  *
  * \sa SDL_ReadBE32
  */
-extern DECLSPEC Uint32 SDLCALL SDL_ReadLE32(SDL_RWops * src);
+extern DECLSPEC uint32_t SDLCALL SDL_ReadLE32(SDL_RWops * src);
 
 /**
  * Use this function to read 32 bits of big-endian data from an SDL_RWops and
@@ -682,7 +682,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_ReadLE32(SDL_RWops * src);
  *
  * \sa SDL_ReadLE32
  */
-extern DECLSPEC Uint32 SDLCALL SDL_ReadBE32(SDL_RWops * src);
+extern DECLSPEC uint32_t SDLCALL SDL_ReadBE32(SDL_RWops * src);
 
 /**
  * Use this function to read 64 bits of little-endian data from an SDL_RWops
@@ -789,7 +789,7 @@ extern DECLSPEC size_t SDLCALL SDL_WriteBE16(SDL_RWops * dst, Uint16 value);
  *
  * \sa SDL_WriteBE32
  */
-extern DECLSPEC size_t SDLCALL SDL_WriteLE32(SDL_RWops * dst, Uint32 value);
+extern DECLSPEC size_t SDLCALL SDL_WriteLE32(SDL_RWops * dst, uint32_t value);
 
 /**
  * Use this function to write 32 bits in native format to a SDL_RWops as
@@ -806,7 +806,7 @@ extern DECLSPEC size_t SDLCALL SDL_WriteLE32(SDL_RWops * dst, Uint32 value);
  *
  * \sa SDL_WriteLE32
  */
-extern DECLSPEC size_t SDLCALL SDL_WriteBE32(SDL_RWops * dst, Uint32 value);
+extern DECLSPEC size_t SDLCALL SDL_WriteBE32(SDL_RWops * dst, uint32_t value);
 
 /**
  * Use this function to write 64 bits in native format to a SDL_RWops as

@@ -170,7 +170,7 @@ extern DECLSPEC void SDLCALL SDL_SetMainReady(void);
  *
  * \since This function is available since SDL 2.0.2.
  */
-extern DECLSPEC int SDLCALL SDL_RegisterApp(const char *name, Uint32 style, void *hInst);
+extern DECLSPEC int SDLCALL SDL_RegisterApp(const char *name, uint32_t style, void *hInst);
 
 /**
  * Deregister the win32 window class from an SDL_RegisterApp call.

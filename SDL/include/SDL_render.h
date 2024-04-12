@@ -78,9 +78,9 @@ typedef enum
 typedef struct SDL_RendererInfo
 {
     const char *name;           /**< The name of the renderer */
-    Uint32 flags;               /**< Supported ::SDL_RendererFlags */
-    Uint32 num_texture_formats; /**< The number of available texture formats */
-    Uint32 texture_formats[16]; /**< The available texture formats */
+    uint32_t flags;               /**< Supported ::SDL_RendererFlags */
+    uint32_t num_texture_formats; /**< The number of available texture formats */
+    uint32_t texture_formats[16]; /**< The available texture formats */
     int max_texture_width;      /**< The maximum texture width */
     int max_texture_height;     /**< The maximum texture height */
 } SDL_RendererInfo;
@@ -203,7 +203,7 @@ extern DECLSPEC int SDLCALL SDL_GetRenderDriverInfo(int index,
  * \sa SDL_CreateWindow
  */
 extern DECLSPEC int SDLCALL SDL_CreateWindowAndRenderer(
-                                int width, int height, Uint32 window_flags,
+                                int width, int height, uint32_t window_flags,
                                 SDL_Window **window, SDL_Renderer **renderer);
 
 
@@ -225,7 +225,7 @@ extern DECLSPEC int SDLCALL SDL_CreateWindowAndRenderer(
  * \sa SDL_GetRendererInfo
  */
 extern DECLSPEC SDL_Renderer * SDLCALL SDL_CreateRenderer(SDL_Window * window,
-                                               int index, Uint32 flags);
+                                               int index, uint32_t flags);
 
 /**
  * Create a 2D software rendering context for a surface.
@@ -331,7 +331,7 @@ extern DECLSPEC int SDLCALL SDL_GetRendererOutputSize(SDL_Renderer * renderer,
  * \sa SDL_UpdateTexture
  */
 extern DECLSPEC SDL_Texture * SDLCALL SDL_CreateTexture(SDL_Renderer * renderer,
-                                                        Uint32 format,
+                                                        uint32_t format,
                                                         int access, int w,
                                                         int h);
 
@@ -384,7 +384,7 @@ extern DECLSPEC SDL_Texture * SDLCALL SDL_CreateTextureFromSurface(SDL_Renderer 
  * \sa SDL_CreateTexture
  */
 extern DECLSPEC int SDLCALL SDL_QueryTexture(SDL_Texture * texture,
-                                             Uint32 * format, int *access,
+                                             uint32_t * format, int *access,
                                              int *w, int *h);
 
 /**
@@ -1699,7 +1699,7 @@ extern DECLSPEC int SDLCALL SDL_RenderGeometryRaw(SDL_Renderer *renderer,
  */
 extern DECLSPEC int SDLCALL SDL_RenderReadPixels(SDL_Renderer * renderer,
                                                  const SDL_Rect * rect,
-                                                 Uint32 format,
+                                                 uint32_t format,
                                                  void *pixels, int pitch);
 
 /**

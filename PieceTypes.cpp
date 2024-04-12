@@ -9,7 +9,7 @@
 Piece::Piece(Side const side, Vec2i const chessPos)
     : m_pseudoLegals{}, m_legalMoves{}, m_side(side),
       m_chessPos(chessPos), m_attackedSquares{},
-      m_whichTexture(ChessApp::TextureIndices::INVALID), m_type(PieceTypes::INVALID), 
+      m_whichTexture(ChessDrawer::TextureIndices::INVALID), m_type(PieceTypes::INVALID),
       m_locationOfPiecePinningThis{INVALID_VEC2I}
 {
 }
@@ -21,14 +21,14 @@ Piece::~Piece()
 
 Pawn::Pawn(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum ChessApp::TextureIndices;
+    using enum ChessDrawer::TextureIndices;
     m_type = PieceTypes::PAWN;
     m_whichTexture = side == Side::WHITE ? WPAWN : BPAWN;
 }
 
 Knight::Knight(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum ChessApp::TextureIndices;
+    using enum ChessDrawer::TextureIndices;
     m_type = PieceTypes::KNIGHT;
     m_whichTexture = side == Side::WHITE ? WKNIGHT : BKNIGHT;
 }
@@ -36,28 +36,28 @@ Knight::Knight(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 Rook::Rook(Side const side, Vec2i const chessPos) : Piece(side, chessPos),
     m_hasMoved(true), m_koqs(KingOrQueenSide::NEITHER)
 {
-    using enum ChessApp::TextureIndices;
+    using enum ChessDrawer::TextureIndices;
     m_type = PieceTypes::ROOK;
     m_whichTexture = side == Side::WHITE ? WROOK : BROOK;
 }
 
 Bishop::Bishop(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum ChessApp::TextureIndices;
+    using enum ChessDrawer::TextureIndices;
     m_type = PieceTypes::BISHOP;
     m_whichTexture = side == Side::WHITE ? WBISHOP : BBISHOP;
 }
 
 Queen::Queen(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum ChessApp::TextureIndices;
+    using enum ChessDrawer::TextureIndices;
     m_whichTexture = side == Side::WHITE ? WQUEEN : BQUEEN;
     m_type = PieceTypes::QUEEN;
 }
 
 King::King(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
-    using enum ChessApp::TextureIndices;
+    using enum ChessDrawer::TextureIndices;
     m_type = PieceTypes::KING;
     m_whichTexture = side == Side::WHITE ? WKING : BKING;
 

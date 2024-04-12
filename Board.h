@@ -4,81 +4,14 @@
 #include <string>
 #include <array>
 #include <vector>
-#include <memory>//std::shared_ptr
+#include <memory>//for std::shared_ptr
+
+#include "chessAppLevelProtocol.h"
+#include "moveType.h"
+#include "castleRights.h"
 
 class Piece;
-enum struct Side : Uint32;
-enum struct GameState : Uint32;
-
-//a signal to be stored with moves that the board 
-//listens to after a move is made
-enum struct MoveInfo : Uint32
-{
-    INVALID,
-    NORMAL,
-    NORMAL_CAPTURE, //a capture that inst an en passant or rook capture
-    DOUBLE_PUSH,    //a double pawn push move
-    ENPASSANT,      //an en passant capture move
-    PROMOTION,      //a pawn promotion move
-    CASTLE,         //a castling move
-    ROOK_MOVE,
-    KING_MOVE,
-    ROOK_CAPTURE,
-    ROOK_CAPTURE_AND_PROMOTION //case where a pawn catures a rook and promotes
-};
-
-//the types of pieces you can promote a pawn to
-enum struct PromoType : Uint32
-{
-    INVALID, //invalid means no promotion
-    QUEEN_PROMOTION,
-    ROOK_PROMOTION,
-    KNIGHT_PROMOTION,
-    BISHOP_PROMOTION
-};
-
-//a move is a vec2 of where the piece moves to, where it moved from, and the type of move
-struct Move
-{
-    Vec2i    m_source; //where the piece is moving to
-    Vec2i    m_dest;   //where the piece moved from
-    MoveInfo m_moveType; //the type of the move
-    inline Move() : m_source{-1, -1}, m_dest{-1, -1}, m_moveType{MoveInfo::INVALID} {}
-    inline Move(Vec2i const& source, Vec2i const& dest, MoveInfo const& moveType) :
-        m_source{source}, m_dest{dest}, m_moveType{moveType} {}
-    inline bool operator==(Move const& rhs) const 
-    {
-        return m_source == rhs.m_source && m_dest == rhs.m_dest && m_moveType == rhs.m_moveType;
-    }
-};
-
-//bit masks to indicate what castling rights are available.
-enum CastleRights : Uint32
-{
-    NONE = 0, WSHORT = 0b1, WLONG = 0b10, BSHORT = 0b100, BLONG = 0b1000
-};
-
-inline CastleRights operator|(CastleRights const lhs, CastleRights const rhs)
-{
-    return static_cast<CastleRights>(static_cast<Uint32>(lhs) | 
-        static_cast<Uint32>(rhs));
-}
-
-inline CastleRights& operator|=(CastleRights& lhs, CastleRights const rhs)
-{
-    return lhs = static_cast<CastleRights>(lhs | rhs);
-}
-
-inline CastleRights operator&(CastleRights const lhs, CastleRights const rhs)
-{
-    return static_cast<CastleRights>(static_cast<Uint32>(lhs) &
-        static_cast<Uint32>(rhs));
-}
-
-inline CastleRights& operator&=(CastleRights& lhs, CastleRights const rhs)
-{
-    return lhs = static_cast<CastleRights>(lhs & rhs);
-}
+enum struct GameState : uint32_t;
 
 //Board object only instantiated as a member of the chessApplication.
 class Board
@@ -103,7 +36,7 @@ public:
     void piecePickUpRoutine(SDL_Event const&) const;
     void piecePutDownRoutine(SDL_Event const&);
 
-    void resetBoard();//reset to starting position
+    void resetBoard();
     bool hasCastleRights(const CastleRights cr) const;//supply with one of the enums above and will respond with true or false
     void removeCastlingRights(const CastleRights cr);
     std::shared_ptr<Piece> getPieceAt(Vec2i const& chessPos) const;

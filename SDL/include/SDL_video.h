@@ -52,7 +52,7 @@ extern "C" {
  */
 typedef struct
 {
-    Uint32 format;              /**< pixel format */
+    uint32_t format;              /**< pixel format */
     int w;                      /**< width, in screen coordinates */
     int h;                      /**< height, in screen coordinates */
     int refresh_rate;           /**< refresh rate (or zero for unspecified) */
@@ -665,7 +665,7 @@ extern DECLSPEC void* SDLCALL SDL_GetWindowICCProfile(SDL_Window * window, size_
  *
  * \since This function is available since SDL 2.0.0.
  */
-extern DECLSPEC Uint32 SDLCALL SDL_GetWindowPixelFormat(SDL_Window * window);
+extern DECLSPEC uint32_t SDLCALL SDL_GetWindowPixelFormat(SDL_Window * window);
 
 /**
  * Create a window with the specified position, dimensions, and flags.
@@ -737,7 +737,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_GetWindowPixelFormat(SDL_Window * window);
  */
 extern DECLSPEC SDL_Window * SDLCALL SDL_CreateWindow(const char *title,
                                                       int x, int y, int w,
-                                                      int h, Uint32 flags);
+                                                      int h, uint32_t flags);
 
 /**
  * Create an SDL window from an existing native window.
@@ -772,7 +772,7 @@ extern DECLSPEC SDL_Window * SDLCALL SDL_CreateWindowFrom(const void *data);
  *
  * \sa SDL_GetWindowFromID
  */
-extern DECLSPEC Uint32 SDLCALL SDL_GetWindowID(SDL_Window * window);
+extern DECLSPEC uint32_t SDLCALL SDL_GetWindowID(SDL_Window * window);
 
 /**
  * Get a window from a stored ID.
@@ -788,7 +788,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_GetWindowID(SDL_Window * window);
  *
  * \sa SDL_GetWindowID
  */
-extern DECLSPEC SDL_Window * SDLCALL SDL_GetWindowFromID(Uint32 id);
+extern DECLSPEC SDL_Window * SDLCALL SDL_GetWindowFromID(uint32_t id);
 
 /**
  * Get the window flags.
@@ -806,7 +806,7 @@ extern DECLSPEC SDL_Window * SDLCALL SDL_GetWindowFromID(Uint32 id);
  * \sa SDL_SetWindowGrab
  * \sa SDL_ShowWindow
  */
-extern DECLSPEC Uint32 SDLCALL SDL_GetWindowFlags(SDL_Window * window);
+extern DECLSPEC uint32_t SDLCALL SDL_GetWindowFlags(SDL_Window * window);
 
 /**
  * Set the title of a window.
@@ -1209,7 +1209,7 @@ extern DECLSPEC void SDLCALL SDL_RestoreWindow(SDL_Window * window);
  * \sa SDL_SetWindowDisplayMode
  */
 extern DECLSPEC int SDLCALL SDL_SetWindowFullscreen(SDL_Window * window,
-                                                    Uint32 flags);
+                                                    uint32_t flags);
 
 /**
  * Get the SDL surface associated with the window.

@@ -140,7 +140,7 @@ extern "C" {
  * \sa SDL_SetMainReady
  * \sa SDL_WasInit
  */
-extern DECLSPEC int SDLCALL SDL_Init(Uint32 flags);
+extern DECLSPEC int SDLCALL SDL_Init(uint32_t flags);
 
 /**
  * Compatibility function to initialize the SDL library.
@@ -157,7 +157,7 @@ extern DECLSPEC int SDLCALL SDL_Init(Uint32 flags);
  * \sa SDL_Quit
  * \sa SDL_QuitSubSystem
  */
-extern DECLSPEC int SDLCALL SDL_InitSubSystem(Uint32 flags);
+extern DECLSPEC int SDLCALL SDL_InitSubSystem(uint32_t flags);
 
 /**
  * Shut down specific SDL subsystems.
@@ -179,7 +179,7 @@ extern DECLSPEC int SDLCALL SDL_InitSubSystem(Uint32 flags);
  * \sa SDL_InitSubSystem
  * \sa SDL_Quit
  */
-extern DECLSPEC void SDLCALL SDL_QuitSubSystem(Uint32 flags);
+extern DECLSPEC void SDLCALL SDL_QuitSubSystem(uint32_t flags);
 
 /**
  * Get a mask of the specified subsystems which are currently initialized.
@@ -195,7 +195,7 @@ extern DECLSPEC void SDLCALL SDL_QuitSubSystem(Uint32 flags);
  * \sa SDL_Init
  * \sa SDL_InitSubSystem
  */
-extern DECLSPEC Uint32 SDLCALL SDL_WasInit(Uint32 flags);
+extern DECLSPEC uint32_t SDLCALL SDL_WasInit(uint32_t flags);
 
 /**
  * Clean up all initialized subsystems.

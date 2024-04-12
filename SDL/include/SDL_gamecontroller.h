@@ -860,7 +860,7 @@ extern DECLSPEC int SDLCALL SDL_GameControllerGetSensorData(SDL_GameController *
  *
  * \sa SDL_GameControllerHasRumble
  */
-extern DECLSPEC int SDLCALL SDL_GameControllerRumble(SDL_GameController *gamecontroller, Uint16 low_frequency_rumble, Uint16 high_frequency_rumble, Uint32 duration_ms);
+extern DECLSPEC int SDLCALL SDL_GameControllerRumble(SDL_GameController *gamecontroller, Uint16 low_frequency_rumble, Uint16 high_frequency_rumble, uint32_t duration_ms);
 
 /**
  * Start a rumble effect in the game controller's triggers.
@@ -885,7 +885,7 @@ extern DECLSPEC int SDLCALL SDL_GameControllerRumble(SDL_GameController *gamecon
  *
  * \sa SDL_GameControllerHasRumbleTriggers
  */
-extern DECLSPEC int SDLCALL SDL_GameControllerRumbleTriggers(SDL_GameController *gamecontroller, Uint16 left_rumble, Uint16 right_rumble, Uint32 duration_ms);
+extern DECLSPEC int SDLCALL SDL_GameControllerRumbleTriggers(SDL_GameController *gamecontroller, Uint16 left_rumble, Uint16 right_rumble, uint32_t duration_ms);
 
 /**
  * Query whether a game controller has an LED.
