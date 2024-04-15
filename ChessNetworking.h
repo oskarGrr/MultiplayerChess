@@ -3,6 +3,7 @@
 #include <string_view>
 #include <optional>
 #include <exception>
+#include <vector>
 
 #include "chessAppLevelProtocol.h"
 
@@ -40,6 +41,11 @@ public:
     ChessConnection();
     ~ChessConnection();
 
+    ChessConnection(ChessConnection const&) = delete;
+    ChessConnection(ChessConnection&&) = delete;
+    ChessConnection& operator=(ChessConnection const&) = delete;
+    ChessConnection& operator=(ChessConnection&&) = delete;
+
 private:
 
     bool        m_isConnected2Server;
@@ -47,21 +53,22 @@ private:
     WSADATA     m_winSockData;
     SOCKET      m_socket;
     sockaddr_in m_addressInfo;
-    std::string m_opponentIpv4Str;
-    std::string m_ipv4OfPotentialOpponentStr;
-    in_addr     m_ipv4OfPotentialOpponent;//in network byte order
+    uint32_t    m_potentialOpponentID;//The ID if someone attempting to play chess with you.
+    uint32_t    m_uniqueID;//This clients unique ID that the server provided upon connection.
 
     void connect2Server(std::string_view serverIp);
 
 public:
 
     void disconnectFromServer();
-    void sendMessage(std::string_view msg);
-    std::optional<std::string> recieveMessageIfAvailable(long seconds = 0, long ms = 0);//waits a given time for a msg
+    void sendMessage(const char* msg, std::size_t msgSize);
+    std::optional<std::vector<char>> recieveMessageIfAvailable(long seconds = 0, long ms = 0);//waits a given time for a network msg
     inline bool isConnectedToServer() const {return m_isConnected2Server;}
     inline bool isPairedWithOpponent() const {return m_isPairedWithOpponent;}
     inline void setIsPairedWithOpponent(bool isPaired) {m_isPairedWithOpponent = isPaired;}
-    inline std::string const& getIpv4OfPotentialOpponentStr() const {return m_ipv4OfPotentialOpponentStr;}
-    inline in_addr getIpv4OfPotentialOpponent() const {return m_ipv4OfPotentialOpponent;}
-    void setPotentialOpponent(in_addr ipv4NwByteOrder);
+    inline auto getPotentialOpponentsID() const {return m_potentialOpponentID;}
+    void setPotentialOpponent(uint32_t potentialOppoentID){m_potentialOpponentID = potentialOppoentID;}
+    static bool isOpponentIDStringValid(std::string_view opponentID);
+    void setUniqueID(uint32_t ID){m_uniqueID = ID;}
+    auto getUniqueID() const {return m_uniqueID;}
 };

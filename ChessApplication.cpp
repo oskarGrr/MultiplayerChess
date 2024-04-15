@@ -50,9 +50,9 @@ void ChessApp::run()
         shouldQuit = processEvents();
         m_chessDrawer.renderAllTheThings();
         SDL_Delay(10);
-    }
+    }                                             
 }
-
+   
 //return true if we should close the app
 bool ChessApp::processEvents()
 {
@@ -68,26 +68,26 @@ bool ChessApp::processEvents()
         case SDL_MOUSEBUTTONDOWN: m_board.piecePickUpRoutine(event); break;
         case SDL_MOUSEBUTTONUP:   m_board.piecePutDownRoutine(event);
         }
-    }
+    }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
     
     return false;
 }
 
-void ChessApp::buildAndSendPairRequest(std::string_view IPAddr)
+//Upon connecting to the server, the client receives a unique uint32_t ID.
+//That ID can then be input to specify to the server what player you
+//want to play against like a "friend code". opponentID param is this ID.
+//This function will NOT do a check to make sure the string referenced by opponentID is a valid ID string.
+void ChessApp::buildAndSendPairRequest(std::string_view opponentID)
 {
-    assert(IPAddr.size() == PAIR_REQUEST_MSG_SIZE);
-
-    in_addr ipOfPotentialOpponent;//ip in network byte order
-    inet_pton(AF_INET, IPAddr.data(), &ipOfPotentialOpponent);
+    //stoi really should be updated to take a string_view or char* instead of string& :(
+    const uint32_t ID = static_cast<uint32_t>(std::stoi(std::string(opponentID)));
+    const uint32_t nwByteOrderID = htonl(ID);
 
     char pairRequestMsg[PAIR_REQUEST_MSG_SIZE] = {0};
     pairRequestMsg[0] = PAIR_REQUEST_MSGTYPE;
+    std::memcpy(pairRequestMsg + 1, &nwByteOrderID, sizeof(nwByteOrderID));
 
-    std::memcpy(pairRequestMsg + 1, 
-        &ipOfPotentialOpponent, 
-        sizeof ipOfPotentialOpponent);
-
-    m_network.sendMessage(pairRequestMsg);
+    m_network.sendMessage(pairRequestMsg, sizeof(pairRequestMsg));
 }
 
 //Builds the move message and then passes it to the m_network's sendMessage method.
@@ -95,9 +95,8 @@ void ChessApp::buildAndSendPairRequest(std::string_view IPAddr)
 //it will hold a value that indicates that a promotion took place and which piece to promote to.
 void ChessApp::buildAndSendMoveMsg(Move const& move, PromoType pt)
 {
-    //pack all of the move information into a string to be sent
-    std::string moveMsg;
-    moveMsg.resize(MOVE_MSG_SIZE);
+    //Pack all of the move information into a buffer to be sent over the network.
+    char moveMsgBuff[MOVE_MSG_SIZE] = {0};
 
     //the layout of the MOVE_MSGTYPE type of message: 
     //|0|1|2|3|4|5|6|
@@ -108,35 +107,44 @@ void ChessApp::buildAndSendMoveMsg(Move const& move, PromoType pt)
     //byte 4 will be the rank (0-7) of the square where the piece will be moving to
     //byte 5 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one
     //byte 6 will be the MoveInfo (enum defined in (client source)moveInfo.h) of the move that is happening
-    moveMsg[0] = static_cast<char>(MOVE_MSGTYPE);
-    moveMsg[1] = move.m_source.x;
-    moveMsg[2] = move.m_source.y;
-    moveMsg[3] = move.m_dest.x;
-    moveMsg[4] = move.m_dest.y;
-    moveMsg[5] = static_cast<char>(pt);
-    moveMsg[6] = static_cast<char>(move.m_moveType);
+    moveMsgBuff[0] = static_cast<char>(MOVE_MSGTYPE);
+    moveMsgBuff[1] = static_cast<char>(move.m_source.x);
+    moveMsgBuff[2] = static_cast<char>(move.m_source.y);
+    moveMsgBuff[3] = static_cast<char>(move.m_dest.x);
+    moveMsgBuff[4] = static_cast<char>(move.m_dest.y);
+    moveMsgBuff[5] = static_cast<char>(pt);
+    moveMsgBuff[6] = static_cast<char>(move.m_moveType);
 
-    m_network.sendMessage(moveMsg);
+    m_network.sendMessage(moveMsgBuff, sizeof(moveMsgBuff));
 }
 
 void ChessApp::buildAndSendPairAccept()
 {
-    in_addr nwByteOrderIp = m_network.getIpv4OfPotentialOpponent();
+    uint32_t opponentID = htonl(m_network.getPotentialOpponentsID());
     char pairAcceptMsg[PAIR_ACCEPT_MSG_SIZE] = {0};
     pairAcceptMsg[0] = PAIR_ACCEPT_MSGTYPE;
-    std::memcpy(pairAcceptMsg + 1, &nwByteOrderIp, sizeof(nwByteOrderIp));
-    m_network.sendMessage(pairAcceptMsg);
+    std::memcpy(pairAcceptMsg + 1, &opponentID, sizeof(opponentID));
+    m_network.sendMessage(pairAcceptMsg, sizeof(pairAcceptMsg));
 }
 
 //1 byte messages only consist of their MSGTYPE (defined in chessAppLevelProtocol.h)
 void ChessApp::send1ByteMessage(messageType_t msgType)
 {
-    char msg[1]{msgType};
-    m_network.sendMessage(msg);
+    char msgBuff{msgType};
+    m_network.sendMessage(&msgBuff, 1);
 }
 
-//handle the incoming move message from the opponent
-void ChessApp::handleMoveMessage(std::string_view msg)
+//Handle the incoming MOVE_MSGTYPE message from the opponent.
+//the layout of the MOVE_MSGTYPE type of message: 
+//|0|1|2|3|4|5|6|
+//byte 0 will be the MOVE_MSGTYPE
+//byte 1 will be the file (0-7) of the square where the piece is that will be moving
+//byte 2 will be the rank (0-7) of the square where the piece is that will be moving
+//byte 3 will be the file (0-7) of the square where the piece will be moving to
+//byte 4 will be the rank (0-7) of the square where the piece will be moving to
+//byte 5 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one
+//byte 6 will be the MoveInfo (enum defined in (client source)moveInfo.h) of the move that is happening
+void ChessApp::handleMoveMessage(std::vector<char> const& msg)
 {
     assert(msg.size() == MOVE_MSG_SIZE);
     MoveInfo moveType = static_cast<MoveInfo>(msg.at(6));
@@ -157,31 +165,25 @@ void ChessApp::handleDrawOfferMessage()
 {
 }
 
-//the layout of the MOVE_MSGTYPE type of message: 
-//|0|1|2|3|4|5|6|
-//byte 0 will be the MOVE_MSGTYPE
-//byte 1 will be the file (0-7) of the square where the piece is that will be moving
-//byte 2 will be the rank (0-7) of the square where the piece is that will be moving
-//byte 3 will be the file (0-7) of the square where the piece will be moving to
-//byte 4 will be the rank (0-7) of the square where the piece will be moving to
-//byte 5 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one
-//byte 6 will be the MoveInfo (enum defined in (client source)moveInfo.h) of the move that is happening
-void ChessApp::handlePairRequestMessage(std::string_view msg)
+void ChessApp::handlePairRequestMessage(std::vector<char> const& msg)
 {
+    assert(msg.size() == PAIR_REQUEST_MSG_SIZE);
+
     //step over the first PAIR_REQUEST_MSGTYPE byte
     //(message types defined in chessAppLevelProtocol.h)
     //and set the potential opponent. now the client has
     //PAIR_REQUEST_TIMEOUT_SECS seconds before the request times out
-    in_addr nwByteOrderPotentialOpponentIp{};
-    std::memcpy(&nwByteOrderPotentialOpponentIp, 
-        msg.data()+1, sizeof nwByteOrderPotentialOpponentIp);
+    uint32_t potentialOpponentID{};
+    std::memcpy(&potentialOpponentID, msg.data() + 1, sizeof potentialOpponentID);
 
-    m_network.setPotentialOpponent(nwByteOrderPotentialOpponentIp);
+    m_network.setPotentialOpponent(ntohl(potentialOpponentID));
     m_chessDrawer.openOrClosePairRequestWindow(true);
 }
 
-void ChessApp::handlePairingCompleteMessage(std::string_view msg)
+void ChessApp::handlePairingCompleteMessage(std::vector<char> const& msg)
 {
+    assert(msg.size() == PAIRING_COMPLETE_MSG_SIZE);
+
     Side blackOrWhite = static_cast<Side>(msg.at(1));
     m_board.setSideUserIsPlayingAs(blackOrWhite);
     m_board.resetBoard();
@@ -222,6 +224,19 @@ void ChessApp::handleUnpairMessage()
     m_board.resetBoard();
 }
 
+//Handle the NEW_ID_MSGTYPE. This message is sent from the server
+//immediately uppon connection. The message is meant to give the client
+//their unique ID to use as a "friend code". Other players can then
+//give this friend code to the server to specify who they want to play chess against.
+//This is a big improvment over just simply giving your opponents external IP address.
+void ChessApp::handleNewIDMessage(std::vector<char> const& msg)
+{
+    assert(msg.size() == NEW_ID_MSG_SIZE);
+    uint32_t newID{0};
+    std::memcpy(&newID, msg.data() + 1, sizeof(newID));
+    m_network.setUniqueID(ntohl(newID));
+}
+
 //called once per frame at the beginning of the frame in ChessApp::run()
 void ChessApp::processIncomingMessages()
 {
@@ -246,7 +261,8 @@ void ChessApp::processIncomingMessages()
         case PAIR_REQUEST_MSGTYPE:     handlePairRequestMessage(msg);      break;
         case PAIRING_COMPLETE_MSGTYPE: handlePairingCompleteMessage(msg);  break;
         case REMATCH_DECLINE_MSGTYPE:  handleRematchDeclineMessage();      break;
-        case OPPONENT_CLOSED_CONNECTION_MSGTPYE: handleOpponentClosedConnectionMessage();
+        case NEW_ID_MSGTYPE:           handleNewIDMessage(msg);            break;
+        case OPPONENT_CLOSED_CONNECTION_MSGTPYE: handleOpponentClosedConnectionMessage(); 
         }
     }
     

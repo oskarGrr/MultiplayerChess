@@ -341,16 +341,29 @@ void ChessDrawer::drawConnectionWindow()
     ImGui::Begin("connect to another player", &m_connectionWindowIsOpen, 
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
     
-    std::string targetIP;
-    targetIP.resize(INET_ADDRSTRLEN);
+    static bool isInputValid = true;
 
-    ImGui::TextUnformatted("enter the IP of the user you wish to play against");
-    ImGui::TextUnformatted("(you can google \"what is my ip\" to find your external ip)");
-    if(ImGui::InputText("<- opponent's IP", targetIP.data(), targetIP.size(),
+    //The ID's are uint32_t, so we need at most 10 chars plus '\0'.
+    char opponentID[11] = {0};
+    
+    ImGui::TextUnformatted("Enter the ID of the player you wish to play against.");
+    ImGui::TextUnformatted("Your ID is at the top of the window in the title bar.");
+    if(ImGui::InputText("<- opponent's ID", opponentID, sizeof(opponentID), 
         ImGuiInputTextFlags_EnterReturnsTrue))
     {
-        ChessApp::getApp().buildAndSendPairRequest(targetIP);
+        if(ChessConnection::isOpponentIDStringValid(opponentID))
+        {
+            ChessApp::getApp().buildAndSendPairRequest(opponentID);
+            isInputValid = true;
+        }
+        else
+        {
+            isInputValid = false;
+        }        
     }
+
+    if(!isInputValid)
+        ImGui::TextUnformatted("The given ID is invalid!");
 
     ImGui::End();
 }
@@ -455,6 +468,7 @@ void ChessDrawer::drawMenuBar()
             }
 
             ImGui::TextUnformatted("connected to server");
+            ImGui::Text("your ID: %u", app.getNetWork().getUniqueID());
         }
         else ImGui::TextUnformatted("not connected to server");
         
@@ -512,14 +526,15 @@ void ChessDrawer::drawNewOpponentPopup()
 
     if(ImGui::BeginPopup("successfully connected"))
     {
+        auto opponentStr = std::to_string(network.getPotentialOpponentsID());
         std::string whichPieces("you are playing with the ");
         whichPieces.append(board.getSideUserIsPlayingAs() ==
             Side::WHITE ? "white " : "black ");
         whichPieces.append("pieces");
 
-        ImGui::TextUnformatted("successfully connected to");
+        ImGui::TextUnformatted("playing against user with ID ");
         ImGui::SameLine();
-        ImGui::TextUnformatted(network.getIpv4OfPotentialOpponentStr().data());
+        ImGui::TextUnformatted(opponentStr.data());
         ImGui::TextUnformatted(whichPieces.data());
 
         if(ImGui::Button("lets play!"))
@@ -600,12 +615,14 @@ void ChessDrawer::drawRematchRequestWindow()
 
 void ChessDrawer::drawPairRequestWindow()
 {
-    auto& app = ChessApp::getApp();
     ImGui::Begin("someone wants to play chesssss");
-    auto const& potentialOpponentIp = app.getNetWork().getIpv4OfPotentialOpponentStr();
-    ImGui::Text("request from %s to play", potentialOpponentIp.c_str());
+    auto& app = ChessApp::getApp();
+
+    auto potentialOpponentID = std::to_string(app.getNetWork().getPotentialOpponentsID());
+    ImGui::Text("request from ID %s to play", potentialOpponentID.c_str());
     if(ImGui::Button("accept"))  app.buildAndSendPairAccept();
     if(ImGui::Button("decline")) app.send1ByteMessage(PAIR_DECLINE_MSGTYPE);
+
     ImGui::End();
 }
 
@@ -657,8 +674,8 @@ void ChessDrawer::updateWinLossDrawMessage()
 
 void ChessDrawer::loadPieceTexturesFromDisk(std::array<std::string, NUMOF_PIECE_TEXTURES> const& filePaths)
 {   
-    SDL_Renderer* renderer = ChessApp::getApp().getCurrentRenderer();
-
+    SDL_Renderer* const renderer = ChessApp::getApp().getCurrentRenderer();
+    
     for(int i = 0; i < NUMOF_PIECE_TEXTURES; ++i)
     {
         if(!(m_pieceTextures[i] = IMG_LoadTexture(renderer, filePaths[i].c_str())))

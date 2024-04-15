@@ -76,6 +76,10 @@ public:
     //it will hold a value that indicates that a promotion took place and which piece to promote to.
     void buildAndSendMoveMsg(Move const& move, PromoType pt = PromoType::INVALID);
     
+    //Upon connecting to the server, the client receives a unique uint32_t ID.
+    //That ID can then be input to specify to the server what player you
+    //want to play against like a "friend code". opponentID param is this ID.
+    //This function will NOT do a check to make sure the string referenced by opponentID is a valid ID string.
     void buildAndSendPairRequest(std::string_view potentialOpponent);
     void buildAndSendPairAccept();
 
@@ -93,16 +97,17 @@ private:
     void processIncomingMessages();//called at the top of ChessApp::run()
 
     //handle the different kinds of messages that can be sent to/from the other player
-    void handleMoveMessage(std::string_view msg);//handle the incoming move message from the opponent
+    void handleMoveMessage(std::vector<char> const& msg);//handle the incoming move message from the opponent
     void handleResignMessage();
     void handleDrawOfferMessage();
     void handleRematchRequestMessage();
     void handleRematchAcceptMessage();
     void handleRematchDeclineMessage();
-    void handlePairingCompleteMessage(std::string_view msg);
-    void handlePairRequestMessage(std::string_view msg);
+    void handlePairingCompleteMessage(std::vector<char> const& msg);
+    void handlePairRequestMessage(std::vector<char> const& msg);
     void handleOpponentClosedConnectionMessage();
     void handleUnpairMessage();
+    void handleNewIDMessage(std::vector<char> const& msg);
 
     bool processEvents();
 

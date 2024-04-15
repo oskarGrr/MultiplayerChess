@@ -9,14 +9,14 @@
 #define SERVER_PORT 42069
 
 ChessConnection::ChessConnection()
-    : m_isConnected2Server{false}, m_isPairedWithOpponent{false}, 
-      m_winSockData{}, m_addressInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)},
-      m_socket{INVALID_SOCKET}, m_opponentIpv4Str{}, m_ipv4OfPotentialOpponentStr{0},
-      m_ipv4OfPotentialOpponent{}
+    : m_isConnected2Server{false},
+      m_isPairedWithOpponent{false}, 
+      m_winSockData{}, 
+      m_socket{INVALID_SOCKET},
+      m_addressInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)},
+      m_potentialOpponentID{},
+      m_uniqueID{}
 {
-    m_opponentIpv4Str.resize(INET_ADDRSTRLEN);
-    m_ipv4OfPotentialOpponentStr.resize(INET_ADDRSTRLEN);
-
     //init winsock2
     if(WSAStartup(MAKEWORD(2, 2), &m_winSockData))
     {
@@ -80,26 +80,36 @@ void ChessConnection::connect2Server(std::string_view serverIp)
     else m_isConnected2Server = true;
 }
 
-void ChessConnection::setPotentialOpponent(in_addr ipv4NwByteOrder)
+bool ChessConnection::isOpponentIDStringValid(std::string_view opponentID)
 {
-    m_ipv4OfPotentialOpponent = ipv4NwByteOrder;
-    inet_ntop(AF_INET, &ipv4NwByteOrder, m_ipv4OfPotentialOpponentStr.data(),
-        m_ipv4OfPotentialOpponentStr.size());
+    //The ID is a uint32_t as a string in base 10. The string referenced by
+    //opponentID should not exceed 10 chars. '\0' is not counted by size().
+    if(opponentID.size() > 10 || opponentID.size() == 0)
+        return false;
+
+    //if any of the chars are not 0-9
+    for(auto const& c : opponentID)
+    {
+        if( !std::isdigit(c) )
+            return false;
+    }
+
+    return true;
 }
 
 //this method wont prefix the message with the MSGTYPE
 //(MSGTYPE's are defined in chessAppLevelProtocol.h). It just sends msg to the server
-void ChessConnection::sendMessage(std::string_view msg)
+void ChessConnection::sendMessage(const char* msg, std::size_t msgSize)
 {
-    send(m_socket, msg.data(), msg.size(), 0);
+    send(m_socket, msg, msgSize, 0);
 }
 
-//returns an string if there is a message ready to be read on the connection socket, otherwise
+//returns a vector of chars if there is a message ready to be read on the connection socket, otherwise
 //returns std::nullopt if there is not a message ready to be read yet. will throw a networkException
 //(defined in ChessNetworking.h) if an error occurs or if the connection has been gracefully closed.
-//the seconds and ms is the time that this function should wait for a message to be available to be read
-//on the connection socket (the amount of time select() waits for). 
-std::optional<std::string> ChessConnection::recieveMessageIfAvailable(long seconds, long ms)
+//the seconds and ms params are the time that this function should wait for a message to be available to be read
+//on the connection socket (the amount of time select() waits for).
+std::optional<std::vector<char>> ChessConnection::recieveMessageIfAvailable(long seconds, long ms)
 {
     fd_set sockSet;
     FD_ZERO(&sockSet);
@@ -120,13 +130,17 @@ std::optional<std::string> ChessConnection::recieveMessageIfAvailable(long secon
     }
     else//select has indicated that there is a message on the connection socket ready to be read...
     {
-        std::string receivedMessage;
-        receivedMessage.resize(MOVE_MSG_SIZE);
-        int recvResult = recv(m_socket, receivedMessage.data(), receivedMessage.size(), 0);
+        //128 bytes should be enough until I implement a chat room in the chess game :D.
+        //I have an assert below though to make sure the size of a message is not greater than 128.
+        std::vector<char> msgBuffer;
+        msgBuffer.resize(128);
 
-        if(recvResult > 0)//recv successfully got a message of recvResult number of bytes
+        int recvResult = recv(m_socket, msgBuffer.data(), msgBuffer.size(), 0); 
+        if(recvResult > 0)//recv() successfully got a message of recvResult number of bytes
         {
-            return std::make_optional(receivedMessage);
+            assert(recvResult <= msgBuffer.size());
+            msgBuffer.resize(recvResult);
+            return std::make_optional(msgBuffer);
         }
         else if(recvResult == SOCKET_ERROR)
         {
