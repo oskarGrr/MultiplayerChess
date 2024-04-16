@@ -177,6 +177,7 @@ void ChessApp::handlePairRequestMessage(std::vector<char> const& msg)
     std::memcpy(&potentialOpponentID, msg.data() + 1, sizeof potentialOpponentID);
 
     m_network.setPotentialOpponent(ntohl(potentialOpponentID));
+    m_network.setIsThereAPotentialOpponent(true);
     m_chessDrawer.openOrClosePairRequestWindow(true);
 }
 
