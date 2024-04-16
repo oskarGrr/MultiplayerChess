@@ -70,7 +70,7 @@ public:
 
     void setIsThereAPotentialOpponent(bool isThereAPotentialOpponent) {m_isPairedWithOpponent = isThereAPotentialOpponent;}
     void setIsPairedWithOpponent(bool isPaired) {m_isPairedWithOpponent = isPaired;}
-    void setPotentialOpponent(uint32_t potentialOppoentID) {m_potentialOpponentID = potentialOppoentID;}
+    void setPotentialOpponentID(uint32_t potentialOppoentID) {m_potentialOpponentID = potentialOppoentID;}
     void setUniqueID(uint32_t ID) {m_uniqueID = ID;}
     void setOpponentID(uint32_t ID) {m_opponentID = ID;}
 

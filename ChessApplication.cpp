@@ -79,6 +79,9 @@ bool ChessApp::processEvents()
 //This function will NOT do a check to make sure the string referenced by opponentID is a valid ID string.
 void ChessApp::buildAndSendPairRequest(std::string_view opponentID)
 {
+    m_network.setPotentialOpponentID(static_cast<uint32_t>(std::stoi(opponentID.data())));
+    m_network.setIsThereAPotentialOpponent(true);
+
     //stoi really should be updated to take a string_view or char* instead of string& :(
     const uint32_t ID = static_cast<uint32_t>(std::stoi(std::string(opponentID)));
     const uint32_t nwByteOrderID = htonl(ID);
@@ -176,7 +179,7 @@ void ChessApp::handlePairRequestMessage(std::vector<char> const& msg)
     uint32_t potentialOpponentID{};
     std::memcpy(&potentialOpponentID, msg.data() + 1, sizeof potentialOpponentID);
 
-    m_network.setPotentialOpponent(ntohl(potentialOpponentID));
+    m_network.setPotentialOpponentID(ntohl(potentialOpponentID));
     m_network.setIsThereAPotentialOpponent(true);
     m_chessDrawer.openOrClosePairRequestWindow(true);
 }
