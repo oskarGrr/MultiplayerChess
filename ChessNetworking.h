@@ -55,20 +55,26 @@ private:
     sockaddr_in m_addressInfo;
     uint32_t    m_potentialOpponentID;//The ID if someone attempting to play chess with you.
     uint32_t    m_uniqueID;//This clients unique ID that the server provided upon connection.
+    uint32_t    m_opponentID;
 
     void connect2Server(std::string_view serverIp);
 
 public:
 
+    static bool isOpponentIDStringValid(std::string_view opponentID);
+
     void disconnectFromServer();
     void sendMessage(const char* msg, std::size_t msgSize);
     std::optional<std::vector<char>> recieveMessageIfAvailable(long seconds = 0, long ms = 0);//waits a given time for a network msg
-    inline bool isConnectedToServer() const {return m_isConnected2Server;}
-    inline bool isPairedWithOpponent() const {return m_isPairedWithOpponent;}
-    inline void setIsPairedWithOpponent(bool isPaired) {m_isPairedWithOpponent = isPaired;}
-    inline auto getPotentialOpponentsID() const {return m_potentialOpponentID;}
+
+    void setIsPairedWithOpponent(bool isPaired) {m_isPairedWithOpponent = isPaired;}
     void setPotentialOpponent(uint32_t potentialOppoentID){m_potentialOpponentID = potentialOppoentID;}
-    static bool isOpponentIDStringValid(std::string_view opponentID);
     void setUniqueID(uint32_t ID){m_uniqueID = ID;}
+    void setOpponentID(uint32_t ID){m_opponentID = ID;}
+
+    bool isConnectedToServer() const {return m_isConnected2Server;}
+    bool isPairedWithOpponent() const {return m_isPairedWithOpponent;}
+    auto getPotentialOpponentsID() const {return m_potentialOpponentID;}
     auto getUniqueID() const {return m_uniqueID;}
+    auto getOpponentID() const {return m_opponentID;}
 };

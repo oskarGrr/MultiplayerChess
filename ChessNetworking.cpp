@@ -15,7 +15,8 @@ ChessConnection::ChessConnection()
       m_socket{INVALID_SOCKET},
       m_addressInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)},
       m_potentialOpponentID{},
-      m_uniqueID{}
+      m_uniqueID{},
+      m_opponentID{}
 {
     //init winsock2
     if(WSAStartup(MAKEWORD(2, 2), &m_winSockData))
