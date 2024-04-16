@@ -108,6 +108,7 @@ private:
     void handleOpponentClosedConnectionMessage();
     void handleUnpairMessage();
     void handleNewIDMessage(std::vector<char> const& msg);
+    void handleIDNotInLobbyMessage();
 
     bool processEvents();
 

@@ -237,6 +237,13 @@ void ChessApp::handleNewIDMessage(std::vector<char> const& msg)
     m_network.setUniqueID(ntohl(newID));
 }
 
+//handle ID_NOT_IN_LOBBY_MSGTYPE
+void ChessApp::handleIDNotInLobbyMessage()
+{
+    assert(m_network.isThereAPotentialOpponent());
+    m_chessDrawer.openOrCloseIDNotInLobbyWindow(OPEN_WINDOW);
+}
+
 //called once per frame at the beginning of the frame in ChessApp::run()
 void ChessApp::processIncomingMessages()
 {
@@ -253,6 +260,7 @@ void ChessApp::processIncomingMessages()
         switch(msgType)
         {
         case MOVE_MSGTYPE:             handleMoveMessage(msg);             break;
+        case ID_NOT_IN_LOBBY_MSGTYPE:  handleIDNotInLobbyMessage();        break;
         case UNPAIR_MSGTPYE:           handleUnpairMessage();              break;
         case RESIGN_MSGTYPE:           handleResignMessage();              break;
         //case DRAW_OFFER_MSGTYPE:     handleDrawOfferMessage();           break;
