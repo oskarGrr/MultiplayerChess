@@ -50,6 +50,7 @@ private:
 
     bool        m_isConnected2Server;
     bool        m_isPairedWithOpponent;
+    bool        m_isThereAPotentialOpponent;//Is there a person you are trying to pair with/trying to pair with you.
     WSADATA     m_winSockData;
     SOCKET      m_socket;
     sockaddr_in m_addressInfo;
@@ -67,13 +68,15 @@ public:
     void sendMessage(const char* msg, std::size_t msgSize);
     std::optional<std::vector<char>> recieveMessageIfAvailable(long seconds = 0, long ms = 0);//waits a given time for a network msg
 
+    void setIsThereAPotentialOpponent(bool isThereAPotentialOpponent) {m_isPairedWithOpponent = isThereAPotentialOpponent;}
     void setIsPairedWithOpponent(bool isPaired) {m_isPairedWithOpponent = isPaired;}
-    void setPotentialOpponent(uint32_t potentialOppoentID){m_potentialOpponentID = potentialOppoentID;}
-    void setUniqueID(uint32_t ID){m_uniqueID = ID;}
-    void setOpponentID(uint32_t ID){m_opponentID = ID;}
+    void setPotentialOpponent(uint32_t potentialOppoentID) {m_potentialOpponentID = potentialOppoentID;}
+    void setUniqueID(uint32_t ID) {m_uniqueID = ID;}
+    void setOpponentID(uint32_t ID) {m_opponentID = ID;}
 
-    bool isConnectedToServer() const {return m_isConnected2Server;}
-    bool isPairedWithOpponent() const {return m_isPairedWithOpponent;}
+    auto isThereAPotentialOpponent() const {return m_isThereAPotentialOpponent;}//Is there a person you are trying to pair with/trying to pair with you.
+    auto isConnectedToServer() const {return m_isConnected2Server;}
+    auto isPairedWithOpponent() const {return m_isPairedWithOpponent;}
     auto getPotentialOpponentsID() const {return m_potentialOpponentID;}
     auto getUniqueID() const {return m_uniqueID;}
     auto getOpponentID() const {return m_opponentID;}

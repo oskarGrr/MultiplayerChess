@@ -11,6 +11,7 @@
 ChessConnection::ChessConnection()
     : m_isConnected2Server{false},
       m_isPairedWithOpponent{false}, 
+      m_isThereAPotentialOpponent{false},
       m_winSockData{}, 
       m_socket{INVALID_SOCKET},
       m_addressInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)},
