@@ -36,6 +36,7 @@ public:
     void openOrCloseWinLossDrawWindow   (bool openOrCLose) {m_winLossDrawWindowIsOpen    = openOrCLose;}
     void openOrCloseRematchRequestWindow(bool openOrCLose) {m_rematchRequestWindowIsOpen = openOrCLose;}
     void openOrClosePairRequestWindow   (bool openOrCLose) {m_pairRequestWindowIsOpen    = openOrCLose;}
+    void openOrCloseIDNotInLobbyWindow  (bool openOrClose) {m_IDNotInLobbyWindowIsOpen   = openOrClose;}
 
     void renderAllTheThings();
 
@@ -57,6 +58,7 @@ public:
 
 private:
 
+    void drawIDNotInLobbyWindow();
     void drawPiecesNotOnMouse();
     void drawPieceOnMouse();
     void drawMoveIndicatorCircles();
@@ -92,6 +94,7 @@ private:
     bool m_winLossDrawWindowIsOpen    {false};
     bool m_rematchRequestWindowIsOpen {false};
     bool m_pairRequestWindowIsOpen    {false};
+    bool m_IDNotInLobbyWindowIsOpen   {false};
 
     uint32_t m_squareSize;
     uint32_t m_chessBoardWidth;

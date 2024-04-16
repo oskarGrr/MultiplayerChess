@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <cassert>
 
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
@@ -153,6 +154,33 @@ void ChessDrawer::drawSquares()
         }
 
         square.y = static_cast<int>(m_menuBarHeight);
+    }
+}
+
+void ChessDrawer::drawIDNotInLobbyWindow()
+{
+    auto& app = ChessApp::getApp();
+    assert(app.getNetWork().isThereAPotentialOpponent());
+
+    ImGui::OpenPopup("Invalid ID");
+
+    if(ImGui::BeginPopup("Invalid ID"))
+    {
+        auto potentialOpponentIDStr = std::to_string(app.getNetWork().getPotentialOpponentsID());
+        ImGui::Text("The ID given (%s) is invalid.", potentialOpponentIDStr);
+        ImGui::TextUnformatted("Either there is not a player with\n"
+            "that ID connected to the server,\n"
+            "or you gave your own ID");
+
+        if(ImGui::Button("okay"))
+        {
+            app.getNetWork().setIsThereAPotentialOpponent(false);
+
+            openOrCloseIDNotInLobbyWindow(CLOSE_WINDOW);
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
     }
 }
 
