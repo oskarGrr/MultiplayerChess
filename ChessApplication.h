@@ -15,13 +15,12 @@ enum struct GameState : uint32_t
     GAME_IN_PROGRESS,
     CHECKMATE,
     STALEMATE,
-    GAME_ABANDONMENT,//when the connection is lost/opponent closes game
+    GAME_ABANDONMENT,//when the connection is lost/opponent closes their game
     DRAW_AGREEMENT,
     OPPONENT_RESIGNED,
     YOU_RESIGNED
 };
 
-//singleton chessApp that contains the board (which owns/"holds" the pieces)
 class ChessApp
 {
 private:
@@ -70,7 +69,7 @@ public:
     void playChessCastleSound()  {m_pieceCastleSound.playFullSound();}
     void playChessCaptureSound() {m_pieceCaptureSound.playFullSound();}
 
-    void setGameState(GameState gs) {m_gameState = gs;}
+    void updateGameState(GameState);
 
     //pt will be defaulted to PromoType::INVALID to indicate no promotion is happening. Otherwise
     //it will hold a value that indicates that a promotion took place and which piece to promote to.
@@ -87,12 +86,6 @@ public:
     void send1ByteMessage(messageType_t msgType);
 
 private:
-
-    //called inside of openWinLossDrawPopup() 
-    //in order to update m_winLossDrawPopupMessage before drawing the win loss draw popup
-    void updateWinLossDrawMessage();
-
-    //friend void ChessConnection::connect2Server(std::string_view targetIP);
 
     void processIncomingMessages();//called at the top of ChessApp::run()
 
@@ -111,11 +104,6 @@ private:
     void handleIDNotInLobbyMessage();
 
     bool processEvents();
-
-    //looks for a file in the same path as the .exe called squareColorData.txt.
-    //if it cant find it, then it will throw an exception.
-    void deserializeAndLoadSquareColorData();
-    void serializeSquareColorData();
 
 private:
     Window m_wnd;

@@ -490,7 +490,7 @@ void ChessDrawer::drawMenuBar()
                 if(ImGui::Button("resign", {48, 20}))
                 {
                     app.send1ByteMessage(RESIGN_MSGTYPE);
-                    app.setGameState(GameState::YOU_RESIGNED);
+                    app.updateGameState(GameState::YOU_RESIGNED);
                     openOrCloseWinLossDrawWindow(false);
                 }
             }

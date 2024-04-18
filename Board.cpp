@@ -8,7 +8,8 @@
 #include <fstream>
 #include <cassert>
 
-#define STARTING_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+//#define STARTING_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+#define STARTING_FEN "8/8/8/8/8/8/6q1/K7 w - 0 1"
 
 Board::Board()
     : m_pieces{}, m_lastCapturedPiece{}, m_checkState(CheckState::INVALID),
@@ -48,7 +49,7 @@ void Board::resetBoard()
     updateLegalMoves();
     m_lastMoveMade = Move();
     auto& app = ChessApp::getApp();
-    app.setGameState(GameState::GAME_IN_PROGRESS);
+    app.updateGameState(GameState::GAME_IN_PROGRESS);
     app.closeWinLossDrawWindow();
 }
 
@@ -493,7 +494,7 @@ void Board::checkForCheckOrStaleM8(Side const sideToCheck)
     auto cs = getCheckState();
     bool isInCheck = cs == CheckState::DOUBLE_CHECK || cs == CheckState::SINGLE_CHECK;
     auto& app = ChessApp::getApp();
-    app.setGameState(isInCheck ? GameState::CHECKMATE : GameState::STALEMATE);
+    app.updateGameState(isInCheck ? GameState::CHECKMATE : GameState::STALEMATE);
     app.openWinLossDrawWindow();
 }
 

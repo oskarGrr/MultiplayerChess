@@ -42,7 +42,7 @@ ChessApp::~ChessApp()
 
 void ChessApp::run()
 {
-    setGameState(GameState::GAME_IN_PROGRESS);
+    updateGameState(GameState::GAME_IN_PROGRESS);
     bool shouldQuit = false;
     while(!shouldQuit)
     {
@@ -159,7 +159,7 @@ void ChessApp::handleMoveMessage(std::vector<char> const& msg)
 
 void ChessApp::handleResignMessage()
 {
-    setGameState(GameState::OPPONENT_RESIGNED);
+    updateGameState(GameState::OPPONENT_RESIGNED);
     m_chessDrawer.openOrCloseWinLossDrawWindow(true);
 }
 
@@ -211,7 +211,7 @@ void ChessApp::handleRematchAcceptMessage()
 
 void ChessApp::handleOpponentClosedConnectionMessage()
 {
-    setGameState(GameState::GAME_ABANDONMENT);
+    updateGameState(GameState::GAME_ABANDONMENT);
     m_network.setIsPairedWithOpponent(false);
     m_chessDrawer.openOrCloseWinLossDrawWindow(true);
 }
@@ -363,4 +363,12 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
 bool ChessApp::isScreenPositionOnBoard(Vec2i const& screenPosition)
 {
     return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
+}
+
+void ChessApp::updateGameState(GameState gs)
+{
+    m_gameState = gs;
+
+    if(gs != GameState::GAME_IN_PROGRESS)
+        m_chessDrawer.updateWinLossDrawMessage();
 }

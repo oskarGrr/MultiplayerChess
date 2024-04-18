@@ -68,7 +68,7 @@ public:
     void sendMessage(const char* msg, std::size_t msgSize);
     std::optional<std::vector<char>> recieveMessageIfAvailable(long seconds = 0, long ms = 0);//waits a given time for a network msg
 
-    void setIsThereAPotentialOpponent(bool isThereAPotentialOpponent) {m_isPairedWithOpponent = isThereAPotentialOpponent;}
+    void setIsThereAPotentialOpponent(bool isThereAPotentialOpponent) {m_isThereAPotentialOpponent = isThereAPotentialOpponent;}
     void setIsPairedWithOpponent(bool isPaired) {m_isPairedWithOpponent = isPaired;}
     void setPotentialOpponentID(uint32_t potentialOppoentID) {m_potentialOpponentID = potentialOppoentID;}
     void setUniqueID(uint32_t ID) {m_uniqueID = ID;}

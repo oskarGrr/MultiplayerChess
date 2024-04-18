@@ -26,6 +26,9 @@ public:
     ChessDrawer& operator=(ChessDrawer const&) = delete;
     ChessDrawer& operator=(ChessDrawer&&) = delete;
 
+    //Update m_winLossDrawPopupMessage based on the current gamestate.
+    void updateWinLossDrawMessage();
+
     //true for open false for close or use the more readable macros CLOSE_WINDOW and OPEN_WINDOW
     void openOrCloseColorEditorWindow   (bool openOrCLose) {m_colorEditorWindowIsOpen    = openOrCLose;}
     void openOrCloseDemoWindow          (bool openOrCLose) {m_demoWindowIsOpen           = openOrCLose;}
@@ -78,8 +81,6 @@ private:
     //generates a circle texture at startup to use later
     void initCircleTexture(int radius, Uint8 RR, Uint8 GG, Uint8 BB, Uint8 AA, 
         SDL_Texture** toInit);
-
-    void updateWinLossDrawMessage();
 
     void serializeSquareColorData();
     void deserializeAndLoadSquareColorData();
