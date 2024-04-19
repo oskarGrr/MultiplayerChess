@@ -110,7 +110,7 @@ private:
     //makes some assumptions that the given string is a valid fen string.
     //in the future I will probably make a seperate class for loading the 
     //different portions of a fen string in order to break up this method which is a little lengthy
-    void loadFENIntoBoard(std::string const&);
+    void loadFENIntoBoard(std::string_view);
 
     //will check for stale or check mate. if either one is true then update the game state to that.
     void checkForCheckOrStaleM8(Side const sideToCheck);

@@ -8,8 +8,8 @@
 #include <fstream>
 #include <cassert>
 
-//#define STARTING_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-#define STARTING_FEN "8/8/8/8/8/8/6q1/K7 w - 0 1"
+#define STARTING_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+//#define STARTING_FEN "7k/8/8/8/8/8/6q1/K7 w - 0 1"//easy to test stalemate pos
 
 Board::Board()
     : m_pieces{}, m_lastCapturedPiece{}, m_checkState(CheckState::INVALID),
@@ -78,7 +78,7 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
 //makes some assumptions that the given string is a valid fen string.
 //in the future I will probably make a seperate class for loading the 
 //different portions of a fen string in order to break up this method which is a little lengthy
-void Board::loadFENIntoBoard(std::string const& FEN)
+void Board::loadFENIntoBoard(std::string_view FEN)
 {   
     int file = 0, rank = 7;
     auto it = FEN.cbegin();
