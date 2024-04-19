@@ -43,8 +43,7 @@ void Board::resetBoard()
     for(int i = 16; i < 48; ++i)
         capturePiece(ChessApp::index2ChessPos(i));
 
-    std::string const startingFEN(STARTING_FEN);
-    loadFENIntoBoard(startingFEN);
+    loadFENIntoBoard(STARTING_FEN);
     setLastCapturedPiece(nullptr);
     updateLegalMoves();
     m_lastMoveMade = Move();
@@ -80,8 +79,12 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
 //different portions of a fen string in order to break up this method which is a little lengthy
 void Board::loadFENIntoBoard(std::string_view FEN)
 {   
-    int file = 0, rank = 7;
+    //Start at the top left (from white's perspective (a8)).
+    int file = {0}, rank = {7};
+
     auto it = FEN.cbegin();
+
+    int numWhiteKings{0}, numBlackKings{0};
 
     //this loop handles the first field (positional field) in the FEN string
     for(; it != FEN.cend(); ++it)
@@ -101,7 +104,7 @@ void Board::loadFENIntoBoard(std::string_view FEN)
             //ascii digit - 48 maps the char to the cooresponding decimal value
             file += *it - 48;
         }
-        else//if c is an upper or lowercase letter
+        else//If the char pointed to by "it" is an upper or lower case letter.
         {
             Side side = isupper(*it) ? Side::WHITE : Side::BLACK;
 
@@ -112,22 +115,32 @@ void Board::loadFENIntoBoard(std::string_view FEN)
             case 'r': makeNewPieceAt<Rook>  ({file, rank}, side); break;
             case 'b': makeNewPieceAt<Bishop>({file, rank}, side); break;
             case 'q': makeNewPieceAt<Queen> ({file, rank}, side); break;
-            case 'k': makeNewPieceAt<King>  ({file, rank}, side);
+            case 'k':
+            {
+                makeNewPieceAt<King>({file, rank}, side);
+                if(side == Side::WHITE) ++numWhiteKings;
+                else ++numBlackKings;
             }
-
+            }
             ++file;
         }
     }
+
+    if(numBlackKings != 1)
+        throw FenException("Too many or too few black kings in FEN string");
+
+    if(numWhiteKings != 1)
+        throw FenException("Too many or too few white kings in FEN string");
 
     //if the FEN string only had a positional field
     if(it == FEN.cend())
         return;
 
-    //handle whos turn it is to move
-    //if c is 'w' then its whites turn otherwise its blacks
+    //Handle who's turn it is to move.
+    //If c is 'w' then it's whites turn otherwise it's blacks turn.
     m_sideOfWhosTurnItIs = (*it == 'w') ? Side::WHITE : Side::BLACK;
 
-    //if the turn field wasnt the last field then jump over the space after it
+    //If the turn field wasn't the last field, then jump over the space after it.
     if(++it != FEN.cend())
         ++it;
     else return;
