@@ -39,8 +39,7 @@ void Board::flipBoardViewingPerspective()
 
 void Board::resetBoard()
 {
-    //if any pieces are in the middle of the board
-    for(int i = 16; i < 48; ++i)
+    for(int i = 0; i < 64; ++i) 
         capturePiece(ChessApp::index2ChessPos(i));
 
     loadFENIntoBoard(STARTING_FEN);
@@ -73,14 +72,14 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
     }
 }
 
-//loads up a fen string into the board. 
-//makes some assumptions that the given string is a valid fen string.
-//in the future I will probably make a seperate class for loading the 
-//different portions of a fen string in order to break up this method which is a little lengthy
+//Loads up a FEN string into the board. 
+//Makes a few assumptions that the given string is a valid FEN string.
+//In the future I will probably make a seperate class for loading the
+//different portions of a fen string; in order to break up this method which is a bit lengthy.
 void Board::loadFENIntoBoard(std::string_view FEN)
-{   
+{
     //Start at the top left (from white's perspective (a8)).
-    int file = {0}, rank = {7};
+    int file{0}, rank{7};
 
     auto it = FEN.cbegin();
 
