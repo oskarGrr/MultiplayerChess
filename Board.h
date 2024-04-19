@@ -115,3 +115,21 @@ private:
     //will check for stale or check mate. if either one is true then update the game state to that.
     void checkForCheckOrStaleM8(Side const sideToCheck);
 };
+
+class FenException : public std::exception
+{
+public:
+    FenException(std::string_view info) : m_exceptionInfoStr{info} {}
+
+    ~FenException() override = default;
+    FenException(FenException const&) = default;
+    FenException(FenException&&) = default;
+    FenException& operator=(FenException const&) = default;
+    FenException& operator=(FenException&&) = default;
+
+    [[nodiscard]]
+    const char* what() const override {return m_exceptionInfoStr.data();}
+
+private:
+    std::string m_exceptionInfoStr;
+};
