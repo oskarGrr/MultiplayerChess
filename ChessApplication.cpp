@@ -163,9 +163,14 @@ void ChessApp::handleResignMessage()
     m_chessDrawer.openOrCloseWinLossDrawWindow(true);
 }
 
-//no draw offer button yet
 void ChessApp::handleDrawOfferMessage()
 {
+    m_chessDrawer.openOrCloseDrawOfferWindow(OPEN_WINDOW);
+}
+
+void ChessApp::hanldeDrawDeclineMessage()
+{
+    m_chessDrawer.openOrCloseDrawDeclinedWindow(OPEN_WINDOW);
 }
 
 void ChessApp::handlePairRequestMessage(std::vector<char> const& msg)
@@ -248,6 +253,12 @@ void ChessApp::handleIDNotInLobbyMessage()
     m_chessDrawer.openOrCloseIDNotInLobbyWindow(OPEN_WINDOW);
 }
 
+void ChessApp::handleDrawAcceptMessage()
+{
+    updateGameState(GameState::DRAW_AGREEMENT);
+    m_chessDrawer.openOrCloseWinLossDrawWindow(OPEN_WINDOW);
+}
+
 //called once per frame at the beginning of the frame in ChessApp::run()
 void ChessApp::processIncomingMessages()
 {
@@ -259,7 +270,7 @@ void ChessApp::processIncomingMessages()
         auto& msg = result.value();
 
         //the first byte is the MSGTYPE (defined in chessAppLevelProtocol.h)
-        messageType_t msgType = static_cast<messageType_t>(msg.at(0));
+        auto const msgType = static_cast<messageType_t>(msg.at(0));
 
         switch(msgType)
         {
@@ -267,7 +278,9 @@ void ChessApp::processIncomingMessages()
         case ID_NOT_IN_LOBBY_MSGTYPE:  handleIDNotInLobbyMessage();        break;
         case UNPAIR_MSGTPYE:           handleUnpairMessage();              break;
         case RESIGN_MSGTYPE:           handleResignMessage();              break;
-        //case DRAW_OFFER_MSGTYPE:     handleDrawOfferMessage();           break;
+        case DRAW_OFFER_MSGTYPE:       handleDrawOfferMessage();           break;
+        case DRAW_DECLINE_MSGTYPE:     hanldeDrawDeclineMessage();         break;
+        case DRAW_ACCEPT_MSGTYPE:      handleDrawAcceptMessage();          break;
         case REMATCH_ACCEPT_MSGTYPE:   handleRematchAcceptMessage();       break;
         case REMATCH_REQUEST_MSGTYPE:  handleRematchRequestMessage();      break;
         case PAIR_REQUEST_MSGTYPE:     handlePairRequestMessage(msg);      break;

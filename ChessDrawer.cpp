@@ -286,12 +286,38 @@ void ChessDrawer::drawMoveIndicatorCircles()
     }
 }
 
+void ChessDrawer::drawDrawDeclinedWindow()
+{
+    ImGui::OpenPopup("draw declined");
+
+    //always center this window when appearing
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if(ImGui::BeginPopup("draw declined", ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
+    {
+        ImGui::TextUnformatted("opponent declined your draw offer.");
+        if(ImGui::Button("okay"))
+        {
+            ImGui::CloseCurrentPopup();
+            openOrCloseDrawDeclinedWindow(CLOSE_WINDOW);
+        }
+        ImGui::EndPopup();
+    }
+}
+
 void ChessDrawer::renderAllTheThings()
 {
     auto const renderer = ChessApp::getApp().getCurrentRenderer();
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+
+    if(m_drawDeclinedWindowIsOpen)   [[unlikely]]
+        drawDrawDeclinedWindow();
+
+    if(m_drawOfferWindowIsOpen)      [[unlikely]]
+        drawDrawOfferWindow();
 
     if(m_connectionWindowIsOpen)     [[unlikely]]
         drawConnectionWindow();
@@ -458,6 +484,31 @@ void ChessDrawer::drawPromotionPopup()
     ImGui::PopStyleVar(4);
 }
 
+void ChessDrawer::drawDrawOfferWindow()
+{
+    ImGui::Begin("opponent has offered a draw");
+
+    auto& app = ChessApp::getApp();
+
+    if(ImGui::Button("Accept"))
+    {
+        app.send1ByteMessage(DRAW_ACCEPT_MSGTYPE);
+        app.updateGameState(GameState::DRAW_AGREEMENT);
+        openOrCloseWinLossDrawWindow(OPEN_WINDOW);
+        openOrCloseDrawOfferWindow(CLOSE_WINDOW);
+    }
+
+    ImGui::SameLine();
+
+    if(ImGui::Button("Decline"))
+    {
+        app.send1ByteMessage(DRAW_DECLINE_MSGTYPE);
+        openOrCloseDrawOfferWindow(CLOSE_WINDOW);
+    }
+
+    ImGui::End();
+}
+
 void ChessDrawer::drawMenuBar()
 {
     auto& app = ChessApp::getApp();
@@ -492,6 +543,14 @@ void ChessDrawer::drawMenuBar()
                     app.send1ByteMessage(RESIGN_MSGTYPE);
                     app.updateGameState(GameState::YOU_RESIGNED);
                     openOrCloseWinLossDrawWindow(false);
+                }
+
+                if(ImGui::Button("draw", {48, 20}))
+                {
+                    app.send1ByteMessage(DRAW_OFFER_MSGTYPE);
+                    
+                    //Do not set the game state to GameState::DRAW_AGREEMENT until 
+                    //receiving/sending DRAW_ACCEPT_MSGTYPE.
                 }
             }
 

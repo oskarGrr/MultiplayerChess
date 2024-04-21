@@ -93,6 +93,7 @@ private:
     void handleMoveMessage(std::vector<char> const& msg);//handle the incoming move message from the opponent
     void handleResignMessage();
     void handleDrawOfferMessage();
+    void hanldeDrawDeclineMessage();
     void handleRematchRequestMessage();
     void handleRematchAcceptMessage();
     void handleRematchDeclineMessage();
@@ -102,6 +103,7 @@ private:
     void handleUnpairMessage();
     void handleNewIDMessage(std::vector<char> const& msg);
     void handleIDNotInLobbyMessage();
+    void handleDrawAcceptMessage();
 
     bool processEvents();
 

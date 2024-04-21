@@ -8,8 +8,8 @@
 #include <fstream>
 #include <cassert>
 
-#define STARTING_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-//#define STARTING_FEN "7k/8/8/8/8/8/6q1/K7 w - 0 1"//easy to test stalemate pos
+//#define STARTING_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+#define STARTING_FEN "7k/8/8/8/8/8/6q1/K7 w - 0 1"//easy to test stalemate pos
 
 Board::Board()
     : m_pieces{}, m_lastCapturedPiece{}, m_checkState(CheckState::INVALID),
