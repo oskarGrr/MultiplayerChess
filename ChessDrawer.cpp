@@ -48,6 +48,8 @@ ChessDrawer::ChessDrawer(uint32_t squareSize)
 
     initCircleTexture(m_squareSize / 6, 0x6F, 0x6F, 0x6F, 0x9F, &m_circleTexture);
     initCircleTexture(m_squareSize / 6, 0xDE, 0x31, 0x63, 0x7F, &m_redCircleTexture);
+
+    ImGui::StyleColorsLight();
 }
 
 ChessDrawer::~ChessDrawer()
@@ -514,16 +516,12 @@ void ChessDrawer::drawMenuBar()
     auto& app = ChessApp::getApp();
     auto& board = app.getBoard();
 
-    ImGui::StyleColorsLight();
-
-    {
-        //Need to call ImGui::PopStyleColor(4) at the end of this function
-        ImGuiStyle& style = ImGui::GetStyle();
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
-        ImGui::PushStyleColor(ImGuiCol_Separator, {0,0,0,1});
-        ImGui::PushStyleColor(ImGuiCol_MenuBarBg, {0.788f, 0.831f, 0.827f, 1});
-        ImGui::PushStyleColor(ImGuiCol_Button, {.2f, 0.79f, 0.8f, 0.70f});
-    }
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {9,5});
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
+    ImGui::PushStyleColor(ImGuiCol_Separator, {0,0,0,1});
+    ImGui::PushStyleColor(ImGuiCol_MenuBarBg, {183/255.f, 189/255.f, 188/255.f, 1});
+    ImGui::PushStyleColor(ImGuiCol_Button, {.2f, 0.79f, 0.8f, 0.70f});
 
     if(ImGui::BeginMainMenuBar()) [[unlikely]]
     {
@@ -593,8 +591,9 @@ void ChessDrawer::drawMenuBar()
     
         ImGui::EndMainMenuBar();
     }
+
     ImGui::PopStyleColor(4);
-    ImGui::StyleColorsDark();
+    ImGui::PopStyleVar(2);
 }
 
 void ChessDrawer::drawResetButtonErrorPopup()
