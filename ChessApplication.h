@@ -57,7 +57,7 @@ public:
     static bool isScreenPositionOnBoard(Vec2i const&);//tells if a screen pos is on the board or if its off the screen/board or is over an imgui window
     static bool inRange(Vec2i const chessPos);//tells if a chess position is within the range of a chess board (0-7 ranks and a-h files)
     static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
-    bool isUserPaired() const {return s_theApplication.m_network.isPairedWithOpponent();}
+    bool isPairedWithOpponent() const {return m_network.isPairedWithOpponent();}
     bool isConnectedToServer() const {return m_network.isConnectedToServer();}
     bool isPromotionWindowOpen() const {return m_chessDrawer.isPromotionWindowOpen();}
     void openPromotionWindow() {m_chessDrawer.openOrClosePromotionWindow(OPEN_WINDOW);}

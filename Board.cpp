@@ -230,7 +230,7 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
 
     auto& app = ChessApp::getApp();
 
-    if(app.isUserPaired() && getWhosTurnItIs() != getSideUserIsPlayingAs())
+    if(app.isPairedWithOpponent() && getWhosTurnItIs() != getSideUserIsPlayingAs())
         return;
 
     Vec2i screenPos{mouseEvent.button.x, mouseEvent.button.y};
@@ -483,7 +483,7 @@ void Board::postMoveUpdate(Move const& move, PromoType whichPromoType)
     playCorrectMoveAudio(move.m_moveType);
 
     auto& app = ChessApp::getApp();
-    if(app.isUserPaired() && whosTurn == getSideUserIsPlayingAs())
+    if(app.isPairedWithOpponent() && whosTurn == getSideUserIsPlayingAs())
         app.buildAndSendMoveMsg(move, whichPromoType);
 
     toggleTurn();

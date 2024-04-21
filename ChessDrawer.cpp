@@ -525,27 +525,27 @@ void ChessDrawer::drawMenuBar()
             ImGui::EndMenu();
         }
 
-        if(ImGui::Button("flip board", {70, 20}))
+        if(ImGui::SmallButton("flip board"))
             board.flipBoardViewingPerspective();
     
-        if(ImGui::Button("reset board", {82, 20}))
+        if(ImGui::SmallButton("reset board"))
         {
-            if(!app.isUserPaired()) board.resetBoard();
+            if(!app.isPairedWithOpponent()) board.resetBoard();
             else openOrCloseResetBoardWindow(false);
         }
 
         if(app.isConnectedToServer())
         {
-            if(app.isUserPaired())
+            if(app.isPairedWithOpponent())
             {
-                if(ImGui::Button("resign", {48, 20}))
+                if(ImGui::SmallButton("resign"))
                 {
                     app.send1ByteMessage(RESIGN_MSGTYPE);
                     app.updateGameState(GameState::YOU_RESIGNED);
                     openOrCloseWinLossDrawWindow(false);
                 }
 
-                if(ImGui::Button("draw", {48, 20}))
+                if(ImGui::SmallButton("draw"))
                 {
                     app.send1ByteMessage(DRAW_OFFER_MSGTYPE);
                     
@@ -554,8 +554,16 @@ void ChessDrawer::drawMenuBar()
                 }
             }
 
-            ImGui::TextUnformatted("connected to server");
+            ImGui::Separator();
+            ImGui::Text("connected to server");
+            ImGui::Separator();
             ImGui::Text("your ID: %u", app.getNetWork().getUniqueID());
+            ImGui::Separator();
+
+            if(app.isPairedWithOpponent())
+            {
+                ImGui::Text("opponentID: %u", app.getNetWork().getOpponentID());
+            }
         }
         else ImGui::TextUnformatted("not connected to server");
         
@@ -652,7 +660,7 @@ void ChessDrawer::drawWinLossDrawPopup()
     
     ImGui::TextUnformatted(m_winLossDrawPopupMessage.data());
 
-    if(app.isUserPaired())
+    if(app.isPairedWithOpponent())
     {
         if(ImGui::Button("request rematch"))
             app.send1ByteMessage(REMATCH_REQUEST_MSGTYPE);
@@ -732,7 +740,7 @@ void ChessDrawer::updateWinLossDrawMessage()
         return;
     }
 
-    if(app.isUserPaired())
+    if(app.isPairedWithOpponent())
     {
         m_winLossDrawPopupMessage = "you ";
         switch(gs)
