@@ -514,12 +514,22 @@ void ChessDrawer::drawMenuBar()
     auto& app = ChessApp::getApp();
     auto& board = app.getBoard();
 
-    ImGui::StyleColorsLight();//light menu bar
+    ImGui::StyleColorsLight();
+
+    {
+        //Need to call ImGui::PopStyleColor(4) at the end of this function
+        ImGuiStyle& style = ImGui::GetStyle();
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
+        ImGui::PushStyleColor(ImGuiCol_Separator, {0,0,0,1});
+        ImGui::PushStyleColor(ImGuiCol_MenuBarBg, {0.788f, 0.831f, 0.827f, 1});
+        ImGui::PushStyleColor(ImGuiCol_Button, {.2f, 0.79f, 0.8f, 0.70f});
+    }
+
     if(ImGui::BeginMainMenuBar()) [[unlikely]]
     {
         if(ImGui::BeginMenu("options"))
         {   
-            ImGui::MenuItem("change colors", nullptr, &m_colorEditorWindowIsOpen);
+            ImGui::MenuItem("change square colors", nullptr, &m_colorEditorWindowIsOpen);
             ImGui::MenuItem("connect to another player", nullptr, &m_connectionWindowIsOpen);
             ImGui::MenuItem("show ImGui demo", nullptr, &m_demoWindowIsOpen);
             ImGui::EndMenu();
@@ -546,12 +556,7 @@ void ChessDrawer::drawMenuBar()
                 }
 
                 if(ImGui::SmallButton("draw"))
-                {
                     app.send1ByteMessage(DRAW_OFFER_MSGTYPE);
-                    
-                    //Do not set the game state to GameState::DRAW_AGREEMENT until 
-                    //receiving/sending DRAW_ACCEPT_MSGTYPE.
-                }
             }
 
             ImGui::Separator();
@@ -561,12 +566,15 @@ void ChessDrawer::drawMenuBar()
             ImGui::Separator();
 
             if(app.isPairedWithOpponent())
-            {
                 ImGui::Text("opponentID: %u", app.getNetWork().getOpponentID());
-            }
         }
-        else ImGui::TextUnformatted("not connected to server");
-        
+        else 
+        {
+            ImGui::Separator();
+            ImGui::TextUnformatted("not connected to server");
+            ImGui::Separator();
+        }
+
         char const* whosTurn = board.getWhosTurnItIs() == Side::WHITE ?
             "it's white's turn" : "it's black's turn";
         ImGui::SameLine(app.getWindowWidth() - (ImGui::CalcTextSize(whosTurn).x + 18));
@@ -585,7 +593,8 @@ void ChessDrawer::drawMenuBar()
     
         ImGui::EndMainMenuBar();
     }
-    ImGui::StyleColorsDark();//light menu bar
+    ImGui::PopStyleColor(4);
+    ImGui::StyleColorsDark();
 }
 
 void ChessDrawer::drawResetButtonErrorPopup()
