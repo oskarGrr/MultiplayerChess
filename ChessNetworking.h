@@ -48,7 +48,7 @@ public:
 
 private:
 
-    bool        m_isConnected2Server;
+    bool        m_isConnectedToServer;
     bool        m_isPairedWithOpponent;
     bool        m_isThereAPotentialOpponent;//Is there a person you are trying to pair with/trying to pair with you.
     WSADATA     m_winSockData;
@@ -75,7 +75,7 @@ public:
     void setOpponentID(uint32_t ID) {m_opponentID = ID;}
 
     auto isThereAPotentialOpponent() const {return m_isThereAPotentialOpponent;}//Is there a person you are trying to pair with/trying to pair with you.
-    auto isConnectedToServer() const {return m_isConnected2Server;}
+    auto isConnectedToServer() const {return m_isConnectedToServer;}
     auto isPairedWithOpponent() const {return m_isPairedWithOpponent;}
     auto getPotentialOpponentsID() const {return m_potentialOpponentID;}
     auto getUniqueID() const {return m_uniqueID;}

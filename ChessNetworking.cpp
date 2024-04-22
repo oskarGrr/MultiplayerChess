@@ -9,7 +9,7 @@
 #define SERVER_PORT 42069
 
 ChessConnection::ChessConnection()
-    : m_isConnected2Server{false},
+    : m_isConnectedToServer{false},
       m_isPairedWithOpponent{false}, 
       m_isThereAPotentialOpponent{false},
       m_winSockData{}, 
@@ -45,8 +45,9 @@ ChessConnection::~ChessConnection()
 void ChessConnection::disconnectFromServer()
 {
     closesocket(m_socket);
-    m_isConnected2Server = false;
-    m_isPairedWithOpponent = false;
+    m_isConnectedToServer = false;
+    setIsPairedWithOpponent(false);
+    setIsThereAPotentialOpponent(false);
 }
 
 static void checkPtonReturn(int ptonResult)
@@ -68,7 +69,7 @@ static void checkPtonReturn(int ptonResult)
 
 void ChessConnection::connect2Server(std::string_view serverIp)
 {   
-    assert(!m_isConnected2Server);
+    assert(!m_isConnectedToServer);
 
     checkPtonReturn(inet_pton(AF_INET, serverIp.data(), &m_addressInfo.sin_addr));
 
@@ -79,7 +80,7 @@ void ChessConnection::connect2Server(std::string_view serverIp)
         errMsg.append(std::to_string(WSAGetLastError()));
         FileErrorLogger::get().logErrors(errMsg);
     }
-    else m_isConnected2Server = true;
+    else m_isConnectedToServer = true;
 }
 
 bool ChessConnection::isOpponentIDStringValid(std::string_view opponentID)
@@ -117,14 +118,15 @@ std::optional<std::vector<char>> ChessConnection::recieveMessageIfAvailable(long
     FD_ZERO(&sockSet);
     FD_SET(m_socket, &sockSet);
     timeval selectWaitTime{.tv_sec = seconds, .tv_usec = ms};
-    int selectResult = select(0, &sockSet, nullptr, nullptr, &selectWaitTime);
 
+    int selectResult = select(0, &sockSet, nullptr, nullptr, &selectWaitTime);
+    
     if(selectResult == SOCKET_ERROR)
     {
-        std::string ret("select() failed with error ");
+        std::string errMsg("select() failed with error ");
         int winsockErr = WSAGetLastError();
-        ret.append(std::to_string(winsockErr));
-        throw networkException(ret, winsockErr);
+        errMsg.append(std::to_string(winsockErr));
+        throw networkException(errMsg, winsockErr);
     }
     else if(selectResult == 0)//select has timed out meaning there is no message to read yet
     {
@@ -136,24 +138,38 @@ std::optional<std::vector<char>> ChessConnection::recieveMessageIfAvailable(long
         //I have an assert below though to make sure the size of a message is not greater than 128.
         std::vector<char> msgBuffer;
         msgBuffer.resize(128);
-
+    
         int recvResult = recv(m_socket, msgBuffer.data(), msgBuffer.size(), 0); 
         if(recvResult > 0)//recv() successfully got a message of recvResult number of bytes
         {
             assert(recvResult <= msgBuffer.size());
+
+            //now that we know the num of bytes to read, "shrink" (the size not the capacity)
+            //of the vector so that msgBuffer.size() holds the correct msg size.
             msgBuffer.resize(recvResult);
+            
             return std::make_optional(msgBuffer);
         }
         else if(recvResult == SOCKET_ERROR)
         {
-            std::string throwMsg("recv() failed with error ");
-            int winsockErr = WSAGetLastError();
-            throw networkException(throwMsg.append(std::to_string(winsockErr)), winsockErr);
+            std::string errMsg("recv() failed with error ");
+            int const winsockErr = WSAGetLastError();
+
+            //10054 an existing connection was forcibly closed by the remote host
+            if(winsockErr == 10054)
+            {
+                //We are already disconnected, but let's make it official!
+                disconnectFromServer();
+                return std::nullopt;
+            }
+            else throw networkException(errMsg, winsockErr);
         }
-        else//if recvResult is 0 that means the connection has been closed
+        else//if recvResult is 0 that means the connection has been gracefully closed
         {
             disconnectFromServer();
             return std::nullopt;
         }
     }
+
+    return std::nullopt;
 }
