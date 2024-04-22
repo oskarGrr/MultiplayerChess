@@ -114,7 +114,6 @@ void ChessDrawer::initCircleTexture(int radius, Uint8 RR, Uint8 GG,
     SDL_FreeSurface(surface);
 }
 
-
 void ChessDrawer::drawSquares()
 {
     const auto& app = ChessApp::getApp();
@@ -511,22 +510,33 @@ void ChessDrawer::drawDrawOfferWindow()
     ImGui::End();
 }
 
-void ChessDrawer::drawMenuBar()
+void ChessDrawer::pushMenuBarStyles()
 {
-    auto& app = ChessApp::getApp();
-    auto& board = app.getBoard();
-
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {9,5});
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
     ImGui::PushStyleColor(ImGuiCol_Separator, {0,0,0,1});
     ImGui::PushStyleColor(ImGuiCol_MenuBarBg, {183/255.f, 189/255.f, 188/255.f, 1});
     ImGui::PushStyleColor(ImGuiCol_Button, {.2f, 0.79f, 0.8f, 0.70f});
+}
+
+void ChessDrawer::popMenuBarStyles()
+{
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(2);
+}
+
+void ChessDrawer::drawMenuBar()
+{
+    auto& app = ChessApp::getApp();
+    auto& board = app.getBoard();
+
+    pushMenuBarStyles();
 
     if(ImGui::BeginMainMenuBar()) [[unlikely]]
     {
         if(ImGui::BeginMenu("options"))
-        {   
+        {
             ImGui::MenuItem("change square colors", nullptr, &m_colorEditorWindowIsOpen);
             ImGui::MenuItem("connect to another player", nullptr, &m_connectionWindowIsOpen);
             ImGui::MenuItem("show ImGui demo", nullptr, &m_demoWindowIsOpen);
@@ -588,12 +598,11 @@ void ChessDrawer::drawMenuBar()
 
             needMenuBarSize = false;
         }
-    
+
         ImGui::EndMainMenuBar();
     }
 
-    ImGui::PopStyleColor(4);
-    ImGui::PopStyleVar(2);
+    popMenuBarStyles();
 }
 
 void ChessDrawer::drawResetButtonErrorPopup()

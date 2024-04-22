@@ -90,6 +90,10 @@ private:
     void deserializeAndLoadSquareColorData();
 
 private:
+
+    static void pushMenuBarStyles();
+    static void popMenuBarStyles();
+
     bool m_colorEditorWindowIsOpen    {false};
     bool m_demoWindowIsOpen           {false};
     bool m_promotionWindowIsOpen      {false};
