@@ -36,10 +36,6 @@ catch(...)
         "initialization of the static ChessApp before main()");
 }
 
-ChessApp::~ChessApp()
-{
-}
-
 void ChessApp::run()
 {
     updateGameState(GameState::GAME_IN_PROGRESS);
@@ -50,7 +46,7 @@ void ChessApp::run()
         shouldQuit = processEvents();
         m_chessDrawer.renderAllTheThings();
         SDL_Delay(10);
-    }                                             
+    }
 }
    
 //return true if we should close the app
@@ -201,7 +197,7 @@ void ChessApp::handlePairingCompleteMessage(std::vector<char> const& msg)
     m_network.setOpponentID(m_network.getPotentialOpponentsID());
     m_chessDrawer.openOrCloseConnectionWindow(false);
     m_chessDrawer.openOrClosePairRequestWindow(false);
-    m_chessDrawer.openOrCloseNewOpponentWindow(true);
+    m_chessDrawer.openOrClosePairingCompleteWindow(true);
 }
 
 void ChessApp::handleRematchRequestMessage()

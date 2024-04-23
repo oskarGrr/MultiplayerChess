@@ -30,18 +30,18 @@ public:
     void updateWinLossDrawMessage();
 
     //true for open false for close or use the more readable macros CLOSE_WINDOW and OPEN_WINDOW
-    void openOrCloseColorEditorWindow   (bool openOrCLose) {m_colorEditorWindowIsOpen    = openOrCLose;}
-    void openOrCloseDemoWindow          (bool openOrCLose) {m_demoWindowIsOpen           = openOrCLose;}
-    void openOrClosePromotionWindow     (bool openOrCLose) {m_promotionWindowIsOpen      = openOrCLose;}
-    void openOrCloseConnectionWindow    (bool openOrCLose) {m_connectionWindowIsOpen     = openOrCLose;}
-    void openOrCloseResetBoardWindow    (bool openOrCLose) {m_resetBoardWindowIsOpen     = openOrCLose;}
-    void openOrCloseNewOpponentWindow   (bool openOrCLose) {m_newOpponentWindowIsOpen    = openOrCLose;}
-    void openOrCloseWinLossDrawWindow   (bool openOrCLose) {m_winLossDrawWindowIsOpen    = openOrCLose;}
-    void openOrCloseRematchRequestWindow(bool openOrCLose) {m_rematchRequestWindowIsOpen = openOrCLose;}
-    void openOrClosePairRequestWindow   (bool openOrCLose) {m_pairRequestWindowIsOpen    = openOrCLose;}
-    void openOrCloseIDNotInLobbyWindow  (bool openOrClose) {m_IDNotInLobbyWindowIsOpen   = openOrClose;}
-    void openOrCloseDrawOfferWindow     (bool openOrClose) {m_drawOfferWindowIsOpen      = openOrClose;}
-    void openOrCloseDrawDeclinedWindow  (bool openOrClose) {m_drawDeclinedWindowIsOpen   = openOrClose;}
+    void openOrCloseColorEditorWindow     (bool openOrCLose) {m_colorEditorWindowIsOpen     = openOrCLose;}
+    void openOrCloseDemoWindow            (bool openOrCLose) {m_demoWindowIsOpen            = openOrCLose;}
+    void openOrClosePromotionWindow       (bool openOrCLose) {m_promotionWindowIsOpen       = openOrCLose;}
+    void openOrCloseConnectionWindow      (bool openOrCLose) {m_connectionWindowIsOpen      = openOrCLose;}
+    void openOrCloseResetBoardWindow      (bool openOrCLose) {m_resetBoardWindowIsOpen      = openOrCLose;}
+    void openOrClosePairingCompleteWindow (bool openOrCLose) {m_pairingCompleteWindowIsOpen = openOrCLose;}
+    void openOrCloseWinLossDrawWindow     (bool openOrCLose) {m_winLossDrawWindowIsOpen     = openOrCLose;}
+    void openOrCloseRematchRequestWindow  (bool openOrCLose) {m_rematchRequestWindowIsOpen  = openOrCLose;}
+    void openOrClosePairRequestWindow     (bool openOrCLose) {m_pairRequestWindowIsOpen     = openOrCLose;}
+    void openOrCloseIDNotInLobbyWindow    (bool openOrClose) {m_IDNotInLobbyWindowIsOpen    = openOrClose;}
+    void openOrCloseDrawOfferWindow       (bool openOrClose) {m_drawOfferWindowIsOpen       = openOrClose;}
+    void openOrCloseDrawDeclinedWindow    (bool openOrClose) {m_drawDeclinedWindowIsOpen    = openOrClose;}
 
     void renderAllTheThings();
 
@@ -63,21 +63,21 @@ public:
 
 private:
 
-    void drawDrawOfferWindow();
-    void drawIDNotInLobbyWindow();
+    void drawDrawOfferPopup();
+    void drawIDNotInLobbyPopup();
     void drawPiecesNotOnMouse();
     void drawPieceOnMouse();
     void drawMoveIndicatorCircles();
-    void drawDrawDeclinedWindow();
+    void drawDrawDeclinedPopup();
     void drawColorEditorWindow();
     void drawConnectionWindow();
     void drawPromotionPopup();
     void drawMenuBar();
     void drawResetButtonErrorPopup();
-    void drawNewOpponentPopup();
+    void drawPairingCompletePopup();
     void drawWinLossDrawPopup();
-    void drawRematchRequestWindow();
-    void drawPairRequestWindow();
+    void drawRematchRequestPopup();
+    void drawPairRequestPopup();
     void drawSquares();
 
     void loadPieceTexturesFromDisk(std::array<std::string, NUMOF_PIECE_TEXTURES> const& filePaths);
@@ -94,18 +94,18 @@ private:
     static void pushMenuBarStyles();
     static void popMenuBarStyles();
 
-    bool m_colorEditorWindowIsOpen    {false};
-    bool m_demoWindowIsOpen           {false};
-    bool m_promotionWindowIsOpen      {false};
-    bool m_connectionWindowIsOpen     {false};
-    bool m_resetBoardWindowIsOpen     {false};
-    bool m_newOpponentWindowIsOpen    {false};
-    bool m_winLossDrawWindowIsOpen    {false};
-    bool m_rematchRequestWindowIsOpen {false};
-    bool m_pairRequestWindowIsOpen    {false};
-    bool m_IDNotInLobbyWindowIsOpen   {false};
-    bool m_drawOfferWindowIsOpen      {false};
-    bool m_drawDeclinedWindowIsOpen   {false};
+    bool m_colorEditorWindowIsOpen     {false};
+    bool m_demoWindowIsOpen            {false};
+    bool m_promotionWindowIsOpen       {false};
+    bool m_connectionWindowIsOpen      {false};
+    bool m_resetBoardWindowIsOpen      {false};
+    bool m_pairingCompleteWindowIsOpen {false};
+    bool m_winLossDrawWindowIsOpen     {false};
+    bool m_rematchRequestWindowIsOpen  {false};
+    bool m_pairRequestWindowIsOpen     {false};
+    bool m_IDNotInLobbyWindowIsOpen    {false};
+    bool m_drawOfferWindowIsOpen       {false};
+    bool m_drawDeclinedWindowIsOpen    {false};
 
     uint32_t m_squareSize;
     uint32_t m_chessBoardWidth;

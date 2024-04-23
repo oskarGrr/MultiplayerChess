@@ -30,12 +30,11 @@ private:
 
 public:
 
+    ~ChessApp()=default;
     ChessApp(ChessApp const&)=delete;
     ChessApp(ChessApp&&)=delete;
     ChessApp& operator=(ChessApp const&)=delete;
     ChessApp& operator=(ChessApp&&)=delete;
-
-    ~ChessApp();
 
     void run();//main application loop
 

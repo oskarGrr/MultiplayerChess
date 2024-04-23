@@ -158,12 +158,16 @@ void ChessDrawer::drawSquares()
     }
 }
 
-void ChessDrawer::drawIDNotInLobbyWindow()
+void ChessDrawer::drawIDNotInLobbyPopup()
 {
     auto& app = ChessApp::getApp();
     assert(app.getNetWork().isThereAPotentialOpponent());
 
     ImGui::OpenPopup("Invalid ID");
+
+    //Center the next window.
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
     if(ImGui::BeginPopup("Invalid ID"))
     {
@@ -287,11 +291,11 @@ void ChessDrawer::drawMoveIndicatorCircles()
     }
 }
 
-void ChessDrawer::drawDrawDeclinedWindow()
+void ChessDrawer::drawDrawDeclinedPopup()
 {
     ImGui::OpenPopup("draw declined");
 
-    //always center this window when appearing
+    //Center the next window.
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
@@ -315,10 +319,10 @@ void ChessDrawer::renderAllTheThings()
     ImGui::NewFrame();
 
     if(m_drawDeclinedWindowIsOpen)   [[unlikely]]
-        drawDrawDeclinedWindow();
+        drawDrawDeclinedPopup();
 
     if(m_drawOfferWindowIsOpen)      [[unlikely]]
-        drawDrawOfferWindow();
+        drawDrawOfferPopup();
 
     if(m_connectionWindowIsOpen)     [[unlikely]]
         drawConnectionWindow();
@@ -335,17 +339,17 @@ void ChessDrawer::renderAllTheThings()
     if(m_resetBoardWindowIsOpen)     [[unlikely]]
         drawResetButtonErrorPopup();
 
-    if(m_newOpponentWindowIsOpen)    [[unlikely]]
-        drawNewOpponentPopup();
+    if(m_pairingCompleteWindowIsOpen) [[unlikely]]
+        drawPairingCompletePopup();
 
     if(m_winLossDrawWindowIsOpen)    [[unlikely]]
         drawWinLossDrawPopup();
 
     if(m_rematchRequestWindowIsOpen) [[unlikely]]
-        drawRematchRequestWindow();
+        drawRematchRequestPopup();
 
     if(m_pairRequestWindowIsOpen)    [[unlikely]]
-        drawPairRequestWindow();
+        drawPairRequestPopup();
 
     drawMenuBar();
 
@@ -481,33 +485,44 @@ void ChessDrawer::drawPromotionPopup()
         openOrClosePromotionWindow(false);
     }
 
-    ImGui::End();
     ImGui::PopStyleVar(4);
+    ImGui::End();
 }
 
-void ChessDrawer::drawDrawOfferWindow()
+void ChessDrawer::drawDrawOfferPopup()
 {
-    ImGui::Begin("opponent has offered a draw");
-
     auto& app = ChessApp::getApp();
 
-    if(ImGui::Button("Accept"))
+    ImGui::OpenPopup("opponent has offered a draw");
+
+    //Center the next window.
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if(ImGui::BeginPopup("opponent has offered a draw"))
     {
-        app.send1ByteMessage(DRAW_ACCEPT_MSGTYPE);
-        app.updateGameState(GameState::DRAW_AGREEMENT);
-        openOrCloseWinLossDrawWindow(OPEN_WINDOW);
-        openOrCloseDrawOfferWindow(CLOSE_WINDOW);
+        ImGui::TextUnformatted("Your opponent has offered a draw.");
+
+        if(ImGui::Button("Accept"))
+        {
+            app.send1ByteMessage(DRAW_ACCEPT_MSGTYPE);
+            app.updateGameState(GameState::DRAW_AGREEMENT);
+            openOrCloseWinLossDrawWindow(OPEN_WINDOW);
+            openOrCloseDrawOfferWindow(CLOSE_WINDOW);
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine();
+
+        if(ImGui::Button("Decline"))
+        {
+            app.send1ByteMessage(DRAW_DECLINE_MSGTYPE);
+            openOrCloseDrawOfferWindow(CLOSE_WINDOW);
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
     }
-
-    ImGui::SameLine();
-
-    if(ImGui::Button("Decline"))
-    {
-        app.send1ByteMessage(DRAW_DECLINE_MSGTYPE);
-        openOrCloseDrawOfferWindow(CLOSE_WINDOW);
-    }
-
-    ImGui::End();
 }
 
 void ChessDrawer::pushMenuBarStyles()
@@ -609,7 +624,7 @@ void ChessDrawer::drawResetButtonErrorPopup()
 {
     ImGui::OpenPopup("error");
 
-    //always center this window when appearing
+    //Center the next window.
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
@@ -625,14 +640,14 @@ void ChessDrawer::drawResetButtonErrorPopup()
     }
 }
 
-void ChessDrawer::drawNewOpponentPopup()
+void ChessDrawer::drawPairingCompletePopup()
 {
     ImGui::OpenPopup("successfully connected");
 
     auto& network = ChessApp::getNetWork();
     auto& board = ChessApp::getBoard();
 
-    //always center this window when appearing
+    //Center the next window.
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
@@ -652,7 +667,7 @@ void ChessDrawer::drawNewOpponentPopup()
         if(ImGui::Button("lets play!"))
         {
             ImGui::CloseCurrentPopup();
-            openOrCloseNewOpponentWindow(CLOSE_WINDOW);
+            openOrClosePairingCompleteWindow(CLOSE_WINDOW);
         }
 
         ImGui::EndPopup();
@@ -666,76 +681,88 @@ void ChessDrawer::drawWinLossDrawPopup()
 
     assert(app.getGameState() != GameState::GAME_IN_PROGRESS);
 
-    //always center this window when appearing
+    ImGui::OpenPopup("game over");
+    
+    //Center the next window.
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-    ImGui::Begin("game over", &m_winLossDrawWindowIsOpen,
-        ImGuiWindowFlags_NoMove | 
-        ImGuiWindowFlags_AlwaysAutoResize |
-        ImGuiWindowFlags_NoTitleBar);
-    
-    ImGui::TextUnformatted(m_winLossDrawPopupMessage.data());
-
-    if(app.isPairedWithOpponent())
+    if(ImGui::BeginPopup("game over"))
     {
-        if(ImGui::Button("request rematch"))
-            app.send1ByteMessage(REMATCH_REQUEST_MSGTYPE);
-
-        if(ImGui::Button("disconnect from opponent"))
+        ImGui::TextUnformatted(m_winLossDrawPopupMessage.data());
+        
+        if(app.isPairedWithOpponent())
         {
-            app.send1ByteMessage(UNPAIR_MSGTPYE);
-            app.getNetWork().setIsPairedWithOpponent(false);
-            board.resetBoard();
+            if(ImGui::Button("request rematch"))
+                app.send1ByteMessage(REMATCH_REQUEST_MSGTYPE);
+        
+            if(ImGui::Button("disconnect from opponent"))
+            {
+                app.send1ByteMessage(UNPAIR_MSGTPYE);
+                app.getNetWork().setIsPairedWithOpponent(false);
+                board.resetBoard();
+            }
         }
-    }
-    else
-    {
-        if(ImGui::Button("okay"))
-            board.resetBoard();
-    }
+        else
+        {
+            if(ImGui::Button("okay"))
+                board.resetBoard();
+        }
 
-    ImGui::End();
+        ImGui::EndPopup();
+    } 
 }
 
-void ChessDrawer::drawRematchRequestWindow()
+void ChessDrawer::drawRematchRequestPopup()
 {
     auto& app = ChessApp::getApp();
     auto& board = app.getBoard();
 
-    ImGui::Begin("opponent has requested rematch", &m_rematchRequestWindowIsOpen);
+    ImGui::OpenPopup("Opponent has requested rematch.");
 
-    ImGui::TextUnformatted("your opponent has requested a rematch");
+    //Center the next window.
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-    if(ImGui::Button("accept rematch"))
+    if(ImGui::BeginPopup("Opponent has requested rematch."))
     {
-        board.resetBoard();
-        app.send1ByteMessage(REMATCH_ACCEPT_MSGTYPE);
-        openOrCloseRematchRequestWindow(false);
-    }
+        if(ImGui::Button("accept rematch"))
+        {
+            board.resetBoard();
+            app.send1ByteMessage(REMATCH_ACCEPT_MSGTYPE);
+            openOrCloseRematchRequestWindow(false);
+        }
+        
+        //decline and disconnect from opponent
+        if(ImGui::Button("decline rematch"))
+        {
+            app.send1ByteMessage(REMATCH_DECLINE_MSGTYPE);
+            board.resetBoard();
+            openOrCloseRematchRequestWindow(false);
+        }
 
-    //decline and disconnect from opponent
-    if(ImGui::Button("decline rematch"))
-    {
-        app.send1ByteMessage(REMATCH_DECLINE_MSGTYPE);
-        board.resetBoard();
-        openOrCloseRematchRequestWindow(false);
+        ImGui::EndPopup();
     }
-
-    ImGui::End();
 }
 
-void ChessDrawer::drawPairRequestWindow()
+void ChessDrawer::drawPairRequestPopup()
 {
-    ImGui::Begin("someone wants to play chesssss");
     auto& app = ChessApp::getApp();
 
-    auto potentialOpponentID = std::to_string(app.getNetWork().getPotentialOpponentsID());
-    ImGui::Text("request from ID %s to play", potentialOpponentID.c_str());
-    if(ImGui::Button("accept"))  app.buildAndSendPairAccept();
-    if(ImGui::Button("decline")) app.send1ByteMessage(PAIR_DECLINE_MSGTYPE);
+    ImGui::OpenPopup("someone wants to play chesssss");
 
-    ImGui::End();
+    //Center the next window.
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if(ImGui::BeginPopup("someone wants to play chesssss"))
+    {
+        auto potentialOpponentID = std::to_string(app.getNetWork().getPotentialOpponentsID());
+        ImGui::Text("request from ID %s to play", potentialOpponentID.c_str());
+        if(ImGui::Button("accept"))  app.buildAndSendPairAccept();
+        if(ImGui::Button("decline")) app.send1ByteMessage(PAIR_DECLINE_MSGTYPE);
+        ImGui::EndPopup();
+    }
 }
 
 //called inside of openWinLossDrawPopup()
