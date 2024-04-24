@@ -162,13 +162,13 @@ void ChessDrawer::drawIDNotInLobbyPopup()
 {
     auto& app = ChessApp::getApp();
     assert(app.getNetWork().isThereAPotentialOpponent());
-
+    
     centerNextWindow();
     ImGui::OpenPopup("Invalid ID");
     if(ImGui::BeginPopup("Invalid ID"))
     {
         auto potentialOpponentIDStr = std::to_string(app.getNetWork().getPotentialOpponentsID());
-        ImGui::Text("The ID given (%s) is invalid.", potentialOpponentIDStr);
+        ImGui::Text("The ID given (%ud) is invalid.", potentialOpponentIDStr);
         ImGui::TextUnformatted("Either there is not a player with\n"
             "that ID connected to the server,\n"
             "or you gave your own ID");
@@ -180,7 +180,7 @@ void ChessDrawer::drawIDNotInLobbyPopup()
             openOrCloseIDNotInLobbyWindow(CLOSE_WINDOW);
             ImGui::CloseCurrentPopup();
         }
-
+        
         ImGui::EndPopup();
     }
 }
@@ -310,39 +310,45 @@ void ChessDrawer::renderAllTheThings()
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    if(m_drawDeclinedWindowIsOpen)   [[unlikely]]
-        drawDrawDeclinedPopup();
-
-    if(m_drawOfferWindowIsOpen)      [[unlikely]]
-        drawDrawOfferPopup();
-
-    if(m_connectionWindowIsOpen)     [[unlikely]]
-        drawConnectionWindow();
-
-    if(m_colorEditorWindowIsOpen)    [[unlikely]]
-        drawColorEditorWindow();
-    
-    if(m_demoWindowIsOpen)           [[unlikely]]
-        ImGui::ShowDemoWindow();
-    
-    if(m_promotionWindowIsOpen)      [[unlikely]]
+    if(m_drawDeclinedWindowIsOpen)    [[unlikely]]
+        drawDrawDeclinedPopup();      
+                                      
+    if(m_drawOfferWindowIsOpen)       [[unlikely]]
+        drawDrawOfferPopup();         
+                                      
+    if(m_connectionWindowIsOpen)      [[unlikely]]
+        drawConnectionWindow();       
+                                      
+    if(m_colorEditorWindowIsOpen)     [[unlikely]]
+        drawColorEditorWindow();      
+                                      
+    if(m_demoWindowIsOpen)            [[unlikely]]
+        ImGui::ShowDemoWindow();      
+                                      
+    if(m_promotionWindowIsOpen)       [[unlikely]]
         drawPromotionPopup();
         
-    if(m_resetBoardWindowIsOpen)     [[unlikely]]
+    if(m_resetBoardWindowIsOpen)      [[unlikely]]
         drawResetButtonErrorPopup();
 
     if(m_pairingCompleteWindowIsOpen) [[unlikely]]
         drawPairingCompletePopup();
 
-    if(m_winLossDrawWindowIsOpen)    [[unlikely]]
-        drawWinLossDrawPopup();
-
-    if(m_rematchRequestWindowIsOpen) [[unlikely]]
-        drawRematchRequestPopup();
-
-    if(m_pairRequestWindowIsOpen)    [[unlikely]]
+    if(m_winLossDrawWindowIsOpen)     [[unlikely]]
+        drawWinLossDrawPopup();       
+                                      
+    if(m_rematchRequestWindowIsOpen)  [[unlikely]]
+        drawRematchRequestPopup();    
+                                      
+    if(m_pairRequestWindowIsOpen)     [[unlikely]]
         drawPairRequestPopup();
 
+    if(m_IDNotInLobbyWindowIsOpen)    [[unlikely]]
+        drawIDNotInLobbyPopup();
+
+    if(m_pairingDeclinedWindowIsOpen) [[unlikely]]
+        drawPairingDeclinedPopup();
+        
     drawMenuBar();
 
     ImGui::Render();
@@ -747,7 +753,7 @@ void ChessDrawer::drawPairRequestPopup()
     }
 }
 
-void ChessDrawer::drawPairDeclinePopup()
+void ChessDrawer::drawPairingDeclinedPopup()
 {
     centerNextWindow();
     ImGui::OpenPopup("pair request declined");

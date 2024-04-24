@@ -79,7 +79,7 @@ private:
     void drawWinLossDrawPopup();
     void drawRematchRequestPopup();
     void drawPairRequestPopup();
-    void drawPairDeclinePopup();
+    void drawPairingDeclinedPopup();
     void drawSquares();
 
     void loadPieceTexturesFromDisk(std::array<std::string, NUMOF_PIECE_TEXTURES> const& filePaths);

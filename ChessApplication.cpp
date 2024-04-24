@@ -48,7 +48,7 @@ void ChessApp::run()
         SDL_Delay(10);
     }
 }
-   
+
 //return true if we should close the app
 bool ChessApp::processEvents()
 {
