@@ -718,6 +718,8 @@ void ChessDrawer::drawRematchRequestPopup()
     ImGui::OpenPopup("Opponent has requested rematch.");
     if(ImGui::BeginPopup("Opponent has requested rematch."))
     {
+        ImGui::Text("Your opponent has offered a rematch");
+
         if(ImGui::Button("accept rematch"))
         {
             board.resetBoard();
