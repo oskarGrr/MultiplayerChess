@@ -225,8 +225,8 @@ void ChessApp::handleRematchAcceptMessage()
 
 void ChessApp::handleOpponentClosedConnectionMessage()
 {
-    updateGameState(GameState::GAME_ABANDONMENT);
     m_network.setIsPairedWithOpponent(false);
+    updateGameState(GameState::GAME_ABANDONMENT);
     m_chessDrawer.openOrCloseWinLossDrawWindow(true);
 }
 
