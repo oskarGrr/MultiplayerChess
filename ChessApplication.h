@@ -80,6 +80,7 @@ public:
     //This function will NOT do a check to make sure the string referenced by opponentID is a valid ID string.
     void buildAndSendPairRequest(std::string_view potentialOpponent);
     void buildAndSendPairAccept();
+    void buildAndSendPairDecline();
 
     //1 byte messages only consist of their MSGTYPE (defined in chessAppLevelProtocol.h)
     void send1ByteMessage(messageType_t msgType);
@@ -102,6 +103,7 @@ private:
     void handleUnpairMessage();
     void handleNewIDMessage(std::vector<char> const& msg);
     void handleIDNotInLobbyMessage();
+    void handlePairDeclineMessage(std::vector<char> const& msg);
     void handleDrawAcceptMessage();
 
     bool processEvents();

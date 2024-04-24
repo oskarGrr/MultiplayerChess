@@ -42,6 +42,7 @@ public:
     void openOrCloseIDNotInLobbyWindow    (bool openOrClose) {m_IDNotInLobbyWindowIsOpen    = openOrClose;}
     void openOrCloseDrawOfferWindow       (bool openOrClose) {m_drawOfferWindowIsOpen       = openOrClose;}
     void openOrCloseDrawDeclinedWindow    (bool openOrClose) {m_drawDeclinedWindowIsOpen    = openOrClose;}
+    void openOrClosePairDeclineWindow     (bool openOrClose) {m_pairingDeclinedWindowIsOpen = openOrClose;}
 
     void renderAllTheThings();
 
@@ -78,6 +79,7 @@ private:
     void drawWinLossDrawPopup();
     void drawRematchRequestPopup();
     void drawPairRequestPopup();
+    void drawPairDeclinePopup();
     void drawSquares();
 
     void loadPieceTexturesFromDisk(std::array<std::string, NUMOF_PIECE_TEXTURES> const& filePaths);
@@ -89,10 +91,12 @@ private:
     void serializeSquareColorData();
     void deserializeAndLoadSquareColorData();
 
-private:
-
     static void pushMenuBarStyles();
     static void popMenuBarStyles();
+
+    static void centerNextWindow();
+
+private:
 
     bool m_colorEditorWindowIsOpen     {false};
     bool m_demoWindowIsOpen            {false};
@@ -106,6 +110,7 @@ private:
     bool m_IDNotInLobbyWindowIsOpen    {false};
     bool m_drawOfferWindowIsOpen       {false};
     bool m_drawDeclinedWindowIsOpen    {false};
+    bool m_pairingDeclinedWindowIsOpen {false};
 
     uint32_t m_squareSize;
     uint32_t m_chessBoardWidth;

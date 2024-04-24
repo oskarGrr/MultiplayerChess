@@ -126,10 +126,22 @@ void ChessApp::buildAndSendPairAccept()
     m_network.sendMessage(pairAcceptMsg, sizeof(pairAcceptMsg));
 }
 
+void ChessApp::buildAndSendPairDecline()
+{
+    assert(m_network.isThereAPotentialOpponent());
+
+    uint32_t nwByteOderPotentialOpponentID = htonl(m_network.getPotentialOpponentsID());
+    char pairDeclineMsg[PAIR_DECLINE_MSG_SIZE] = {PAIR_DECLINE_MSGTYPE};
+    std::memcpy(pairDeclineMsg + 1, &nwByteOderPotentialOpponentID, 
+        sizeof(nwByteOderPotentialOpponentID));
+
+    m_network.sendMessage(pairDeclineMsg, sizeof(pairDeclineMsg));
+}
+
 //1 byte messages only consist of their MSGTYPE (defined in chessAppLevelProtocol.h)
 void ChessApp::send1ByteMessage(messageType_t msgType)
 {
-    char msgBuff{msgType};
+    char msgBuff{static_cast<char>(msgType)};
     m_network.sendMessage(&msgBuff, 1);
 }
 
@@ -256,6 +268,17 @@ void ChessApp::handleDrawAcceptMessage()
     m_chessDrawer.openOrCloseWinLossDrawWindow(OPEN_WINDOW);
 }
 
+void ChessApp::handlePairDeclineMessage(std::vector<char> const& msg)
+{
+    //The ID of the player that declined our PAIR_ACCEPT_MSGTYPE.
+    uint32_t potentialOpponentID{0};
+    std::memcpy(&potentialOpponentID, msg.data() + 1, sizeof(potentialOpponentID));
+    potentialOpponentID = ntohl(potentialOpponentID);
+    assert(m_network.getPotentialOpponentsID() == potentialOpponentID);
+    m_chessDrawer.openOrClosePairDeclineWindow(OPEN_WINDOW);
+    m_network.setIsThereAPotentialOpponent(false);
+}
+
 //called once per frame at the beginning of the frame in ChessApp::run()
 void ChessApp::processIncomingMessages()
 {
@@ -284,6 +307,7 @@ void ChessApp::processIncomingMessages()
         case PAIRING_COMPLETE_MSGTYPE: handlePairingCompleteMessage(msg);  break;
         case REMATCH_DECLINE_MSGTYPE:  handleRematchDeclineMessage();      break;
         case NEW_ID_MSGTYPE:           handleNewIDMessage(msg);            break;
+        case PAIR_DECLINE_MSGTYPE:     handlePairDeclineMessage(msg);      break;
         case OPPONENT_CLOSED_CONNECTION_MSGTPYE: handleOpponentClosedConnectionMessage(); 
         }
     }

@@ -163,12 +163,8 @@ void ChessDrawer::drawIDNotInLobbyPopup()
     auto& app = ChessApp::getApp();
     assert(app.getNetWork().isThereAPotentialOpponent());
 
+    centerNextWindow();
     ImGui::OpenPopup("Invalid ID");
-
-    //Center the next window.
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
     if(ImGui::BeginPopup("Invalid ID"))
     {
         auto potentialOpponentIDStr = std::to_string(app.getNetWork().getPotentialOpponentsID());
@@ -293,12 +289,8 @@ void ChessDrawer::drawMoveIndicatorCircles()
 
 void ChessDrawer::drawDrawDeclinedPopup()
 {
+    centerNextWindow();
     ImGui::OpenPopup("draw declined");
-
-    //Center the next window.
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
     if(ImGui::BeginPopup("draw declined", ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
     {
         ImGui::TextUnformatted("opponent declined your draw offer.");
@@ -493,12 +485,8 @@ void ChessDrawer::drawDrawOfferPopup()
 {
     auto& app = ChessApp::getApp();
 
+    centerNextWindow();
     ImGui::OpenPopup("opponent has offered a draw");
-
-    //Center the next window.
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
     if(ImGui::BeginPopup("opponent has offered a draw"))
     {
         ImGui::TextUnformatted("Your opponent has offered a draw.");
@@ -539,6 +527,12 @@ void ChessDrawer::popMenuBarStyles()
 {
     ImGui::PopStyleColor(4);
     ImGui::PopStyleVar(2);
+}
+
+void ChessDrawer::centerNextWindow()
+{
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 }
 
 void ChessDrawer::drawMenuBar()
@@ -681,12 +675,8 @@ void ChessDrawer::drawWinLossDrawPopup()
 
     assert(app.getGameState() != GameState::GAME_IN_PROGRESS);
 
+    centerNextWindow();
     ImGui::OpenPopup("game over");
-    
-    //Center the next window.
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
     if(ImGui::BeginPopup("game over"))
     {
         ImGui::TextUnformatted(m_winLossDrawPopupMessage.data());
@@ -718,12 +708,8 @@ void ChessDrawer::drawRematchRequestPopup()
     auto& app = ChessApp::getApp();
     auto& board = app.getBoard();
 
+    centerNextWindow();
     ImGui::OpenPopup("Opponent has requested rematch.");
-
-    //Center the next window.
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
     if(ImGui::BeginPopup("Opponent has requested rematch."))
     {
         if(ImGui::Button("accept rematch"))
@@ -749,18 +735,32 @@ void ChessDrawer::drawPairRequestPopup()
 {
     auto& app = ChessApp::getApp();
 
+    centerNextWindow();
     ImGui::OpenPopup("someone wants to play chesssss");
-
-    //Center the next window.
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
     if(ImGui::BeginPopup("someone wants to play chesssss"))
     {
         auto potentialOpponentID = std::to_string(app.getNetWork().getPotentialOpponentsID());
         ImGui::Text("request from ID %s to play", potentialOpponentID.c_str());
         if(ImGui::Button("accept"))  app.buildAndSendPairAccept();
-        if(ImGui::Button("decline")) app.send1ByteMessage(PAIR_DECLINE_MSGTYPE);
+        if(ImGui::Button("decline")) app.buildAndSendPairDecline();
+        ImGui::EndPopup();
+    }
+}
+
+void ChessDrawer::drawPairDeclinePopup()
+{
+    centerNextWindow();
+    ImGui::OpenPopup("pair request declined");
+    if(ImGui::BeginPopup("pair request declined"))
+    {
+        ImGui::Text("Your offer to play chess was declined");
+        
+        if(ImGui::Button("okay"))
+        {
+            openOrClosePairDeclineWindow(CLOSE_WINDOW);
+            ImGui::CloseCurrentPopup();
+        }
+
         ImGui::EndPopup();
     }
 }
