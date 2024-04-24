@@ -747,8 +747,18 @@ void ChessDrawer::drawPairRequestPopup()
     {
         auto potentialOpponentID = std::to_string(app.getNetWork().getPotentialOpponentsID());
         ImGui::Text("request from ID %s to play", potentialOpponentID.c_str());
-        if(ImGui::Button("accept"))  app.buildAndSendPairAccept();
-        if(ImGui::Button("decline")) app.buildAndSendPairDecline();
+        if(ImGui::Button("accept"))  
+        {
+            openOrClosePairRequestWindow(CLOSE_WINDOW);
+            ImGui::CloseCurrentPopup();
+            app.buildAndSendPairAccept();
+        }
+        if(ImGui::Button("decline")) 
+        {
+            openOrClosePairRequestWindow(CLOSE_WINDOW);
+            ImGui::CloseCurrentPopup();
+            app.buildAndSendPairDecline();
+        }
         ImGui::EndPopup();
     }
 }

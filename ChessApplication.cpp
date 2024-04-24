@@ -208,9 +208,8 @@ void ChessApp::handlePairingCompleteMessage(std::vector<char> const& msg)
     m_network.setIsPairedWithOpponent(true);
     m_network.setIsThereAPotentialOpponent(false);
     m_network.setOpponentID(m_network.getPotentialOpponentsID());
-    m_chessDrawer.openOrCloseConnectionWindow(false);
-    m_chessDrawer.openOrClosePairRequestWindow(false);
-    m_chessDrawer.openOrClosePairingCompleteWindow(true);
+    m_chessDrawer.openOrCloseConnectionWindow(CLOSE_WINDOW);
+    m_chessDrawer.openOrClosePairingCompleteWindow(OPEN_WINDOW);
 }
 
 void ChessApp::handleRematchRequestMessage()
