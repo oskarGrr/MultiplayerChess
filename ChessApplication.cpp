@@ -206,6 +206,7 @@ void ChessApp::handlePairingCompleteMessage(std::vector<char> const& msg)
     m_board.resetBoard();
     m_board.setBoardViewingPerspective(blackOrWhite);
     m_network.setIsPairedWithOpponent(true);
+    m_network.setIsThereAPotentialOpponent(false);
     m_network.setOpponentID(m_network.getPotentialOpponentsID());
     m_chessDrawer.openOrCloseConnectionWindow(false);
     m_chessDrawer.openOrClosePairRequestWindow(false);
