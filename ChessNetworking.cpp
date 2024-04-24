@@ -97,6 +97,12 @@ bool ChessConnection::isOpponentIDStringValid(std::string_view opponentID)
             return false;
     }
 
+    //Why do string to ___ functions take std::string const& instead of std::string_view :(
+    uint64_t bigID = std::stoull(std::string(opponentID));
+
+    if(bigID > UINT32_MAX) 
+        return false;
+
     return true;
 }
 
