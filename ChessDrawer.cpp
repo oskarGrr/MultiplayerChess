@@ -167,8 +167,8 @@ void ChessDrawer::drawIDNotInLobbyPopup()
     ImGui::OpenPopup("Invalid ID");
     if(ImGui::BeginPopup("Invalid ID"))
     {
-        auto potentialOpponentIDStr = std::to_string(app.getNetWork().getPotentialOpponentsID());
-        ImGui::Text("The ID given (%ud) is invalid.", potentialOpponentIDStr);
+        uint32_t potentialOpponentIDStr = app.getNetWork().getPotentialOpponentsID();
+        ImGui::Text("The ID given (%u) is invalid.", potentialOpponentIDStr);
         ImGui::TextUnformatted("Either there is not a player with\n"
             "that ID connected to the server,\n"
             "or you gave your own ID");
