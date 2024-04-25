@@ -574,7 +574,7 @@ void ChessDrawer::drawMenuBar()
                 {
                     app.send1ByteMessage(RESIGN_MSGTYPE);
                     app.updateGameState(GameState::YOU_RESIGNED);
-                    openOrCloseWinLossDrawWindow(false);
+                    openOrCloseWinLossDrawWindow(OPEN_WINDOW);
                 }
 
                 if(ImGui::SmallButton("draw"))
