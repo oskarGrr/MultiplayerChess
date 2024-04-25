@@ -1,4 +1,5 @@
 #include <memory>//std::make_unique/make_shared and std::unique_ptr/shared_ptr
+#include <chrono>
 
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
@@ -40,12 +41,19 @@ void ChessApp::run()
 {
     updateGameState(GameState::GAME_IN_PROGRESS);
     bool shouldQuit = false;
+    double dt{0.0};
+
     while(!shouldQuit)
     {
+        auto start = std::chrono::steady_clock::now();
+
         processIncomingMessages();
         shouldQuit = processEvents();
         m_chessDrawer.renderAllTheThings();
         SDL_Delay(10);
+
+        auto end = std::chrono::high_resolution_clock::now();
+        dt = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / 1.0E9;
     }
 }
 
