@@ -168,10 +168,9 @@ void ChessDrawer::drawIDNotInLobbyPopup()
     if(ImGui::BeginPopup("Invalid ID"))
     {
         uint32_t potentialOpponentIDStr = app.getNetWork().getPotentialOpponentsID();
-        ImGui::Text("The ID given (%u) is invalid.", potentialOpponentIDStr);
-        ImGui::TextUnformatted("Either there is not a player with\n"
-            "that ID connected to the server,\n"
-            "or you gave your own ID");
+        ImGui::Text("The given ID (%u)\n"
+            "is either not connected to the server,\n"
+            "or you gave your own ID.", potentialOpponentIDStr);
 
         if(ImGui::Button("okay"))
         {
