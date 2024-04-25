@@ -563,7 +563,7 @@ void ChessDrawer::drawMenuBar()
         if(ImGui::SmallButton("reset board"))
         {
             if(!app.isPairedWithOpponent()) board.resetBoard();
-            else openOrCloseResetBoardWindow(false);
+            else openOrCloseResetBoardWindow(OPEN_WINDOW);
         }
 
         if(app.isConnectedToServer())
