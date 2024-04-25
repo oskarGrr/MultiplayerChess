@@ -746,9 +746,9 @@ void ChessDrawer::drawPairRequestPopup()
     ImGui::OpenPopup("someone wants to play chesssss");
     if(ImGui::BeginPopup("someone wants to play chesssss"))
     {
-        auto potentialOpponentID = std::to_string(app.getNetWork().getPotentialOpponentsID());
-        ImGui::Text("request from ID %s to play", potentialOpponentID.c_str());
-        if(ImGui::Button("accept"))  
+        uint32_t potentialOpponentID = app.getNetWork().getPotentialOpponentsID();
+        ImGui::Text("request from ID %u to play chess!", potentialOpponentID);
+        if(ImGui::Button("accept"))
         {
             openOrClosePairRequestWindow(CLOSE_WINDOW);
             ImGui::CloseCurrentPopup();
