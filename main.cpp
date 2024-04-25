@@ -1,10 +1,7 @@
 #include "ChessApplication.h"
-#include <exception>//std::exception
-#include <fstream>//std::ofstream
-
 #include "errorLogger.h"
+#include <exception>//std::exception
 
-#include <thread>
 int main(int argCount, char** arguments)
 {    
     try
