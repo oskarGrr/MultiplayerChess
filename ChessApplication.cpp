@@ -224,8 +224,8 @@ void ChessApp::handlePairingCompleteMessage(std::vector<char> const& msg)
 
 void ChessApp::handleRematchRequestMessage()
 {
-    m_chessDrawer.openOrCloseRematchRequestWindow(true);
-    m_chessDrawer.openOrCloseWinLossDrawWindow(false);
+    m_chessDrawer.openOrCloseRematchRequestWindow(OPEN_WINDOW);
+    m_chessDrawer.openOrCloseWinLossDrawWindow(CLOSE_WINDOW);
 }
 
 void ChessApp::handleRematchAcceptMessage()

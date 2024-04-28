@@ -1,8 +1,8 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <unordered_map>
 #include <string>
-
 #include "SDL.h"
 #include "Vector2i.h"
 
@@ -30,19 +30,19 @@ public:
     void updateWinLossDrawMessage();
 
     //true for open false for close or use the more readable macros CLOSE_WINDOW and OPEN_WINDOW
-    void openOrCloseColorEditorWindow     (bool openOrCLose) {m_colorEditorWindowIsOpen     = openOrCLose;}
-    void openOrCloseDemoWindow            (bool openOrCLose) {m_demoWindowIsOpen            = openOrCLose;}
-    void openOrClosePromotionWindow       (bool openOrCLose) {m_promotionWindowIsOpen       = openOrCLose;}
-    void openOrCloseConnectionWindow      (bool openOrCLose) {m_connectionWindowIsOpen      = openOrCLose;}
-    void openOrCloseResetBoardWindow      (bool openOrCLose) {m_resetBoardWindowIsOpen      = openOrCLose;}
-    void openOrClosePairingCompleteWindow (bool openOrCLose) {m_pairingCompleteWindowIsOpen = openOrCLose;}
-    void openOrCloseWinLossDrawWindow     (bool openOrCLose) {m_winLossDrawWindowIsOpen     = openOrCLose;}
-    void openOrCloseRematchRequestWindow  (bool openOrCLose) {m_rematchRequestWindowIsOpen  = openOrCLose;}
-    void openOrClosePairRequestWindow     (bool openOrCLose) {m_pairRequestWindowIsOpen     = openOrCLose;}
-    void openOrCloseIDNotInLobbyWindow    (bool openOrClose) {m_IDNotInLobbyWindowIsOpen    = openOrClose;}
-    void openOrCloseDrawOfferWindow       (bool openOrClose) {m_drawOfferWindowIsOpen       = openOrClose;}
-    void openOrCloseDrawDeclinedWindow    (bool openOrClose) {m_drawDeclinedWindowIsOpen    = openOrClose;}
-    void openOrClosePairDeclineWindow     (bool openOrClose) {m_pairingDeclinedWindowIsOpen = openOrClose;}
+    void openOrCloseColorEditorWindow     (bool openOrCLose);
+    void openOrCloseDemoWindow            (bool openOrCLose);
+    void openOrClosePromotionWindow       (bool openOrCLose);
+    void openOrCloseConnectionWindow      (bool openOrCLose);
+    void openOrCloseResetBoardErrorWindow (bool openOrCLose);
+    void openOrClosePairingCompleteWindow (bool openOrCLose);
+    void openOrCloseWinLossDrawWindow     (bool openOrCLose);
+    void openOrCloseRematchRequestWindow  (bool openOrCLose);
+    void openOrClosePairRequestWindow     (bool openOrCLose);
+    void openOrCloseIDNotInLobbyWindow    (bool openOrClose);
+    void openOrCloseDrawOfferWindow       (bool openOrClose);
+    void openOrCloseDrawDeclinedWindow    (bool openOrClose);
+    void openOrClosePairDeclineWindow     (bool openOrClose);
 
     void renderAllTheThings();
 
@@ -50,7 +50,7 @@ public:
     auto getMenuBarHeightInPixels() const {return m_menuBarHeight;}
     auto getBoardWidthInPixels()    const {return m_chessBoardWidth;}
     auto getBoardHeightInPixels()   const {return m_chessBoardHeight;}
-    bool isPromotionWindowOpen()    const {return m_promotionWindowIsOpen;}
+    bool isPromotionWindowOpen()    const;
 
     //indecies into the array of SDL textures for the different pieces.
     //scoped to ChessDrawer but is an unscoped enum (not enum struct/class)  
@@ -64,23 +64,48 @@ public:
 
 private:
 
+    void deferedWindowDeletion();
+
+    //These are used as a key to map to the draw __ popup/window methods below.
+    //I would use a std::unordered_set, and just have member function pointers as the key,
+    //but you can't easily hash those, so these are the keys in an unordered map. 
+    //The values they map to are of course of type void(ChessDrawer::*)() which 
+    //will point to the correct draw __ window/popup method.
+    enum struct WindowTypes : uint32_t
+    {
+        DRAW_OFFER,
+        ID_NOT_IN_LOBBY,
+        DRAW_DECLINED,
+        COLOR_EDITOR,
+        CONNECTION,
+        PROMOTION,
+        RESET_BOARD_ERROR,
+        PAIRING_COMPLETE,
+        WIN_LOSS_DRAW,
+        REMATCH_REQUEST,
+        PAIR_REQUEST,
+        PAIRING_DECLINED
+    };
+
+    //Draw window/popup methods
     void drawDrawOfferPopup();
     void drawIDNotInLobbyPopup();
-    void drawPiecesNotOnMouse();
-    void drawPieceOnMouse();
-    void drawMoveIndicatorCircles();
     void drawDrawDeclinedPopup();
     void drawColorEditorWindow();
     void drawConnectionWindow();
     void drawPromotionPopup();
-    void drawMenuBar();
-    void drawResetButtonErrorPopup();
+    void drawResetBoardErrorPopup();
     void drawPairingCompletePopup();
     void drawWinLossDrawPopup();
     void drawRematchRequestPopup();
     void drawPairRequestPopup();
     void drawPairingDeclinedPopup();
+
+    void drawMoveIndicatorCircles();
+    void drawPieceOnMouse();
+    void drawMenuBar();
     void drawSquares();
+    void drawPiecesNotOnMouse();
 
     void loadPieceTexturesFromDisk(std::array<std::string, NUMOF_PIECE_TEXTURES> const& filePaths);
     
@@ -96,26 +121,15 @@ private:
 
     static void centerNextWindow();
 
-private:
-
-    bool m_colorEditorWindowIsOpen     {false};
-    bool m_demoWindowIsOpen            {false};
-    bool m_promotionWindowIsOpen       {false};
-    bool m_connectionWindowIsOpen      {false};
-    bool m_resetBoardWindowIsOpen      {false};
-    bool m_pairingCompleteWindowIsOpen {false};
-    bool m_winLossDrawWindowIsOpen     {false};
-    bool m_rematchRequestWindowIsOpen  {false};
-    bool m_pairRequestWindowIsOpen     {false};
-    bool m_IDNotInLobbyWindowIsOpen    {false};
-    bool m_drawOfferWindowIsOpen       {false};
-    bool m_drawDeclinedWindowIsOpen    {false};
-    bool m_pairingDeclinedWindowIsOpen {false};
+    //The bool in the std::pair is a defered deletion flag. 
+    //True signals that it is marked for deletion.
+    std::unordered_map<WindowTypes, std::pair<void(ChessDrawer::*)(void), bool>> m_openWindows;
 
     uint32_t m_squareSize;
     uint32_t m_chessBoardWidth;
     uint32_t m_chessBoardHeight;
     float m_menuBarHeight;
+    bool m_imguiDemoWindowIsOpen{false};
 
     std::array<SDL_Texture*, NUMOF_PIECE_TEXTURES> m_pieceTextures;
     std::array<Vec2i,        NUMOF_PIECE_TEXTURES> m_pieceTextureSizes;
@@ -123,5 +137,7 @@ private:
 
     SDL_Texture* m_circleTexture;
     SDL_Texture* m_redCircleTexture;
-    std::string m_winLossDrawPopupMessage;//message that gets displayed when the game is over
+
+    //The message that gets displayed in a popup when the game is over.
+    std::string m_winLossDrawPopupMessage;
 };

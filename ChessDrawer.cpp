@@ -1,9 +1,9 @@
 #include <cstdint>
 #include <array>
 #include <vector>
-#include <fstream>
 #include <sstream>
 #include <cassert>
+#include <functional>//std::invoke
 
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
@@ -304,50 +304,18 @@ void ChessDrawer::drawDrawDeclinedPopup()
 
 void ChessDrawer::renderAllTheThings()
 {
+    deferedWindowDeletion();
     auto const renderer = ChessApp::getApp().getCurrentRenderer();
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    if(m_drawDeclinedWindowIsOpen)    [[unlikely]]
-        drawDrawDeclinedPopup();      
-                                      
-    if(m_drawOfferWindowIsOpen)       [[unlikely]]
-        drawDrawOfferPopup();         
-                                      
-    if(m_connectionWindowIsOpen)      [[unlikely]]
-        drawConnectionWindow();       
-                                      
-    if(m_colorEditorWindowIsOpen)     [[unlikely]]
-        drawColorEditorWindow();      
-                                      
-    if(m_demoWindowIsOpen)            [[unlikely]]
-        ImGui::ShowDemoWindow();      
-                                      
-    if(m_promotionWindowIsOpen)       [[unlikely]]
-        drawPromotionPopup();
-        
-    if(m_resetBoardWindowIsOpen)      [[unlikely]]
-        drawResetButtonErrorPopup();
+    for(auto& [key, value] : m_openWindows)
+        std::invoke(value.first, this);
 
-    if(m_pairingCompleteWindowIsOpen) [[unlikely]]
-        drawPairingCompletePopup();
+    if(m_imguiDemoWindowIsOpen) [[unlikely]]
+        ImGui::ShowDemoWindow();
 
-    if(m_winLossDrawWindowIsOpen)     [[unlikely]]
-        drawWinLossDrawPopup();       
-                                      
-    if(m_rematchRequestWindowIsOpen)  [[unlikely]]
-        drawRematchRequestPopup();    
-                                      
-    if(m_pairRequestWindowIsOpen)     [[unlikely]]
-        drawPairRequestPopup();
-
-    if(m_IDNotInLobbyWindowIsOpen)    [[unlikely]]
-        drawIDNotInLobbyPopup();
-
-    if(m_pairingDeclinedWindowIsOpen) [[unlikely]]
-        drawPairingDeclinedPopup();
-        
     drawMenuBar();
 
     ImGui::Render();
@@ -363,10 +331,24 @@ void ChessDrawer::renderAllTheThings()
     SDL_RenderPresent(renderer);
 }
 
+bool ChessDrawer::isPromotionWindowOpen() const
+{
+    return m_openWindows.contains(WindowTypes::PROMOTION);
+}
+
+void ChessDrawer::deferedWindowDeletion()
+{
+    std::erase_if(m_openWindows, 
+        [](auto const& pair){return pair.second.second;});
+}
+
 void ChessDrawer::drawColorEditorWindow()
 {
-    ImGui::Begin("change square colors", &m_colorEditorWindowIsOpen,
-        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
+    static bool isOpen {true};
+
+    ImGui::Begin("change square colors", &isOpen,
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_AlwaysAutoResize);
     
     ImGui::TextUnformatted("light squares");
     
@@ -389,15 +371,22 @@ void ChessDrawer::drawColorEditorWindow()
         m_darkSquareColor[i] = static_cast<Uint8>(f_darkSquares[i] * 255);
     }
     
+    if(!isOpen) 
+    {
+        openOrCloseColorEditorWindow(CLOSE_WINDOW); 
+        isOpen = true;
+    }
+
     ImGui::End();
 }
 
 void ChessDrawer::drawConnectionWindow()
 {
-    ImGui::Begin("connect to another player", &m_connectionWindowIsOpen, 
+    static bool isOpen{true};
+    ImGui::Begin("connect to another player", &isOpen,
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
     
-    static bool isInputValid = true;
+    static bool isInputValid{true};
 
     //The ID's are uint32_t, so we need at most 10 chars plus '\0'.
     char opponentID[11] = {0};
@@ -420,6 +409,12 @@ void ChessDrawer::drawConnectionWindow()
 
     if(!isInputValid)
         ImGui::TextUnformatted("The given ID is invalid!");
+
+    if(!isOpen)
+    {
+        openOrCloseConnectionWindow(CLOSE_WINDOW);
+        isOpen = true;
+    }
 
     ImGui::End();
 }
@@ -551,9 +546,15 @@ void ChessDrawer::drawMenuBar()
     {
         if(ImGui::BeginMenu("options"))
         {
-            ImGui::MenuItem("change square colors", nullptr, &m_colorEditorWindowIsOpen);
-            ImGui::MenuItem("connect to another player", nullptr, &m_connectionWindowIsOpen);
-            ImGui::MenuItem("show ImGui demo", nullptr, &m_demoWindowIsOpen);
+            if(ImGui::MenuItem("change square colors", nullptr, nullptr))
+                openOrCloseColorEditorWindow(OPEN_WINDOW);
+
+            if(ImGui::MenuItem("connect to another player", nullptr, nullptr))
+                openOrCloseConnectionWindow(OPEN_WINDOW);
+
+            //if(ImGui::MenuItem("show ImGui demo", nullptr, nullptr))
+                //ImGui::();
+
             ImGui::EndMenu();
         }
 
@@ -563,7 +564,7 @@ void ChessDrawer::drawMenuBar()
         if(ImGui::SmallButton("reset board"))
         {
             if(!app.isPairedWithOpponent()) board.resetBoard();
-            else openOrCloseResetBoardWindow(OPEN_WINDOW);
+            else openOrCloseResetBoardErrorWindow(OPEN_WINDOW);
         }
 
         if(app.isConnectedToServer())
@@ -619,7 +620,7 @@ void ChessDrawer::drawMenuBar()
     popMenuBarStyles();
 }
 
-void ChessDrawer::drawResetButtonErrorPopup()
+void ChessDrawer::drawResetBoardErrorPopup()
 {
     ImGui::OpenPopup("error");
 
@@ -633,7 +634,7 @@ void ChessDrawer::drawResetButtonErrorPopup()
         if(ImGui::Button("okay"))
         {
             ImGui::CloseCurrentPopup();
-            openOrCloseResetBoardWindow(CLOSE_WINDOW);
+            openOrCloseResetBoardErrorWindow(CLOSE_WINDOW);
         }
         ImGui::EndPopup();
     }
@@ -825,6 +826,179 @@ void ChessDrawer::updateWinLossDrawMessage()
     {
         m_winLossDrawPopupMessage = whosTurnIsIt == Side::BLACK ? "black " : "white ";
         m_winLossDrawPopupMessage.append("lost by checkmate");
+    }
+}
+
+void ChessDrawer::openOrCloseColorEditorWindow(bool openOrCLose)
+{
+    if(openOrCLose) 
+    { 
+        m_openWindows.insert({WindowTypes::COLOR_EDITOR, {
+            &ChessDrawer::drawColorEditorWindow, false}});
+    }
+    else
+    { 
+        auto it = m_openWindows.find(WindowTypes::COLOR_EDITOR);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrCloseDemoWindow(bool openOrCLose)
+{
+    m_imguiDemoWindowIsOpen = openOrCLose;
+}
+
+void ChessDrawer::openOrClosePromotionWindow(bool openOrCLose)
+{
+    if(openOrCLose)
+    {
+        m_openWindows.insert({WindowTypes::PROMOTION, {
+            &ChessDrawer::drawPromotionPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::PROMOTION);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrCloseConnectionWindow(bool openOrCLose)
+{
+    if(openOrCLose)
+    {
+        m_openWindows.insert({WindowTypes::CONNECTION, {
+            &ChessDrawer::drawConnectionWindow, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::CONNECTION);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrCloseResetBoardErrorWindow(bool openOrCLose)
+{
+    if(openOrCLose)
+    {
+        m_openWindows.insert({WindowTypes::RESET_BOARD_ERROR, {
+            &ChessDrawer::drawResetBoardErrorPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::RESET_BOARD_ERROR);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrClosePairingCompleteWindow(bool openOrCLose)
+{
+    if(openOrCLose)
+    {
+        m_openWindows.insert({WindowTypes::PAIRING_COMPLETE, {
+            &ChessDrawer::drawPairingCompletePopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::PAIRING_COMPLETE);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrCloseWinLossDrawWindow(bool openOrCLose)
+{
+    if(openOrCLose)
+    {
+        m_openWindows.insert({WindowTypes::WIN_LOSS_DRAW, {
+            &ChessDrawer::drawWinLossDrawPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::WIN_LOSS_DRAW);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrCloseRematchRequestWindow(bool openOrCLose)
+{
+    if(openOrCLose)
+    {
+        m_openWindows.insert({WindowTypes::REMATCH_REQUEST, {
+            &ChessDrawer::drawRematchRequestPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::REMATCH_REQUEST);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrClosePairRequestWindow(bool openOrCLose)
+{
+    if(openOrCLose)
+    {
+        m_openWindows.insert({WindowTypes::PAIR_REQUEST, {
+            &ChessDrawer::drawPairRequestPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::PAIR_REQUEST);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrCloseIDNotInLobbyWindow(bool openOrClose)
+{
+    if(openOrClose)
+    {
+        m_openWindows.insert({WindowTypes::ID_NOT_IN_LOBBY, {
+            &ChessDrawer::drawIDNotInLobbyPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::ID_NOT_IN_LOBBY);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrCloseDrawOfferWindow(bool openOrClose)
+{
+    if(openOrClose)
+    {
+        m_openWindows.insert({WindowTypes::DRAW_OFFER, {
+            &ChessDrawer::drawDrawOfferPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::DRAW_OFFER);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrCloseDrawDeclinedWindow(bool openOrClose)
+{
+    if(openOrClose)
+    {
+        m_openWindows.insert({WindowTypes::DRAW_DECLINED, {
+            &ChessDrawer::drawDrawDeclinedPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::DRAW_DECLINED);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
+}
+
+void ChessDrawer::openOrClosePairDeclineWindow(bool openOrClose)
+{
+    if(openOrClose)
+    {
+        m_openWindows.insert({WindowTypes::PAIRING_DECLINED, {
+            &ChessDrawer::drawPairingDeclinedPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::PAIRING_DECLINED);
+        if(it != m_openWindows.end()) {it->second.second = true;}
     }
 }
 
