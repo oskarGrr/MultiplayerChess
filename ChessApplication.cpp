@@ -373,23 +373,24 @@ Vec2i ChessApp::chess2ScreenPos(Vec2i const pos)
     //move down to account for the menu bar.
     //will only work after the first frame since the first imgui frame
     //needs to be started to measure the menu bar
-    ret.y += static_cast<int>(s_theApplication.m_chessDrawer.getMenuBarHeightInPixels());
+    ret.y += static_cast<int>(s_theApplication.m_chessDrawer.getMenuBarSize().y);
 
     return ret;
 }
 
-//wont check if pos is on the chess board callee must do that
-Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
+//Will not check if pos is on the chess board.
+Vec2i ChessApp::screen2ChessPos(Vec2i const pos) const
 {
-    auto squareSize = s_theApplication.m_chessDrawer.getSquareSizeInPixels();
+    auto const squareSize = m_chessDrawer.getSquareSizeInPixels();
+    auto const menuBarHeight = static_cast<int>(m_chessDrawer.getMenuBarSize().y);
 
     Vec2i ret
     {
         static_cast<int>(pos.x / squareSize),
-        static_cast<int>(pos.y / squareSize)
+        static_cast<int>((pos.y - menuBarHeight) / squareSize)
     };
 
-    if(s_theApplication.m_board.getViewingPerspective() == Side::WHITE)
+    if(m_board.getViewingPerspective() == Side::WHITE)
     {
         ret.y = 7 - ret.y;
     }
@@ -404,12 +405,12 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos)
 //return if the position is on the board (false if over an imgui window)
 //in the future I will add a border with the rank file indicators around the board
 //and this func will also return false when the mouse is over that border.
-bool ChessApp::isScreenPositionOnBoard(Vec2i const& screenPosition)
+bool ChessApp::isScreenPositionOnBoard(Vec2i const& screenPosition) const
 {
-    return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
+    return m_chessDrawer.isScreenPositionOnBoard();
 }
 
-void ChessApp::updateGameState(GameState gs)
+void ChessApp::updateGameState(GameState const gs)
 {
     m_gameState = gs;
 

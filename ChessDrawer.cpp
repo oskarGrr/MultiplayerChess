@@ -24,7 +24,7 @@
 //board width, height and square size are initialized with their setters later
 ChessDrawer::ChessDrawer(uint32_t squareSize)
     : m_squareSize{squareSize}, m_chessBoardWidth{squareSize * 8}, m_chessBoardHeight{squareSize * 8},
-      m_menuBarHeight{0.0f}, m_pieceTextures{}, m_pieceTextureSizes{},
+      m_menuBarSize{0.0f, 0.0f}, m_pieceTextures{}, m_pieceTextureSizes{},
       m_lightSquareColor{214, 235, 225, 255}, m_darkSquareColor{43, 86, 65, 255},
       m_circleTexture{nullptr}, m_redCircleTexture{nullptr}
 {
@@ -118,7 +118,7 @@ void ChessDrawer::drawSquares()
 {
     const auto& app = ChessApp::getApp();
 
-    SDL_Rect square{0, static_cast<int>(m_menuBarHeight),
+    SDL_Rect square{0, static_cast<int>(m_menuBarSize.y),
         static_cast<int>(m_squareSize), static_cast<int>(m_squareSize)};
 
     SDL_Renderer *const renderer = app.getCurrentRenderer();
@@ -154,7 +154,7 @@ void ChessDrawer::drawSquares()
             SDL_RenderFillRect(renderer, &square);
         }
 
-        square.y = static_cast<int>(m_menuBarHeight);
+        square.y = static_cast<int>(m_menuBarSize.y);
     }
 }
 
@@ -603,15 +603,12 @@ void ChessDrawer::drawMenuBar()
         ImGui::SameLine(app.getWindowWidth() - (ImGui::CalcTextSize(whosTurn).x + 18));
         ImGui::TextUnformatted(whosTurn);
 
-        static bool needMenuBarSize = true;
-        if(needMenuBarSize) [[unlikely]]
+        static bool firstPass = true;
+        if(firstPass) [[unlikely]]
         {
-            m_menuBarHeight = ImGui::GetWindowSize().y;
-    
-            SDL_SetWindowSize(app.getSDLWindow(), app.getWindowWidth(),
-                static_cast<int>(app.getWindowHeight() + m_menuBarHeight));
-
-            needMenuBarSize = false;
+            m_menuBarSize = ImGui::GetWindowSize();
+            SDL_SetWindowSize(app.getSDLWindow(), app.getWindowWidth(), 
+                app.getWindowHeight() + m_menuBarSize.y);
         }
 
         ImGui::EndMainMenuBar();
@@ -827,6 +824,11 @@ void ChessDrawer::updateWinLossDrawMessage()
         m_winLossDrawPopupMessage = whosTurnIsIt == Side::BLACK ? "black " : "white ";
         m_winLossDrawPopupMessage.append("lost by checkmate");
     }
+}
+
+bool ChessDrawer::isScreenPositionOnBoard() const
+{
+    return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
 }
 
 void ChessDrawer::openOrCloseColorEditorWindow(bool openOrCLose)

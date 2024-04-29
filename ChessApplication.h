@@ -52,8 +52,8 @@ public:
     static int chessPos2Index(Vec2i const pos){return pos.y * 8 + pos.x;}
     static Vec2i index2ChessPos(int const index){return{index % 8, index / 8};}
     static Vec2i chess2ScreenPos(Vec2i const);//converts a chess position (0-7 for rank and file) to screen position
-    static Vec2i screen2ChessPos(Vec2i const);//converts a screen position to a chess position (0-7 for rank and file)
-    static bool isScreenPositionOnBoard(Vec2i const&);//tells if a screen pos is on the board or if its off the screen/board or is over an imgui window
+    Vec2i screen2ChessPos(Vec2i const) const;//converts a screen position to a chess position (0-7 for rank and file)
+    bool isScreenPositionOnBoard(Vec2i const&) const;//tells if a screen pos is on the board or if its off the screen/board or is over an imgui window
     static bool inRange(Vec2i const chessPos);//tells if a chess position is within the range of a chess board (0-7 ranks and a-h files)
     static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
     bool isPairedWithOpponent() const {return m_network.isPairedWithOpponent();}

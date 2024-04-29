@@ -234,10 +234,10 @@ void Board::piecePickUpRoutine(SDL_Event const& mouseEvent) const
         return;
 
     Vec2i screenPos{mouseEvent.button.x, mouseEvent.button.y};
-    if(!ChessApp::isScreenPositionOnBoard(screenPos))
+    if(!app.isScreenPositionOnBoard(screenPos))
         return;
 
-    Vec2i chessPos = ChessApp::screen2ChessPos(screenPos);
+    Vec2i chessPos = app.screen2ChessPos(screenPos);
 
     auto const p = getPieceAt(chessPos);
 
@@ -274,13 +274,13 @@ void Board::piecePutDownRoutine(SDL_Event const& mouseEvent)
         
     Vec2i screenPos{mouseEvent.button.x, mouseEvent.button.y};
 
-    if(!ChessApp::isScreenPositionOnBoard(screenPos))
+    if(!app.isScreenPositionOnBoard(screenPos))
     {
         Piece::putPieceOnMouseDown();
         return;
     }
 
-    if(auto it = requestMove(ChessApp::screen2ChessPos(screenPos));
+    if(auto it = requestMove(app.screen2ChessPos(screenPos));
         it != pom->getLegalMoves().end())
     {
         movePiece(*it);

@@ -29,6 +29,8 @@ public:
     //Update m_winLossDrawPopupMessage based on the current gamestate.
     void updateWinLossDrawMessage();
 
+    bool isScreenPositionOnBoard() const;
+
     //true for open false for close or use the more readable macros CLOSE_WINDOW and OPEN_WINDOW
     void openOrCloseColorEditorWindow     (bool openOrCLose);
     void openOrCloseDemoWindow            (bool openOrCLose);
@@ -47,7 +49,7 @@ public:
     void renderAllTheThings();
 
     auto getSquareSizeInPixels()    const {return m_squareSize;}
-    auto getMenuBarHeightInPixels() const {return m_menuBarHeight;}
+    auto getMenuBarSize()           const {return m_menuBarSize;}
     auto getBoardWidthInPixels()    const {return m_chessBoardWidth;}
     auto getBoardHeightInPixels()   const {return m_chessBoardHeight;}
     bool isPromotionWindowOpen()    const;
@@ -128,7 +130,7 @@ private:
     uint32_t m_squareSize;
     uint32_t m_chessBoardWidth;
     uint32_t m_chessBoardHeight;
-    float m_menuBarHeight;
+    ImVec2   m_menuBarSize;
     bool m_imguiDemoWindowIsOpen{false};
 
     std::array<SDL_Texture*, NUMOF_PIECE_TEXTURES> m_pieceTextures;
