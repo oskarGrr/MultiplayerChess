@@ -826,9 +826,14 @@ void ChessDrawer::updateWinLossDrawMessage()
     }
 }
 
-bool ChessDrawer::isScreenPositionOnBoard() const
+bool ChessDrawer::isScreenPositionOnBoard(Vec2i const screenPos) const
 {
-    return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
+    //ImGui::IsWindowHovered() should handle this. There seems to be a bug in their code.
+    //It does not work in the case where I click on the options menu bar 
+    //drop down, and then click again on it while the drop down is open.
+    bool const belowMenuBar{screenPos.y > static_cast<int>(m_menuBarSize.y)};
+
+    return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && belowMenuBar;
 }
 
 void ChessDrawer::openOrCloseColorEditorWindow(bool openOrCLose)

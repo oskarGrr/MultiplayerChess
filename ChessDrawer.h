@@ -29,7 +29,7 @@ public:
     //Update m_winLossDrawPopupMessage based on the current gamestate.
     void updateWinLossDrawMessage();
 
-    bool isScreenPositionOnBoard() const;
+    bool isScreenPositionOnBoard(Vec2i const screenPos) const;
 
     //true for open false for close or use the more readable macros CLOSE_WINDOW and OPEN_WINDOW
     void openOrCloseColorEditorWindow     (bool openOrCLose);

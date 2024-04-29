@@ -407,7 +407,7 @@ Vec2i ChessApp::screen2ChessPos(Vec2i const pos) const
 //and this func will also return false when the mouse is over that border.
 bool ChessApp::isScreenPositionOnBoard(Vec2i const& screenPosition) const
 {
-    return m_chessDrawer.isScreenPositionOnBoard();
+    return m_chessDrawer.isScreenPositionOnBoard(screenPosition);
 }
 
 void ChessApp::updateGameState(GameState const gs)
