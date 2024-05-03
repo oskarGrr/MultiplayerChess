@@ -31,7 +31,9 @@ public:
 
     bool isScreenPositionOnBoard(Vec2i const screenPos) const;
 
+
     //true for open false for close or use the more readable macros CLOSE_WINDOW and OPEN_WINDOW
+    void openOrCloseUnpairWindow(bool openOrClose);
     void openOrCloseColorEditorWindow     (bool openOrCLose);
     void openOrCloseDemoWindow            (bool openOrCLose);
     void openOrClosePromotionWindow       (bool openOrCLose);
@@ -75,6 +77,7 @@ private:
     //will point to the correct draw __ window/popup method.
     enum struct WindowTypes : uint32_t
     {
+        UNPAIR,
         DRAW_OFFER,
         ID_NOT_IN_LOBBY,
         DRAW_DECLINED,
@@ -102,7 +105,7 @@ private:
     void drawRematchRequestPopup();
     void drawPairRequestPopup();
     void drawPairingDeclinedPopup();
-
+    void drawUnpairPopup();
     void drawMoveIndicatorCircles();
     void drawPieceOnMouse();
     void drawMenuBar();

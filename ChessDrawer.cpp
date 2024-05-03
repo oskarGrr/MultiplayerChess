@@ -702,6 +702,7 @@ void ChessDrawer::drawWinLossDrawPopup()
                 app.sendHeaderOnlyMessage(MessageType::UNPAIR_MSGTYPE, 
                     MessageSize::UNPAIR_MSGSIZE);
                 app.getNetWork().setIsPairedWithOpponent(false);
+                openOrCloseUnpairWindow(OPEN_WINDOW);
                 board.resetBoard();
             }
         }
@@ -792,6 +793,24 @@ void ChessDrawer::drawPairingDeclinedPopup()
     }
 }
 
+void ChessDrawer::drawUnpairPopup()
+{
+    ImGui::OpenPopup("unpair");
+    centerNextWindow();
+    if(ImGui::BeginPopup("unpair"))
+    {
+        ImGui::TextUnformatted("You were disconnected and put back in the server lobby");
+
+        if(ImGui::Button("okay"))
+        {
+            openOrCloseUnpairWindow(CLOSE_WINDOW);
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
 //called inside of openWinLossDrawPopup()
 //in order to update m_winLossDrawPopupMessage before drawing the win loss draw popup
 void ChessDrawer::updateWinLossDrawMessage()
@@ -846,6 +865,20 @@ bool ChessDrawer::isScreenPositionOnBoard(Vec2i const screenPos) const
     bool const belowMenuBar{screenPos.y > static_cast<int>(m_menuBarSize.y)};
 
     return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && belowMenuBar;
+}
+
+void ChessDrawer::openOrCloseUnpairWindow(bool openOrClose)
+{
+    if(openOrClose)
+    {
+        m_openWindows.insert({WindowTypes::UNPAIR, 
+            {&ChessDrawer::drawUnpairPopup, false}});
+    }
+    else
+    {
+        auto it = m_openWindows.find(WindowTypes::UNPAIR);
+        if(it != m_openWindows.end()) {it->second.second = true;}
+    }
 }
 
 void ChessDrawer::openOrCloseColorEditorWindow(bool openOrCLose)
