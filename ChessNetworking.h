@@ -5,7 +5,7 @@
 #include <exception>
 #include <vector>
 
-#include "chessAppLevelProtocol.h"
+#include "chessNetworkProtocol.h"
 
 //how long (in seconds) the request to pair up will last before timing out
 #define PAIR_REQUEST_TIMEOUT_SECS 10

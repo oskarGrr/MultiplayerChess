@@ -178,7 +178,7 @@
   <ItemGroup>
     <ClInclude Include="Board.h" />
     <ClInclude Include="castleRights.h" />
-    <ClInclude Include="chessAppLevelProtocol.h" />
+    <ClInclude Include="chessNetworkProtocol.h" />
     <ClInclude Include="ChessApplication.h" />
     <ClInclude Include="ChessDrawer.h" />
     <ClInclude Include="errorLogger.h" />

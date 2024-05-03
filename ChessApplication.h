@@ -55,7 +55,6 @@ public:
     Vec2i screen2ChessPos(Vec2i const) const;//converts a screen position to a chess position (0-7 for rank and file)
     bool isScreenPositionOnBoard(Vec2i const&) const;//tells if a screen pos is on the board or if its off the screen/board or is over an imgui window
     static bool inRange(Vec2i const chessPos);//tells if a chess position is within the range of a chess board (0-7 ranks and a-h files)
-    static bool isMouseOver(SDL_Rect const&);//tells wether mouse position is over a given rectangle
     bool isPairedWithOpponent() const {return m_network.isPairedWithOpponent();}
     bool isConnectedToServer() const {return m_network.isConnectedToServer();}
     bool isPromotionWindowOpen() const {return m_chessDrawer.isPromotionWindowOpen();}
@@ -82,8 +81,8 @@ public:
     void buildAndSendPairAccept();
     void buildAndSendPairDecline();
 
-    //1 byte messages only consist of their MSGTYPE (defined in chessAppLevelProtocol.h)
-    void send1ByteMessage(messageType_t msgType);
+    //A lot of messages have no "payload" but just the two byte header.
+    void sendHeaderOnlyMessage(MessageType, MessageSize);
 
 private:
 
@@ -104,6 +103,7 @@ private:
     void handleNewIDMessage(std::vector<char> const& msg);
     void handleIDNotInLobbyMessage();
     void handlePairDeclineMessage(std::vector<char> const& msg);
+    void handleInvalidMessageType();
     void handleDrawAcceptMessage();
 
     bool processEvents();

@@ -10,7 +10,7 @@
 #include "SDL.h"
 #include "SDL_image.h"
 #include "imgui.h"
-#include "chessAppLevelProtocol.h"
+#include "chessNetworkProtocol.h"
 #include "ChessApplication.h"
 #include "PieceTypes.h"
 #include "Vector2i.h"
@@ -493,7 +493,8 @@ void ChessDrawer::drawDrawOfferPopup()
 
         if(ImGui::Button("Accept"))
         {
-            app.send1ByteMessage(DRAW_ACCEPT_MSGTYPE);
+            app.sendHeaderOnlyMessage(MessageType::DRAW_ACCEPT_MSGTYPE, 
+                MessageSize::DRAW_ACCEPT_MSGSIZE);
             app.updateGameState(GameState::DRAW_AGREEMENT);
             openOrCloseWinLossDrawWindow(OPEN_WINDOW);
             openOrCloseDrawOfferWindow(CLOSE_WINDOW);
@@ -504,7 +505,8 @@ void ChessDrawer::drawDrawOfferPopup()
 
         if(ImGui::Button("Decline"))
         {
-            app.send1ByteMessage(DRAW_DECLINE_MSGTYPE);
+            app.sendHeaderOnlyMessage(MessageType::DRAW_DECLINE_MSGTYPE,
+                MessageSize::DRAW_DECLINE_MSGSIZE);
             openOrCloseDrawOfferWindow(CLOSE_WINDOW);
             ImGui::CloseCurrentPopup();
         }
@@ -573,13 +575,17 @@ void ChessDrawer::drawMenuBar()
             {
                 if(ImGui::SmallButton("resign"))
                 {
-                    app.send1ByteMessage(RESIGN_MSGTYPE);
+                    app.sendHeaderOnlyMessage(MessageType::RESIGN_MSGTYPE, 
+                        MessageSize::RESIGN_MSGSIZE);
                     app.updateGameState(GameState::YOU_RESIGNED);
                     openOrCloseWinLossDrawWindow(OPEN_WINDOW);
                 }
 
                 if(ImGui::SmallButton("draw"))
-                    app.send1ByteMessage(DRAW_OFFER_MSGTYPE);
+                {
+                    app.sendHeaderOnlyMessage(MessageType::DRAW_OFFER_MSGTYPE,
+                        MessageSize::DRAW_OFFER_MSGSIZE);
+                }
             }
 
             ImGui::Separator();
@@ -687,11 +693,14 @@ void ChessDrawer::drawWinLossDrawPopup()
         if(app.isPairedWithOpponent())
         {
             if(ImGui::Button("request rematch"))
-                app.send1ByteMessage(REMATCH_REQUEST_MSGTYPE);
-        
+            {
+                app.sendHeaderOnlyMessage(MessageType::REMATCH_REQUEST_MSGTYPE, 
+                    MessageSize::REMATCH_REQUEST_MSGSIZE);
+            }
             if(ImGui::Button("disconnect from opponent"))
             {
-                app.send1ByteMessage(UNPAIR_MSGTPYE);
+                app.sendHeaderOnlyMessage(MessageType::UNPAIR_MSGTYPE, 
+                    MessageSize::UNPAIR_MSGSIZE);
                 app.getNetWork().setIsPairedWithOpponent(false);
                 board.resetBoard();
             }
@@ -720,16 +729,19 @@ void ChessDrawer::drawRematchRequestPopup()
         if(ImGui::Button("accept rematch"))
         {
             board.resetBoard();
-            app.send1ByteMessage(REMATCH_ACCEPT_MSGTYPE);
-            openOrCloseRematchRequestWindow(false);
+            app.sendHeaderOnlyMessage(MessageType::REMATCH_ACCEPT_MSGTYPE,
+                MessageSize::REMATCH_ACCEPT_MSGSIZE);
+            openOrCloseRematchRequestWindow(CLOSE_WINDOW);
         }
         
         //decline and disconnect from opponent
         if(ImGui::Button("decline rematch"))
         {
-            app.send1ByteMessage(REMATCH_DECLINE_MSGTYPE);
+            app.sendHeaderOnlyMessage(MessageType::REMATCH_DECLINE_MSGTYPE,
+                MessageSize::REMATCH_DECLINE_MSGSIZE);
             board.resetBoard();
-            openOrCloseRematchRequestWindow(false);
+            app.getNetWork().setIsPairedWithOpponent(false);
+            openOrCloseRematchRequestWindow(CLOSE_WINDOW);
         }
 
         ImGui::EndPopup();

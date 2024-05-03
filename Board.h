@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>//for std::shared_ptr
 
-#include "chessAppLevelProtocol.h"
+#include "chessNetworkProtocol.h"
 #include "moveType.h"
 #include "castleRights.h"
 
