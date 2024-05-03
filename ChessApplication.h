@@ -58,9 +58,9 @@ public:
     bool isPairedWithOpponent() const {return m_network.isPairedWithOpponent();}
     bool isConnectedToServer() const {return m_network.isConnectedToServer();}
     bool isPromotionWindowOpen() const {return m_chessDrawer.isPromotionWindowOpen();}
-    void openPromotionWindow() {m_chessDrawer.openOrClosePromotionWindow(OPEN_WINDOW);}
-    void openWinLossDrawWindow() {m_chessDrawer.openOrCloseWinLossDrawWindow(OPEN_WINDOW);}
-    void closeWinLossDrawWindow() {m_chessDrawer.openOrCloseWinLossDrawWindow(CLOSE_WINDOW);}
+    void openPromotionWindow() {m_chessDrawer.openWindow(ChessDrawer::WindowTypes::PROMOTION);}
+    void openWinLossDrawWindow() {m_chessDrawer.openWindow(ChessDrawer::WindowTypes::WIN_LOSS_DRAW);}
+    void closeWinLossDrawWindow() {m_chessDrawer.closeWindow(ChessDrawer::WindowTypes::WIN_LOSS_DRAW);}
 
     //play audio methods
     void playChessMoveSound()    {m_pieceMoveSound.playFullSound();}

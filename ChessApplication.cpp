@@ -187,17 +187,17 @@ void ChessApp::handleMoveMessage(std::vector<char> const& msg)
 void ChessApp::handleResignMessage()
 {
     updateGameState(GameState::OPPONENT_RESIGNED);
-    m_chessDrawer.openOrCloseWinLossDrawWindow(true);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::WIN_LOSS_DRAW);
 }
 
 void ChessApp::handleDrawOfferMessage()
 {
-    m_chessDrawer.openOrCloseDrawOfferWindow(OPEN_WINDOW);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::DRAW_OFFER);
 }
 
 void ChessApp::hanldeDrawDeclineMessage()
 {
-    m_chessDrawer.openOrCloseDrawDeclinedWindow(OPEN_WINDOW);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::DRAW_DECLINED);
 }
 
 void ChessApp::handlePairRequestMessage(std::vector<char> const& msg)
@@ -210,7 +210,7 @@ void ChessApp::handlePairRequestMessage(std::vector<char> const& msg)
 
     m_network.setPotentialOpponentID(ntohl(potentialOpponentID));
     m_network.setIsThereAPotentialOpponent(true);
-    m_chessDrawer.openOrClosePairRequestWindow(true);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::PAIR_REQUEST);
 }
 
 void ChessApp::handlePairingCompleteMessage(std::vector<char> const& msg)
@@ -224,14 +224,14 @@ void ChessApp::handlePairingCompleteMessage(std::vector<char> const& msg)
     m_network.setIsPairedWithOpponent(true);
     m_network.setIsThereAPotentialOpponent(false);
     m_network.setOpponentID(m_network.getPotentialOpponentsID());
-    m_chessDrawer.openOrCloseConnectionWindow(CLOSE_WINDOW);
-    m_chessDrawer.openOrClosePairingCompleteWindow(OPEN_WINDOW);
+    m_chessDrawer.closeWindow(ChessDrawer::WindowTypes::CONNECTION);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::PAIRING_COMPLETE);
 }
 
 void ChessApp::handleRematchRequestMessage()
 {
-    m_chessDrawer.openOrCloseRematchRequestWindow(OPEN_WINDOW);
-    m_chessDrawer.openOrCloseWinLossDrawWindow(CLOSE_WINDOW);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::REMATCH_REQUEST);
+    m_chessDrawer.closeWindow(ChessDrawer::WindowTypes::WIN_LOSS_DRAW);
 }
 
 void ChessApp::handleRematchAcceptMessage()
@@ -243,7 +243,7 @@ void ChessApp::handleOpponentClosedConnectionMessage()
 {
     m_network.setIsPairedWithOpponent(false);
     updateGameState(GameState::GAME_ABANDONMENT);
-    m_chessDrawer.openOrCloseWinLossDrawWindow(true);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::WIN_LOSS_DRAW);
 }
 
 void ChessApp::handleRematchDeclineMessage()
@@ -255,7 +255,7 @@ void ChessApp::handleRematchDeclineMessage()
 void ChessApp::handleUnpairMessage()
 {
     m_network.setIsPairedWithOpponent(false);
-    m_chessDrawer.openOrCloseUnpairWindow(OPEN_WINDOW);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::UNPAIR);
     m_board.resetBoard();
 }
 
@@ -276,13 +276,13 @@ void ChessApp::handleNewIDMessage(std::vector<char> const& msg)
 void ChessApp::handleIDNotInLobbyMessage()
 {
     assert(m_network.isThereAPotentialOpponent());
-    m_chessDrawer.openOrCloseIDNotInLobbyWindow(OPEN_WINDOW);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::ID_NOT_IN_LOBBY);
 }
 
 void ChessApp::handleDrawAcceptMessage()
 {
     updateGameState(GameState::DRAW_AGREEMENT);
-    m_chessDrawer.openOrCloseWinLossDrawWindow(OPEN_WINDOW);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::WIN_LOSS_DRAW);
 }
 
 void ChessApp::handlePairDeclineMessage(std::vector<char> const& msg)
@@ -294,7 +294,7 @@ void ChessApp::handlePairDeclineMessage(std::vector<char> const& msg)
     std::memcpy(&potentialOpponentID, msg.data() + 2, sizeof(potentialOpponentID));
     potentialOpponentID = ntohl(potentialOpponentID);
     assert(m_network.getPotentialOpponentsID() == potentialOpponentID);
-    m_chessDrawer.openOrClosePairDeclineWindow(OPEN_WINDOW);
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::PAIRING_DECLINED);
     m_network.setIsThereAPotentialOpponent(false);
 }
 

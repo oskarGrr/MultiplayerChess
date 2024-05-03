@@ -11,8 +11,6 @@
 //the squares pieces and imgui windows etc
 
 #define NUMOF_PIECE_TEXTURES 12
-#define CLOSE_WINDOW false
-#define OPEN_WINDOW true
 
 class ChessDrawer
 {
@@ -30,45 +28,6 @@ public:
     void updateWinLossDrawMessage();
 
     bool isScreenPositionOnBoard(Vec2i const screenPos) const;
-
-
-    //true for open false for close or use the more readable macros CLOSE_WINDOW and OPEN_WINDOW
-    void openOrCloseUnpairWindow(bool openOrClose);
-    void openOrCloseColorEditorWindow     (bool openOrCLose);
-    void openOrCloseDemoWindow            (bool openOrCLose);
-    void openOrClosePromotionWindow       (bool openOrCLose);
-    void openOrCloseConnectionWindow      (bool openOrCLose);
-    void openOrCloseResetBoardErrorWindow (bool openOrCLose);
-    void openOrClosePairingCompleteWindow (bool openOrCLose);
-    void openOrCloseWinLossDrawWindow     (bool openOrCLose);
-    void openOrCloseRematchRequestWindow  (bool openOrCLose);
-    void openOrClosePairRequestWindow     (bool openOrCLose);
-    void openOrCloseIDNotInLobbyWindow    (bool openOrClose);
-    void openOrCloseDrawOfferWindow       (bool openOrClose);
-    void openOrCloseDrawDeclinedWindow    (bool openOrClose);
-    void openOrClosePairDeclineWindow     (bool openOrClose);
-
-    void renderAllTheThings();
-
-    auto getSquareSizeInPixels()    const {return m_squareSize;}
-    auto getMenuBarSize()           const {return m_menuBarSize;}
-    auto getBoardWidthInPixels()    const {return m_chessBoardWidth;}
-    auto getBoardHeightInPixels()   const {return m_chessBoardHeight;}
-    bool isPromotionWindowOpen()    const;
-
-    //indecies into the array of SDL textures for the different pieces.
-    //scoped to ChessDrawer but is an unscoped enum (not enum struct/class)  
-    //to allow for convenient implicit conversion to the underlying type 
-    //(the textures are in the single chess app instance as m_pieceTextures)
-    enum TextureIndices : uint32_t
-    {
-        WPAWN, WKNIGHT, WROOK, WBISHOP, WQUEEN, WKING,
-        BPAWN, BKNIGHT, BROOK, BBISHOP, BQUEEN, BKING, INVALID
-    };
-
-private:
-
-    void deferedWindowDeletion();
 
     //These are used as a key to map to the draw __ popup/window methods below.
     //I would use a std::unordered_set, and just have member function pointers as the key,
@@ -91,6 +50,31 @@ private:
         PAIR_REQUEST,
         PAIRING_DECLINED
     };
+
+    void openWindow(WindowTypes);
+    void closeWindow(WindowTypes);
+
+    void renderAllTheThings();
+
+    auto getSquareSizeInPixels()    const {return m_squareSize;}
+    auto getMenuBarSize()           const {return m_menuBarSize;}
+    auto getBoardWidthInPixels()    const {return m_chessBoardWidth;}
+    auto getBoardHeightInPixels()   const {return m_chessBoardHeight;}
+    bool isPromotionWindowOpen()    const;
+
+    //indecies into the array of SDL textures for the different pieces.
+    //scoped to ChessDrawer but is an unscoped enum (not enum struct/class)  
+    //to allow for convenient implicit conversion to the underlying type 
+    //(the textures are in the single chess app instance as m_pieceTextures)
+    enum TextureIndices : uint32_t
+    {
+        WPAWN, WKNIGHT, WROOK, WBISHOP, WQUEEN, WKING,
+        BPAWN, BKNIGHT, BROOK, BBISHOP, BQUEEN, BKING, INVALID
+    };
+
+private:
+
+    void deferedWindowDeletion();
 
     //Draw window/popup methods
     void drawDrawOfferPopup();
@@ -126,9 +110,13 @@ private:
 
     static void centerNextWindow();
 
-    //The bool in the std::pair is a defered deletion flag. 
-    //True signals that it is marked for deletion.
-    std::unordered_map<WindowTypes, std::pair<void(ChessDrawer::*)(void), bool>> m_openWindows;
+    //The bool in the std::pair is to tell whether or not that window is open.
+    //If you try to open a window that is already open, or close a window that is already closed
+    //then nothing happens. Otherwise we will push_back() to the m_openWindows vector.
+    std::unordered_map<WindowTypes, std::pair<void(ChessDrawer::*)(void), bool>> m_windowFunctionMap;
+
+    //The bool is the std::pair is to mark a vector element for defered deletion.
+    std::vector<std::pair<void(ChessDrawer::*)(void), bool>> m_openWindows;
 
     uint32_t m_squareSize;
     uint32_t m_chessBoardWidth;
