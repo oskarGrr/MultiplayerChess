@@ -788,6 +788,7 @@ void ChessDrawer::drawRematchRequestPopup()
             board.resetBoard();
             app.getNetWork().setIsPairedWithOpponent(false);
             closeWindow(WindowTypes::REMATCH_REQUEST);
+            openWindow(WindowTypes::UNPAIR);
         }
 
         ImGui::EndPopup();

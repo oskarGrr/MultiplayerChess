@@ -250,6 +250,7 @@ void ChessApp::handleRematchDeclineMessage()
 {
     m_network.setIsPairedWithOpponent(false);
     m_board.resetBoard();
+    m_chessDrawer.openWindow(ChessDrawer::WindowTypes::UNPAIR);
 }
 
 void ChessApp::handleUnpairMessage()
