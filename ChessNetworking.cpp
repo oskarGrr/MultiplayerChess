@@ -8,8 +8,6 @@
 #include <filesystem>
 #include <string>
 
-#define SERVER_PORT 42069
-
 ChessConnection::ChessConnection()
     : m_isConnectedToServer{false},
       m_isPairedWithOpponent{false}, 
