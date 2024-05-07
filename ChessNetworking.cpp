@@ -2,8 +2,10 @@
 #include "ChessApplication.h"
 #include "errorLogger.h"
 #include <optional>
+#include <sstream>
 #include <thread>
 #include <fstream>
+#include <filesystem>
 #include <string>
 
 #define SERVER_PORT 42069
@@ -14,10 +16,11 @@ ChessConnection::ChessConnection()
       m_isThereAPotentialOpponent{false},
       m_winSockData{}, 
       m_socket{INVALID_SOCKET},
-      m_addressInfo{.sin_family = AF_INET, .sin_port = htons(SERVER_PORT)},
+      m_addressInfo{},
       m_potentialOpponentID{},
       m_uniqueID{},
-      m_opponentID{}
+      m_opponentID{},
+      m_serverIPFileName{"ServerIP.txt"}
 {
     //init winsock2
     if(WSAStartup(MAKEWORD(2, 2), &m_winSockData))
@@ -32,7 +35,7 @@ ChessConnection::ChessConnection()
         throw networkException(msg.append(std::to_string(WSAGetLastError())));
     }
 
-    std::thread conn2ServerThread(&ChessConnection::connect2Server, this, "127.0.0.1");
+    std::thread conn2ServerThread(&ChessConnection::connectToServer, this);
     conn2ServerThread.detach();//no need to join later :)
 }
 
@@ -50,28 +53,138 @@ void ChessConnection::disconnectFromServer()
     setIsThereAPotentialOpponent(false);
 }
 
-static void checkPtonReturn(int ptonResult)
+bool ChessConnection::loadServerIPFromFile()
 {
-    if(ptonResult == 0)
+    if(!std::filesystem::exists(m_serverIPFileName))
+        generateServerIPFile();
+
+    std::ifstream ifs{m_serverIPFileName};
+
+    if(!ifs.is_open())
+        return false;
+
+    bool wasIPCorrect = false;
+    bool wasPORTCorrect = false;
+
+    for(std::string line; std::getline(ifs, line) && (!wasIPCorrect || !wasPORTCorrect);)
     {
-        throw networkException("the address entered is not a"
-            "valid IPv4 dotted-decimal string\n"
-            "a correct IPv4 example: 192.0.2.146");
+        //If the current line is a comment or an empty line.
+        if(line[0] == '#' || line.size() == 0)
+            continue;
+
+        std::size_t const notWhiteSpace = line.find_first_not_of("\t ");
+
+        //If the line is only whitespace (tabs or spaces).
+        if(notWhiteSpace == std::string::npos)
+            continue;
+
+        std::size_t const colonIndex = line.find_first_of(':');
+
+        //No colon? UNACCEPTABLE!!!1
+        if(colonIndex == std::string::npos)
+            return false;
+
+        std::string rightSide;
+        std::string leftSide;//should be "IP" or "PORT"
+        try 
+        {
+            leftSide = line.substr(notWhiteSpace, colonIndex);
+            rightSide = line.substr(line.find_first_not_of("\t ", colonIndex + 1));
+        }
+        catch(std::out_of_range const& e)
+        {
+            return false;
+        }
+
+        if(leftSide == "PORT")
+        {
+            wasPORTCorrect = checkServerPortTxt(rightSide);
+            if(wasPORTCorrect) std::cout << rightSide << '\n';
+        }
+        else if(leftSide == "IP")
+        {
+            wasIPCorrect = checkServerIPTxt(rightSide);
+            if(wasIPCorrect) std::cout << rightSide << '\n';
+        }
+        else//If leftSide was not "IP" or "PORT"
+        {
+            return false;
+        }
     }
-    else if(ptonResult < 0)
-    {
-        std::string msg("inet_pton() failed with error ");
-        int winsockError = WSAGetLastError();
-        msg.append(std::to_string(winsockError));
-        throw networkException(msg, winsockError);
-    }
+
+    return wasIPCorrect && wasPORTCorrect;
 }
 
-void ChessConnection::connect2Server(std::string_view serverIp)
-{   
+//Checks the PORT field in ServerIP.txt.
+bool ChessConnection::checkServerPortTxt(std::string_view port)
+{
+    //The Biggest port string size should be 5 chars.
+    if(port.size() > 5)
+        return false;
+    
+    for(auto c : port)
+    {
+        if(!std::isdigit(c))
+            return false;
+    }
+    
+    uint64_t const portValue = std::stoull(static_cast<std::string>(port));
+    
+    if(portValue > (1 << 16) - 1)
+        return false;
+    
+    m_addressInfo.sin_port = htons(portValue);
+    return true;
+}
+
+//Checks the IP line in ServerIP.txt.
+bool ChessConnection::checkServerIPTxt(std::string_view ip)
+{
+    if(inet_pton(AF_INET, ip.data(), &m_addressInfo.sin_addr) == 1)
+    {
+        m_addressInfo.sin_family = AF_INET;
+        return true;
+    }
+    if(inet_pton(AF_INET6, ip.data(), &m_addressInfo.sin_addr) == 1)
+    {
+        m_addressInfo.sin_family = AF_INET6;
+        return true;
+    }
+
+    return false;
+}
+
+//If ServerIP.txt does not exist, this creates a new one.
+void ChessConnection::generateServerIPFile()
+{
+    assert(!std::filesystem::exists(m_serverIPFileName));
+    std::ofstream ofs{m_serverIPFileName};
+
+    ofs << "#Enter the IP and PORT of the chess server below." << std::endl
+        << "#The server source can be found at https://github.com/oskarGrr/chessServer if you want" << std::endl
+        << "#to build it and set up your own server. The server uses a lot of win32 api calls, so it" << std::endl
+        << "#will only work on windows. " << std::endl
+        << std::endl
+        << "#Be sure to put a space after IP: and PORT: below." << std::endl
+        << "#If you accidentally modify this file, and need a new one you can delete it" << std::endl
+        << "#and a new one will be genertated when you start the application again." << std::endl
+        << std::endl
+        << "#by default this will be the loopback IP. Change it to your server's IP and port." << std::endl
+        << std::endl
+        << "IP: 127.0.0.1" << std::endl
+        << "PORT: 42069" << std::endl;
+}
+
+void ChessConnection::connectToServer()
+{
     assert(!m_isConnectedToServer);
 
-    checkPtonReturn(inet_pton(AF_INET, serverIp.data(), &m_addressInfo.sin_addr));
+    if(!loadServerIPFromFile())
+    {
+        //open popup to explain that ServerIP.txt was missing/invalid.
+        //ask if they want to input the servers ip in popup.
+        return;
+    }
 
     if(connect(m_socket, reinterpret_cast<sockaddr*>(&m_addressInfo),
         static_cast<int>(sizeof m_addressInfo)) == SOCKET_ERROR)

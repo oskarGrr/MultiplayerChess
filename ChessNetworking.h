@@ -53,12 +53,26 @@ private:
     bool        m_isThereAPotentialOpponent;//Is there a person you are trying to pair with/trying to pair with you.
     WSADATA     m_winSockData;
     SOCKET      m_socket;
-    sockaddr_in m_addressInfo;
+    sockaddr_in m_addressInfo;//server addr info
     uint32_t    m_potentialOpponentID;//The ID if someone attempting to play chess with you.
     uint32_t    m_uniqueID;//This clients unique ID that the server provided upon connection.
     uint32_t    m_opponentID;
+    std::string const m_serverIPFileName;
 
-    void connect2Server(std::string_view serverIp);
+    void connectToServer();
+
+    //Returns true if successfully loaded address from ServerIP.txt.
+    //Returns false if the file ServerIP.txt could not be found, or
+    //if the file had an invalid IP addr or PORT number.
+    bool loadServerIPFromFile();
+
+    void generateServerIPFile();
+
+    //Checks the IP line in ServerIP.txt.
+    bool checkServerIPTxt(std::string_view ip);
+
+    //Checks the PORT line in ServerIP.txt.
+    bool checkServerPortTxt(std::string_view port);
 
 public:
 
