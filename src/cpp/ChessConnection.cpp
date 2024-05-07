@@ -1,4 +1,4 @@
-#include "ChessNetworking.h"
+#include "ChessConnection.h"
 #include "ChessApplication.h"
 #include "errorLogger.h"
 #include <optional>

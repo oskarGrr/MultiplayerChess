@@ -5,7 +5,7 @@
 #include "imgui_impl_sdlrenderer.h"
 #include "SDL.h"
 #include "SDL_image.h"
-#include "ChessNetworking.h"
+#include "ChessConnection.h"
 #include "errorLogger.h"
 #include "ChessDrawer.h"
 #include "PieceTypes.h"

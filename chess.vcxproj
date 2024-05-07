@@ -126,7 +126,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\hpp;$(ProjectDir)ImGui_Src;$(ProjectDir)SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <Optimization>Disabled</Optimization>
     </ClCompile>
@@ -145,7 +145,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\hpp;$(ProjectDir)ImGui_Src;$(ProjectDir)SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <Optimization>Disabled</Optimization>
     </ClCompile>
@@ -159,43 +159,44 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Board.cpp" />
-    <ClCompile Include="ChessApplication.cpp" />
-    <ClCompile Include="ChessDrawer.cpp" />
-    <ClCompile Include="imgui.cpp" />
-    <ClCompile Include="imgui_demo.cpp" />
-    <ClCompile Include="imgui_draw.cpp" />
-    <ClCompile Include="imgui_impl_sdl.cpp" />
-    <ClCompile Include="imgui_impl_sdlrenderer.cpp" />
-    <ClCompile Include="imgui_tables.cpp" />
-    <ClCompile Include="imgui_widgets.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="ChessNetworking.cpp" />
-    <ClCompile Include="PieceTypes.cpp" />
-    <ClCompile Include="WavSound.cpp" />
-    <ClCompile Include="Window.cpp" />
+    <ClCompile Include="ImGui_Src\imgui.cpp" />
+    <ClCompile Include="ImGui_Src\imgui_demo.cpp" />
+    <ClCompile Include="ImGui_Src\imgui_draw.cpp" />
+    <ClCompile Include="ImGui_Src\imgui_impl_sdl.cpp" />
+    <ClCompile Include="ImGui_Src\imgui_impl_sdlrenderer.cpp" />
+    <ClCompile Include="ImGui_Src\imgui_tables.cpp" />
+    <ClCompile Include="ImGui_Src\imgui_widgets.cpp" />
+    <ClCompile Include="src\cpp\Board.cpp" />
+    <ClCompile Include="src\cpp\ChessApplication.cpp" />
+    <ClCompile Include="src\cpp\ChessConnection.cpp" />
+    <ClCompile Include="src\cpp\ChessDrawer.cpp" />
+    <ClCompile Include="src\cpp\main.cpp" />
+    <ClCompile Include="src\cpp\PieceTypes.cpp" />
+    <ClCompile Include="src\cpp\WavSound.cpp" />
+    <ClCompile Include="src\cpp\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Board.h" />
-    <ClInclude Include="castleRights.h" />
-    <ClInclude Include="chessNetworkProtocol.h" />
-    <ClInclude Include="ChessApplication.h" />
-    <ClInclude Include="ChessDrawer.h" />
-    <ClInclude Include="errorLogger.h" />
-    <ClInclude Include="imconfig.h" />
-    <ClInclude Include="imgui.h" />
-    <ClInclude Include="imgui_impl_sdl.h" />
-    <ClInclude Include="imgui_impl_sdlrenderer.h" />
-    <ClInclude Include="imgui_internal.h" />
-    <ClInclude Include="imstb_rectpack.h" />
-    <ClInclude Include="imstb_textedit.h" />
-    <ClInclude Include="imstb_truetype.h" />
-    <ClInclude Include="ChessNetworking.h" />
-    <ClInclude Include="moveType.h" />
-    <ClInclude Include="Vector2i.h" />
-    <ClInclude Include="PieceTypes.h" />
-    <ClInclude Include="WavSound.h" />
-    <ClInclude Include="Window.h" />
+    <ClInclude Include="ImGui_Src\imconfig.h" />
+    <ClInclude Include="ImGui_Src\imgui.h" />
+    <ClInclude Include="ImGui_Src\imgui_impl_sdl.h" />
+    <ClInclude Include="ImGui_Src\imgui_impl_sdlrenderer.h" />
+    <ClInclude Include="ImGui_Src\imgui_internal.h" />
+    <ClInclude Include="ImGui_Src\imstb_rectpack.h" />
+    <ClInclude Include="ImGui_Src\imstb_textedit.h" />
+    <ClInclude Include="ImGui_Src\imstb_truetype.h" />
+    <ClInclude Include="src\hpp\Board.h" />
+    <ClInclude Include="src\hpp\castleRights.h" />
+    <ClInclude Include="src\hpp\ChessApplication.h" />
+    <ClInclude Include="src\hpp\ChessConnection.h" />
+    <ClInclude Include="src\hpp\ChessDrawer.h" />
+    <ClInclude Include="src\hpp\chessNetworkProtocol.h" />
+    <ClInclude Include="src\hpp\errorLogger.h" />
+    <ClInclude Include="src\hpp\moveType.h" />
+    <ClInclude Include="src\hpp\PieceTypes.h" />
+    <ClInclude Include="src\hpp\ServerConnection.hpp" />
+    <ClInclude Include="src\hpp\Vector2i.h" />
+    <ClInclude Include="src\hpp\WavSound.h" />
+    <ClInclude Include="src\hpp\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

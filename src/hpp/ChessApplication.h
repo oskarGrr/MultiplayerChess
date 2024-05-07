@@ -7,7 +7,7 @@
 #include "WavSound.h"
 #include "SDL.h"
 #include "imgui.h"
-#include "ChessNetworking.h"
+#include "ChessConnection.h"
 
 enum struct GameState : uint32_t
 {

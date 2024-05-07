@@ -744,7 +744,7 @@ void ChessDrawer::drawWinLossDrawPopup()
             }
             if(ImGui::Button("disconnect from opponent"))
             {
-                app.sendHeaderOnlyMessage(MessageType::UNPAIR_MSGTYPE, 
+                app.sendHeaderOnlyMessage(MessageType::UNPAIR_MSGTYPE,
                     MessageSize::UNPAIR_MSGSIZE);
                 app.getNetWork().setIsPairedWithOpponent(false);
                 closeWindow(WindowTypes::UNPAIR);
