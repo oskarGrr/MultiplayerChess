@@ -127,7 +127,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)src\hpp;$(ProjectDir)ImGui_Src;$(ProjectDir)SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
@@ -146,7 +146,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)src\hpp;$(ProjectDir)ImGui_Src;$(ProjectDir)SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
@@ -172,6 +172,9 @@
     <ClCompile Include="src\cpp\ChessDrawer.cpp" />
     <ClCompile Include="src\cpp\main.cpp" />
     <ClCompile Include="src\cpp\PieceTypes.cpp" />
+    <ClCompile Include="src\cpp\ServerConnection.cpp" />
+    <ClCompile Include="src\cpp\ServerConnector.cpp" />
+    <ClCompile Include="src\cpp\SettingsFileManager.cpp" />
     <ClCompile Include="src\cpp\WavSound.cpp" />
     <ClCompile Include="src\cpp\Window.cpp" />
   </ItemGroup>
@@ -194,6 +197,8 @@
     <ClInclude Include="src\hpp\moveType.h" />
     <ClInclude Include="src\hpp\PieceTypes.h" />
     <ClInclude Include="src\hpp\ServerConnection.hpp" />
+    <ClInclude Include="src\hpp\ServerConnector.hpp" />
+    <ClInclude Include="src\hpp\SettingsFileManager.hpp" />
     <ClInclude Include="src\hpp\Vector2i.h" />
     <ClInclude Include="src\hpp\WavSound.h" />
     <ClInclude Include="src\hpp\Window.h" />
