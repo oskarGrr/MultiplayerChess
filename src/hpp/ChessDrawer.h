@@ -99,7 +99,7 @@ private:
     void drawSquares();
     void drawPiecesNotOnMouse();
 
-    void loadPieceTexturesFromDisk(std::array<std::string, NUMOF_PIECE_TEXTURES> const& filePaths);
+    void loadPieceTexturesFromDisk(std::span<std::filesystem::path> filePaths);
     
     //generates a circle texture at startup to use later
     void initCircleTexture(int radius, Uint8 RR, Uint8 GG, Uint8 BB, Uint8 AA, 
@@ -127,9 +127,9 @@ private:
     ImVec2   m_menuBarSize;
     bool m_imguiDemoWindowIsOpen{false};
 
-    std::array<SDL_Texture*, NUMOF_PIECE_TEXTURES> m_pieceTextures;
-    std::array<Vec2i,        NUMOF_PIECE_TEXTURES> m_pieceTextureSizes;
-    std::array<uint32_t, 4> m_lightSquareColor, m_darkSquareColor;
+    std::vector<SDL_Texture*> m_pieceTextures;
+    std::vector<Vec2i>        m_pieceTextureSizes;
+    std::array<uint32_t, 4>   m_lightSquareColor, m_darkSquareColor;
 
     SDL_Texture* m_circleTexture;
     SDL_Texture* m_redCircleTexture;

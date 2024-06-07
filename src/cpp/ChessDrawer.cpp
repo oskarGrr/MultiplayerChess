@@ -913,21 +913,30 @@ bool ChessDrawer::isScreenPositionOnBoard(Vec2i const screenPos) const
     return !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && belowMenuBar;
 }
 
-void ChessDrawer::loadPieceTexturesFromDisk(std::array<std::string, NUMOF_PIECE_TEXTURES> const& filePaths)
+void ChessDrawer::loadPieceTexturesFromDisk(std::span<std::filesystem::path> paths)
 {   
     SDL_Renderer* const renderer = ChessApp::getApp().getCurrentRenderer();
     
-    for(int i = 0; i < NUMOF_PIECE_TEXTURES; ++i)
+    for(auto const& p : paths)
     {
-        if(!(m_pieceTextures[i] = IMG_LoadTexture(renderer, filePaths[i].c_str())))
+        auto pathStr {p.string()};
+        SDL_Texture* tex {IMG_LoadTexture(renderer, pathStr.c_str())};
+
+        if(!tex)
             throw std::runtime_error(IMG_GetError());
+
+        m_pieceTextures.push_back(tex);
     }
 
     //get the width and height of each texture
-    for(int i = 0; i < NUMOF_PIECE_TEXTURES; ++i)
+    for(auto const& tex : m_pieceTextures)
     {
-        SDL_QueryTexture(m_pieceTextures[i], nullptr, 
-            nullptr, &m_pieceTextureSizes[i].x, &m_pieceTextureSizes[i].y);
+        int width {0}, height {0};//texture sizes
+
+        if(SDL_QueryTexture(tex, nullptr, nullptr, &width, &height) < 0)
+            throw std::runtime_error(SDL_GetError());
+
+        m_pieceTextureSizes.emplace_back(width, height);
     }
 }
 
