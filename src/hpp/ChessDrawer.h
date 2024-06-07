@@ -1,5 +1,8 @@
 #pragma once
 #include <array>
+#include <vector>
+#include <filesystem>
+#include <span>
 #include <cstdint>
 #include <unordered_map>
 #include <string>

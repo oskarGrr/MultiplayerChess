@@ -959,7 +959,7 @@ void ChessDrawer::deserializeAndLoadSquareColorData()
     std::ifstream ifs(SQUARE_COLOR_DATA_FILENAME);
     if(!ifs)
     {
-        FileErrorLogger::get().logErrors("Could not find " SQUARE_COLOR_DATA_FILENAME 
+        FileErrorLogger::get().log("Could not find " SQUARE_COLOR_DATA_FILENAME 
             ". Using default square colors instead");
         return;
     }

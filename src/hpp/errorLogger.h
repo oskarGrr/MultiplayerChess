@@ -18,11 +18,11 @@ public:
     //creates as many log entries as there are parameters in the errors param pack.
     //It does this by folding the errors pack over the << operator and calling
     //operator << for every error in errors.
-    void logErrors(auto const&... errors) 
-    { 
+    void log(auto const&... errors)
+    {
         std::lock_guard lk {m_logMutex};
         std::ofstream errLoggStream {"chessErrorLog.txt", std::ios_base::app};
-        (errLoggStream << ... << errors); 
+        (errLoggStream << ... << errors);
     }
 
 private:

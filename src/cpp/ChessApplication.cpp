@@ -29,30 +29,30 @@ catch(std::exception& e)
 {
     std::string errMsg{e.what()};
     errMsg.append(" thrown durring initialization of the static ChessApp before main()");
-    FileErrorLogger::get().logErrors(errMsg);
+    FileErrorLogger::get().log(errMsg);
 }
 catch(...)
 {
-    FileErrorLogger::get().logErrors("exception of unknown type thrown durring"
+    FileErrorLogger::get().log("exception of unknown type thrown durring"
         "initialization of the static ChessApp before main()");
 }
 
 void ChessApp::run()
 {
     updateGameState(GameState::GAME_IN_PROGRESS);
-    bool shouldQuit = false;
+    bool shouldQuit {false};
     double dt{0.0};
 
     while(!shouldQuit)
     {
-        auto start = std::chrono::steady_clock::now();
+        auto const start {std::chrono::steady_clock::now()};
 
         processIncomingMessages();
         shouldQuit = processEvents();
         m_chessDrawer.renderAllTheThings();
         SDL_Delay(10);
 
-        auto end = std::chrono::high_resolution_clock::now();
+        auto const end {std::chrono::steady_clock::now()};
         dt = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / 1.0E9;
     }
 }
@@ -72,7 +72,7 @@ bool ChessApp::processEvents()
         case SDL_MOUSEBUTTONDOWN: m_board.piecePickUpRoutine(event); break;
         case SDL_MOUSEBUTTONUP:   m_board.piecePutDownRoutine(event);
         }
-    }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+    }
     
     return false;
 }
@@ -301,7 +301,7 @@ void ChessApp::handlePairDeclineMessage(std::vector<char> const& msg)
 
 void ChessApp::handleInvalidMessageType()
 {
-    FileErrorLogger::get().logErrors("invalid message type sent from the server uh oh...");
+    FileErrorLogger::get().log("invalid message type sent from the server uh oh...");
 }
 
 //called once per frame at the beginning of the frame in ChessApp::run()
@@ -312,12 +312,12 @@ void ChessApp::processIncomingMessages()
 
     if(auto result = m_network.recieveMessageIfAvailable())//std::optional operator bool() called
     {
-        auto& msg = result.value();
-        auto const msgType = static_cast<MessageType>(msg.at(0));
+        auto& msg {result.value()};
+        auto const msgType {static_cast<MessageType>(msg.at(0))};
 
         switch(msgType)
         {
-        using enum MessageType;//only using this enum's namespace inside this switch
+        using enum MessageType;//only using this enum's scope inside this switch
         case MOVE_MSGTYPE:             handleMoveMessage(msg);             break;
         case ID_NOT_IN_LOBBY_MSGTYPE:  handleIDNotInLobbyMessage();        break;
         case UNPAIR_MSGTYPE:           handleUnpairMessage();              break;
@@ -337,8 +337,6 @@ void ChessApp::processIncomingMessages()
         }
     }
     
-    //if we are no longer connected as indicated by recv()
-    //returning 0 inside m_network.recieveMessageIfAvailable()
     if(!m_network.isConnectedToServer())
     {
         m_board.resetBoard();

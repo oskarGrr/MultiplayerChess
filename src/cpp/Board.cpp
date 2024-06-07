@@ -68,7 +68,7 @@ void Board::makeNewPieceAt(Vec2i const& pos, Side const side)
         (void)ba;//silences c4101 (unused local variable) (cant use [[maybe unused]] here...)
         std::string outOfMemMsg{"problem allocating memory for a "};
         outOfMemMsg.append(typeid(ConcreteTy).name());
-        FileErrorLogger::get().logErrors(outOfMemMsg);
+        FileErrorLogger::get().log(outOfMemMsg);
     }
 }
 

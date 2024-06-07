@@ -13,12 +13,12 @@ int main(int argCount, char** arguments)
     {
         std::string errMsg{e.what()};
         errMsg.append(" caught in main()");
-        FileErrorLogger::get().logErrors(errMsg);
+        FileErrorLogger::get().log(errMsg);
         return EXIT_FAILURE;
     }
     catch(...)
     {
-        FileErrorLogger::get().logErrors("exception caught of unknown type in main()");
+        FileErrorLogger::get().log("exception caught of unknown type in main()");
         return EXIT_FAILURE;
     }
 
