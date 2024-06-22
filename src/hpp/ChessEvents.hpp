@@ -16,10 +16,10 @@ public:
     static_assert((std::is_base_of_v<Event, EventTs> && ...),
         "All event types must inherit from Event (no runtime polymorphism)");
 
-    using Callable_t = std::function<void(Event&)>;
+    using OnEventCallback = std::function<void(Event&)>;
 
     template <typename EventType>
-    void subscribe(Callable_t callback)
+    void subscribe(OnEventCallback callback)
     {
         //static assert used instead of a requires constraint to allow for a helpful error message.
         static_assert(IsTypeInPack<EventType, EventTs...>, "The event type template paramater passed to"
@@ -47,5 +47,5 @@ public:
         }
     }
 
-    std::unordered_map< std::type_index, std::vector<Callable_t> > mSubscriptions;
+    std::unordered_map< std::type_index, std::vector<OnEventCallback> > mSubscriptions;
 };
