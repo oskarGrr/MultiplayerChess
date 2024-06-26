@@ -18,9 +18,7 @@ Board::Board()
       m_castlingRights(CastleRights::NONE), m_viewingPerspective(Side::WHITE),
       m_sideUserIsPlayingAs(Side::INVALID), m_lastMoveMade{}
 {
-    //load the board with the fen string
-    std::string const startingFEN(STARTING_FEN);
-    loadFENIntoBoard(startingFEN);
+    loadFENIntoBoard(STARTING_FEN);
     
     //update the pieces internal legal moves
     updateLegalMoves();
