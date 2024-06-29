@@ -21,7 +21,7 @@ public:
     Piece& operator=(Piece&&)=delete;
 
     Piece(Side const side, Vec2i const chessPos);
-    virtual ~Piece();//a Piece doesnt own any resources but its good practice to remember to include a vitual dtor here since Piece is abstract
+    virtual ~Piece()=default;
     
 protected:
 

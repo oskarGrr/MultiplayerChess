@@ -14,11 +14,6 @@ Piece::Piece(Side const side, Vec2i const chessPos)
 {
 }
 
-Piece::~Piece()
-{
-    //the pieces themselves dont own any resources to free :)
-}
-
 Pawn::Pawn(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 {
     using enum ChessDrawer::TextureIndices;
