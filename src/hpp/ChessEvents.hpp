@@ -17,13 +17,20 @@ class EventSystem
 {
 public:
 
-    static_assert((std::is_base_of_v<Event, EventTs> && ...),
-        "All event types must inherit from Event (no runtime polymorphism)");
+    static_assert((std::is_base_of_v<Event, EventTs> && ...), 
+        "All event types must inherit from Event");
 
     using OnEventCallback = std::function<void(Event&)>;
+    using SubscriptionID = uint32_t;
+
+    struct SubscriptionList
+    {
+        std::vector<OnEventCallback> eventCallbacks;
+        SubscriptionID nextSubscriptionID {0};
+    };
 
     template <typename EventType>
-    void sub(OnEventCallback callback)
+    SubscriptionID sub(OnEventCallback callback)
     {
         static_assert
         (
@@ -32,7 +39,33 @@ public:
             " EventSystem::sub was not a valid event type for this EventSystem."
         );
         
-        mSubscriptions[typeid(EventType)].push_back(std::move(callback));
+        //get the list of subscribers associated with this event type
+        auto& subscriptionList { mSubscriptions[typeid(EventType)] };
+
+        subscriptionList.eventCallbacks.push_back(std::move(callback));
+
+        auto const retVal { subscriptionList.nextSubscriptionID };
+        ++subscriptionList.nextSubscriptionID;
+        return retVal;
+    }
+
+    template <typename EventType>
+    void unsub(SubscriptionID subID)
+    {
+        static_assert
+        (
+            IsTypeInPack<EventType, EventTs...>, 
+            "The template type paramater passed to"
+            " EventSystem::unsub was not a valid event type for this EventSystem."
+        );
+
+        //find the list of subscribers associated with this event type (if any)
+        auto it { mSubscriptions.find(typeid(EventType)) };
+        if(it != mSubscriptions.end())
+        {
+            it->second.erase(subID);
+            if(it->second.empty()) { mSubscriptions.erase(it); }
+        }
     }
 
     template <typename EventType>
@@ -45,18 +78,20 @@ public:
             " EventSystem::pub was not a valid event type for this EventSystem."
         );
 
+        //find the list of subscribers associated with this event type (if any)
         auto const it { mSubscriptions.find(typeid(e)) };
 
         if(it != mSubscriptions.end())
         {
-            for(auto const& fn : it->second)
+            for(auto const& fn : it->second.eventCallbacks)
                 fn(e);
         }
     }
 
 private:
 
-    std::unordered_map< std::type_index, std::vector<OnEventCallback> > mSubscriptions;
+    //A map from event types to a list of subscribers.
+    std::unordered_map< std::type_index, SubscriptionList > mSubscriptions;
 };
 
 //Events that occur when the user presses a button/input text in the GUI
