@@ -5,10 +5,15 @@
 //so that it doesnt clutter up another header file
 
 //bit masks to indicate what castling rights are available.
-enum CastleRights : uint32_t
+enum class CastleRights : uint32_t
 {
     NONE = 0, WSHORT = 0b1, WLONG = 0b10, BSHORT = 0b100, BLONG = 0b1000
 };
+
+inline CastleRights operator~(CastleRights const& cr)
+{
+    return static_cast<CastleRights>(~static_cast<uint32_t>(cr));
+}
 
 inline CastleRights operator|(CastleRights const lhs, CastleRights const rhs)
 {

@@ -2,16 +2,13 @@
 #include <iostream>
 #include "imgui.h"
 
-//used for various things such as an invalid/null chess position
-#define INVALID_VEC2I Vec2i{-1, -1}
-
 //inline vector2 struct used for chess positions (0-7)
 struct Vec2i
 {
     int x = 0, y = 0;
 
-    //defaulted c++20 spaceship operator allows compiler 
-    //to supply default comparison operators for this struct
+    //Defaulted c++20 spaceship operator allows compiler 
+    //to supply default comparison operators for this struct.
     auto operator<=>(Vec2i const&) const = default;
 
     inline operator ImVec2() const
@@ -57,3 +54,6 @@ struct Vec2i
         return *this;
     }
 };
+
+//used for various things such as an invalid/null chess position
+static constexpr Vec2i INVALID_VEC2I{-1, -1};

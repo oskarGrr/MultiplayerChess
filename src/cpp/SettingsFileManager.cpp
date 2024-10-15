@@ -9,7 +9,29 @@ SettingsManager::SettingsManager(std::filesystem::path const& fileName)
 {
 }
 
-auto SettingsManager::findKVPair(std::string_view key)
+auto SettingsManager::generateNewFile(std::span<std::string const> comments,
+    std::span<KVPair const> kvPairs) const -> std::optional<Error>
+{
+    for(auto const& comment : comments)
+    {
+        if(auto maybeError{writeComment(comment)})
+            return maybeError;
+    }
+
+    std::ofstream ofs {mFileName};
+    ofs << std::endl;
+    ofs.close();
+
+    for(auto const& kvPair : kvPairs)
+    {
+        if(auto maybeError{createKVPair(kvPair)})
+            return maybeError;
+    }
+
+    return std::nullopt;
+}
+
+auto SettingsManager::findKVPair(std::string_view key) const
     -> std::expected<KVPair, Error>
 {
     if(auto maybeError{checkFileExists()})
@@ -43,10 +65,12 @@ auto SettingsManager::findKVPair(std::string_view key)
 
     if(ifs.bad())
     {
+        char errMsg[1024]{};
+        strerror_s(errMsg, sizeof(errMsg), errno);
         return std::unexpected(Error
         {
             .code = Error::Code::FSTREAM_ERROR, 
-            .msg  = strerror(errno)
+            .msg  = errMsg
         });
     }
 
@@ -57,7 +81,23 @@ auto SettingsManager::findKVPair(std::string_view key)
     });
 }
 
-auto SettingsManager::splitKVPairLine(std::string_view KVPairLine) 
+void SettingsManager::removeTrailingAndLeadingWhitespace(std::string& outStr)
+{
+    size_t first {0};
+    size_t last {outStr.size()};
+
+    //find first non-whitespace char
+    while(first < outStr.size() && (outStr[first] == ' ' || outStr[first] == '\t'))
+        ++first;
+
+    //find last non-whitespace char
+    while(last > first && (outStr[last - 1] == ' ' || outStr[last - 1] == '\t'))
+        --last;
+    
+    outStr = outStr.substr(first, last - first);
+}
+
+auto SettingsManager::splitKVPairLine(std::string_view KVPairLine) const
     -> std::expected<KVPair, Error>
 {
     assert( ! KVPairLine.empty() );
@@ -92,6 +132,7 @@ auto SettingsManager::splitKVPairLine(std::string_view KVPairLine)
     try {rightSide = KVPairLine.substr(colonIdx + 1);}
     catch(std::out_of_range const& e)
     {
+        (void)e;
         std::string errMsg {"nothing to the right of '"};
         errMsg.push_back(mKVPairSeperatorToken);
         errMsg.append("' in: ").append(KVPairLine);
@@ -102,13 +143,18 @@ auto SettingsManager::splitKVPairLine(std::string_view KVPairLine)
         });
     }
 
-    return KVPair{leftSide.data(), rightSide.data()};
+    std::string key {leftSide};
+    std::string value {rightSide};
+    removeTrailingAndLeadingWhitespace(key);
+    removeTrailingAndLeadingWhitespace(value);
+
+    return KVPair{key, value};
 }
 
-auto SettingsManager::checkFileExists() 
+auto SettingsManager::checkFileExists() const
     -> std::optional<Error>
 {
-    if(!std::filesystem::exists(mFileName))
+    if( ! std::filesystem::exists(mFileName) )
     {
         return Error
         {
@@ -120,26 +166,24 @@ auto SettingsManager::checkFileExists()
     return std::nullopt;
 }
 
-template <typename S>
-requires std::same_as<S, std::fstream>  ||
-         std::same_as<S, std::ifstream> ||
-         std::same_as<S, std::ofstream>
-auto SettingsManager::checkStreamOpen(S const& stream) 
+auto SettingsManager::checkStreamOpen(auto const& stream)
     -> std::optional<Error>
 {
-    if(!stream.is_open())
+    if( ! stream.is_open() )
     {
+        char errMsg[1024]{};
+        strerror_s(errMsg, sizeof(errMsg), errno);
         return Error
         {
             .code = Error::Code::FSTREAM_ERROR,
-            .msg = strerror(errno)
+            .msg = errMsg
         };
     }
 
     return std::nullopt;
 }
 
-auto SettingsManager::createKVPair(KVPair const& kvpair)
+auto SettingsManager::createKVPair(KVPair const& kvpair) const
     -> std::optional<Error>
 {
     if(auto maybeError{checkFileExists()})
@@ -150,28 +194,25 @@ auto SettingsManager::createKVPair(KVPair const& kvpair)
     if(auto maybeError{checkStreamOpen(ofs)})
         return maybeError;
 
-    ofs << kvpair.key << " : " << kvpair.value << std::endl;
+    ofs << kvpair.key << ' ' << mKVPairSeperatorToken << ' ' << kvpair.value << std::endl;
 
     return std::nullopt;
 }
 
-auto SettingsManager::writeComment(std::string_view comment) 
+auto SettingsManager::writeComment(std::string_view comment) const
     -> std::optional<Error>
 {
-    if(auto maybeError{checkFileExists()})
-        return maybeError;
-
     std::ofstream ofs {mFileName, std::ios::app};
 
     if(auto maybeError{checkStreamOpen(ofs)})
         return maybeError;
 
-    ofs << '#' << comment << std::endl;
+    ofs << mCommentToken << comment << std::endl;
 
     return std::nullopt;
 }
 
-auto SettingsManager::getValue(std::string_view key)
+auto SettingsManager::getValue(std::string_view key) const
     -> std::expected<std::string, Error>
 {
     auto maybePair {findKVPair(key)};
@@ -181,7 +222,7 @@ auto SettingsManager::getValue(std::string_view key)
     return std::unexpected(maybePair.error());
 }
 
-auto SettingsManager::setValue(std::string_view key, std::string_view newValue)
+auto SettingsManager::setValue(std::string_view key, std::string_view newValue) const
     -> std::optional<Error>
 {
     //This will just copy the whole file over, change the kvpair that needs to be updated,
@@ -200,7 +241,7 @@ auto SettingsManager::setValue(std::string_view key, std::string_view newValue)
     for(std::string line; std::getline(ifs, line);)
     {
         //If this line represents a key value pair.
-        if( ! line.empty() && line[0] != mCommentToken)
+        if( ! line.empty() && line[0] != mCommentToken )
         {
             auto const maybePair {splitKVPairLine(line)};
             if( ! maybePair.has_value() )
@@ -230,4 +271,6 @@ auto SettingsManager::setValue(std::string_view key, std::string_view newValue)
 
     std::for_each(lines.begin(), lines.end(),
         [&](auto const& line){ofs << line;});
+
+    return std::nullopt;//return no error
 }

@@ -3,21 +3,25 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#include <exception>
 
 Window::Window(int const width, int const height,
-               char const* title, uint32_t const SDL_subsystems,
+               char const* title, uint32_t const SDL_subsystemFlags,
                uint32_t const SDL_windowFlags)
-               : m_width(width), m_height(height)
 {
-    SDL_Init(SDL_subsystems);
-    SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &m_window, &m_renderer);//set m_window && m_renderer
-    SDL_SetWindowTitle(m_window, title);
+    if(SDL_Init(SDL_subsystemFlags)) 
+        throw std::exception(SDL_GetError());
+
+    if(SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &window, &renderer)) 
+        throw std::exception(SDL_GetError());
+
+    SDL_SetWindowTitle(window, title);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
-    ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
-    ImGui_ImplSDLRenderer_Init(m_renderer);
+    ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
+    ImGui_ImplSDLRenderer_Init(renderer);
 
     //add the font from the fonts folder
     auto& io = ImGui::GetIO();
@@ -38,7 +42,7 @@ Window::~Window()
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_DestroyRenderer(m_renderer);
-    SDL_DestroyWindow(m_window);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
     SDL_Quit();
 }

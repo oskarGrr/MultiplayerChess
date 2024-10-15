@@ -1,5 +1,4 @@
 #pragma once
-#include "SettingsFileManager.hpp"
 #include <WinSock2.h>
 #include <span>
 #include <vector>
@@ -47,6 +46,8 @@ private:
     std::string const mServerAddrFileName   {"ServerIP.txt"};
 
     bool mIsConnected {false};
+
+    bool mConnectToServerThreadIsDone {false};
 
 public:
     ServerConnection(ServerConnection const&)=delete;

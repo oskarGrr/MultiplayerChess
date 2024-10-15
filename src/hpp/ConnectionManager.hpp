@@ -1,7 +1,6 @@
 #pragma once
-#include "moveType.h"
+#include "ChessMove.hpp"
 #include "ServerConnection.hpp"
-#include "chessNetworkProtocol.h"
 #include "ChessEvents.hpp"
 #include <string_view>
 
@@ -16,59 +15,14 @@ class ConnectionManager
 {
 public:
 
-    //Events that this class publishes:
-    //Inc is short for incomming. These messages signify that this type
-    //of message has been recieved from the server.
-    struct IncMoveEvent : Event {Move move;};
-    struct IncResignEvent : Event {};
-    struct IncDrawOfferEvent : Event {};
-    struct IncDrawDeclineEvent : Event {};
-    struct IncPairRequestEvent : Event {uint32_t potentialOpponentID;};
-    struct IncRematchRequestEvent : Event {};
-    struct IncRematchAcceptEvent : Event {};
-    struct IncRematchDeclineEvent : Event {};
-    struct IncPairingCompleteEvent : Event {};
-    struct IncOpponentClosedConnectionEvent : Event {};
-    struct IncUnpairEvent : Event {};
-    struct IncNewIDEvent : Event {};
-    struct IncIDNotInLobbyEvent : Event {};
-    struct IncPairDeclineEvent : Event {};
-    struct IncDrawAcceptEvent : Event {};
-
-    using ConnectionManagerEventSystem = EventSystem
-    <
-        IncMoveEvent,
-        IncResignEvent,
-        IncDrawOfferEvent,
-        IncDrawDeclineEvent,
-        IncPairRequestEvent,
-        IncRematchRequestEvent,
-        IncRematchAcceptEvent,
-        IncRematchDeclineEvent,
-        IncPairingCompleteEvent,
-        IncOpponentClosedConnectionEvent,
-        IncUnpairEvent,
-        IncNewIDEvent,
-        IncIDNotInLobbyEvent,
-        IncPairDeclineEvent,
-        IncDrawAcceptEvent
-    >;
-
-    //Subscribe to one of the event types above. Because of how I designed the event eystem,
-    //you can only subscribe with one of the above types through this subscribe function (otherwise it wont compile).
-    //if another class has an event system that it uses to publish events, then the event types
-    //that it defines will be the only types that you can subscribe to for that instance of the event system.
-    template <typename EventType>
-    void subscribe(ConnectionManagerEventSystem::OnEventCallback callback)
-    {
-        mEventSystem.subscribe<EventType>(callback);
-    }
+    ConnectionManager(IncommingNetworkEventSystem const&, GUIEventSystem&, BoardEventSystem&);
     
     //Call once per main loop iteration.
     void update();
 
+    auto isConnectedToServer() const {return mServerConn.isConnected();}
     auto isThereAPotentialOpponent() const {return mIsThereAPotentialOpponent;}//Is there a person you are trying to pair with/trying to pair with you.
-    auto isPairedWithOpponent() const {return mIsPairedWithOpponent;}
+    auto isPairedOnline() const {return mIsPairedWithOpponent;}
     auto getPotentialOpponentsID() const {return mPotentialOpponentID;}
     auto getUniqueID() const {return mUniqueID;}
     auto getOpponentID() const {return mOpponentID;}
@@ -76,15 +30,15 @@ public:
 
 private:
 
-    bool        mIsPairedWithOpponent {false};
-    bool        mIsThereAPotentialOpponent {false};//Is there a person you are trying to pair with/trying to pair with you.
-    uint32_t    mPotentialOpponentID {0};//The ID if someone attempting to play chess with you.
-    uint32_t    mUniqueID {0};//This clients unique ID that the server provided upon connection.
-    uint32_t    mOpponentID {0};
+    bool     mIsPairedWithOpponent {false};
+    bool     mIsThereAPotentialOpponent {false};//Is there a person you are trying to pair with/trying to pair with you.
+    uint32_t mPotentialOpponentID {0};//The ID if someone attempting to play chess with you.
+    uint32_t mUniqueID {0};//This clients unique ID that the server provided upon connection.
+    uint32_t mOpponentID {0};
 
     ServerConnection mServerConn;
 
-    ConnectionManagerEventSystem mEventSystem;
+    IncommingNetworkEventSystem const& mNetworkIncommingPublisher;
 
 private:
 
@@ -96,14 +50,17 @@ private:
     //Helper to reduce processNetworkMessages() size.
     void processNetworkMessage(NetworkMessage const&);//Helper to reduce processNetworkMessages() size.
     void processNetworkMessages();//Processes incoming network messages.
-    void buildAndSendMoveMsgType(Move const& move, PromoType const& pt);
-    void buildAndSendPairRequest(std::string_view potentialOpponent);
+    void buildAndSendMoveMsgType(ChessMove const& move);
+    void buildAndSendPairRequest(uint32_t potentialOpponent);
     void buildAndSendPairAccept();
     void buildAndSendPairDecline();
     void sendHeaderOnlyMessage(MessageType msgType, MessageSize msgSize);
     
-    template <typename EventType>
-    void publishEventNoData();
+    template<typename EventT, typename... EventArgs>
+    void pubEvent(EventArgs&&...);
+
+    //helper method to reduce ctor size
+    void subToEvents(GUIEventSystem&, BoardEventSystem&);
 
     //The message types that do not have a corresponding handle message 
     //function simply call publishEventNoData() inside of processNetworkMessage().
@@ -116,9 +73,9 @@ private:
     void handleOpponentClosedConnectionMessage();
     void handleNewIDMessage(NetworkMessage const&);
     void handlePairDeclineMessage(NetworkMessage const&);
+    void handleIDNotInLobbyMessage(NetworkMessage const& msg);
 
 public:
-    ConnectionManager()=default;
     ~ConnectionManager()=default;
     ConnectionManager(ConnectionManager const&)=delete;
     ConnectionManager(ConnectionManager&&)=delete;

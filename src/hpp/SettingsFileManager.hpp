@@ -4,6 +4,7 @@
 #include <string_view>
 #include <optional>
 #include <expected>
+#include <span>
 
 //This class manages the .txt files that hold settings and information for the chess game.
 //Assumtions are made that a SettingsManager will not be used in shared memory from multiple threads,
@@ -30,13 +31,17 @@ public:
         };
 
         Code const code;
-        std::string const msg;//set with strerror() for more information
+        std::string const msg;
     };
+    
+    std::expected<std::string, Error> getValue(std::string_view key) const;
+    std::optional<Error> setValue(std::string_view key, std::string_view newValue) const;
+    std::optional<Error> createKVPair(KVPair const& pair) const;
 
-    std::expected<std::string, Error> getValue(std::string_view key);
-    std::optional<Error> setValue(std::string_view key, std::string_view newValue);
-    std::optional<Error> createKVPair(KVPair const& pair);
-    std::optional<Error> writeComment(std::string_view comment);
+    //Erase the current file if there is one and generate a new one.
+    std::optional<Error> generateNewFile(std::span<std::string const> comments, 
+        std::span<KVPair const> kvpairs) const;
+    
     void deleteFile() const {std::filesystem::remove(mFileName);}
 
     ~SettingsManager()=default;
@@ -47,15 +52,12 @@ public:
 
 private: 
 
-    std::expected<KVPair, Error> splitKVPairLine(std::string_view line);
-    std::expected<KVPair, Error> findKVPair(std::string_view key);
-    std::optional<Error> checkFileExists();
-
-    template <typename S> 
-    requires std::same_as<S, std::fstream>  || 
-             std::same_as<S, std::ifstream> || 
-             std::same_as<S, std::ofstream>
-    static std::optional<Error> checkStreamOpen(S const& stream);
+    std::optional<Error> writeComment(std::string_view comment) const;
+    std::expected<KVPair, Error> splitKVPairLine(std::string_view line) const;
+    std::expected<KVPair, Error> findKVPair(std::string_view key) const;
+    static void removeTrailingAndLeadingWhitespace(std::string& outStr);
+    std::optional<Error> checkFileExists() const;
+    static std::optional<Error> checkStreamOpen(auto const& stream);
 
     std::filesystem::path const mFileName;
     char const mCommentToken{'#'};

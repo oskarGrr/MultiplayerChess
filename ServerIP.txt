@@ -1,13 +1,3 @@
-#Enter the IP and PORT of the chess server below.
-#The server source can be found at https://github.com/oskarGrr/chessServer if you want
-#to build it and set up your own server. The server uses a lot of win32 api calls, so it
-#will only work on windows. 
 
-#Be sure to put a space after IP: and PORT: below.
-#If you accidentally modify this file, and need a new one you can delete it
-#and a new one will be genertated when you start the application again.
-
-#by default this will be the loopback IP. Change it to your server's IP and port.
-
-IP: 127.0.0.1
-PORT: 42069
+IP : 127.0.0.1
+PORT : 42069

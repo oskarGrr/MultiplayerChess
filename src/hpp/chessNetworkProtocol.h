@@ -20,7 +20,7 @@ Side
  : uint8_t
 #endif
 {
-    INVALID, WHITE, BLACK
+    INVALID = 0, WHITE, BLACK
 }Side;
 
 //This MessageType enum (1 byte) will be the first byte of every message.
@@ -36,8 +36,8 @@ MessageType
 #endif
 {
     //(client to server and server to client)
-    //The layout of the MOVE_MSGTYPE type of message:
-    //|0|1|2|3|4|5|6|7|
+    //The layout of the MOVE_MSGTYPE type of message (class ChessMove defined in move.h client code):
+    //|0|1|2|3|4|5|6|7|8|
     //Byte 0 will be MessageType::MOVE_MSGTYPE.
     //Byte 1 will be MessageSize::MOVE_MSGSIZE.
     //--------------------------------------------------------------------------------------
@@ -45,12 +45,13 @@ MessageType
     //Byte 3 will be the rank (0-7) of the square where the piece is moving from.
     //Byte 4 will be the file (0-7) of the square where the piece is moving to.
     //Byte 5 will be the rank (0-7) of the square where the piece is moving to.
-    //Byte 6 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one.
-    //Byte 7 will be the MoveInfo (enum defined in (client source)moveInfo.h) of the move that is happening.
+    //Byte 6 will be the ChessMove::PromoTypes (enum defined in (client source)moveInfo.h) of the promotion if there was one.
+    //Byte 7 will be the ChessMove::MoveTypes (enum defined in (client source)moveInfo.h) of the move that is happening.
+    //Byte 8 will be the bool which signifies whether or not the move was a capture of an enemy piece (true means it was a capture)
     //
-    //The reason why enum PromoType and enum MoveInfo only defined in the client source is
-    //because they are only used as that type there. Those bytes are not cast to/de-serialized to
-    //their enum types on the server. This message is simply forwarded along from one player to the other in a chess game.
+    //The reason why enum ChessMove::PromoTypes and enum ChessMove::MoveTypes are only defined in the client source is
+    //because they are only used as that type there (in the client source). Those bytes are not cast to/de-serialized to
+    //their enum types on the server. This message is simply forwarded along from one player/client to the other durring a chess game.
     MOVE_MSGTYPE,
 
     //(client to server and server to client)
@@ -93,11 +94,9 @@ MessageType
     //the ID is the ID of the person who sent the pair request to the server origonally.
     PAIR_REQUEST_MSGTYPE,
 
-    //When the opponent accepts a PAIR_REQUEST_MSGTYPE (client to server and server to client).
-    //The 4 bytes after the first two header bytes will be a network byte order uint32_t unique identifier.
-    //When this message is being sent from client to server, the ID will be the ID of the player
-    //who you want to send a pair accept message to. When this message is being sent from server to client,
-    //the ID will be the ID of the player who sent the pair accept message to the server origonally.
+    //Sent to the server from the client, when the client accepts a PAIR_REQUEST_MSGTYPE.
+    //The 4 bytes after the first two header bytes will be a network byte order uint32_t unique identifier
+    //of the person who orrigonally sent the PAIR_REQUEST_MSGTYPE.
     PAIR_ACCEPT_MSGTYPE,
 
     //When the opponent declines a request to be paired up.
@@ -119,6 +118,7 @@ MessageType
 
     //Sent (from server to client only) when a player tries to supply an ID
     //of another player which is not in the lobby (or they supply their own ID).
+    //The invalid ID is sent back to the client in this message.
     ID_NOT_IN_LOBBY_MSGTYPE,
 
     //Sent (from server to client and client to server)
@@ -159,7 +159,7 @@ MessageSize
  : uint8_t
 #endif
 {
-    MOVE_MSGSIZE = 8,
+    MOVE_MSGSIZE = 9,
     RESIGN_MSGSIZE = 2,
     DRAW_OFFER_MSGSIZE = 2,
     DRAW_ACCEPT_MSGSIZE = 2,
@@ -172,7 +172,7 @@ MessageSize
     PAIR_COMPLETE_MSGSIZE = 3,
     PAIR_NORESPONSE_MSGSIZE = 2,
     SERVER_FULL_MSGSIZE = 2,
-    ID_NOT_IN_LOBBY_MSGSIZE = 2,
+    ID_NOT_IN_LOBBY_MSGSIZE = 6,
     UNPAIR_MSGSIZE = 2,
     OPPONENT_CLOSED_CONNECTION_MSGSIZE = 2,
     REMATCH_DECLINE_MSGSIZE = 2,

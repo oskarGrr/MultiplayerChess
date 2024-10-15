@@ -167,14 +167,15 @@
     <ClCompile Include="ImGui_Src\imgui_tables.cpp" />
     <ClCompile Include="ImGui_Src\imgui_widgets.cpp" />
     <ClCompile Include="src\cpp\Board.cpp" />
-    <ClCompile Include="src\cpp\ChessApplication.cpp" />
-    <ClCompile Include="src\cpp\ConnectionManager.cpp" />
-    <ClCompile Include="src\cpp\ChessDrawer.cpp" />
     <ClCompile Include="src\cpp\main.cpp" />
+    <ClCompile Include="src\cpp\ConnectionManager.cpp" />
+    <ClCompile Include="src\cpp\ChessRenderer.cpp" />
     <ClCompile Include="src\cpp\PieceTypes.cpp" />
+    <ClCompile Include="src\cpp\PopupManager.cpp" />
     <ClCompile Include="src\cpp\ServerConnection.cpp" />
     <ClCompile Include="src\cpp\SettingsFileManager.cpp" />
-    <ClCompile Include="src\cpp\WavSound.cpp" />
+    <ClCompile Include="src\cpp\SoundManager.cpp" />
+    <ClCompile Include="src\cpp\TextureManager.cpp" />
     <ClCompile Include="src\cpp\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -186,20 +187,21 @@
     <ClInclude Include="ImGui_Src\imstb_rectpack.h" />
     <ClInclude Include="ImGui_Src\imstb_textedit.h" />
     <ClInclude Include="ImGui_Src\imstb_truetype.h" />
-    <ClInclude Include="src\hpp\Board.h" />
+    <ClInclude Include="src\hpp\Board.hpp" />
     <ClInclude Include="src\hpp\castleRights.h" />
-    <ClInclude Include="src\hpp\ChessApplication.h" />
     <ClInclude Include="src\hpp\ChessEvents.hpp" />
     <ClInclude Include="src\hpp\ConnectionManager.hpp" />
-    <ClInclude Include="src\hpp\ChessDrawer.h" />
+    <ClInclude Include="src\hpp\ChessRenderer.hpp" />
     <ClInclude Include="src\hpp\chessNetworkProtocol.h" />
     <ClInclude Include="src\hpp\errorLogger.h" />
-    <ClInclude Include="src\hpp\moveType.h" />
+    <ClInclude Include="src\hpp\ChessMove.hpp" />
     <ClInclude Include="src\hpp\PieceTypes.h" />
+    <ClInclude Include="src\hpp\PopupManager.hpp" />
     <ClInclude Include="src\hpp\ServerConnection.hpp" />
     <ClInclude Include="src\hpp\SettingsFileManager.hpp" />
+    <ClInclude Include="src\hpp\SoundManager.hpp" />
+    <ClInclude Include="src\hpp\TextureManager.hpp" />
     <ClInclude Include="src\hpp\Vector2i.h" />
-    <ClInclude Include="src\hpp\WavSound.h" />
     <ClInclude Include="src\hpp\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -1,4 +1,5 @@
 #include "ServerConnection.hpp"
+#include "SettingsFileManager.hpp"
 #include "errorLogger.h"
 #include <ws2tcpip.h>
 #include <cassert>
@@ -6,6 +7,8 @@
 #include <format>
 #include <future>
 #include <string>
+#include <array>
+#include <chrono>
 
 static void logLastError()
 {
@@ -17,8 +20,8 @@ static void logLastError()
     if(ec == 10054)
         return;
 
-    LPWSTR msg {nullptr};
-    FormatMessageW
+    LPSTR msg {nullptr};
+    FormatMessageA
     (
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM     |
@@ -26,7 +29,7 @@ static void logLastError()
         nullptr,
         ec,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        reinterpret_cast<LPWSTR>(&msg),
+        reinterpret_cast<LPSTR>(&msg),
         0,
         nullptr
     );
@@ -44,6 +47,26 @@ static void logLastError()
 //Gets any new data that might have been sent from the server.
 void ServerConnection::update()
 {
+    if( ! mConnectToServerThreadIsDone ) [[unlikely]]
+    {
+        auto const futureStatus { mFutureSocket.wait_for(std::chrono::microseconds(100)) };
+        if(futureStatus == std::future_status::ready)
+        {
+            auto const maybeSocket {mFutureSocket.get()};
+            if(maybeSocket)
+            {
+                mSocket = *maybeSocket;
+                mIsConnected = true;
+            }
+            
+            mConnectToServerThreadIsDone = true;
+        }
+
+        return;
+    }
+
+    if( ! mIsConnected ) { return; }
+
     fd_set sockSet;
     FD_ZERO(&sockSet);
     FD_SET(mSocket, &sockSet);
@@ -59,7 +82,7 @@ void ServerConnection::update()
     }
     else if(selectResult > 0)//select() has indicated that there is a message on the socket ready to be read.
     {
-        int const recvResult {recv(mSocket, mReadBuff.data(), mReadBuff.size(), 0)};
+        int const recvResult { recv(mSocket, mReadBuff.data(), static_cast<int>(mReadBuff.size()), 0) };
 
         if(recvResult == SOCKET_ERROR)
         {
@@ -81,13 +104,18 @@ std::optional<std::byte> ServerConnection::peek(uint32_t idx)
     return static_cast<std::byte>(mReadBuff[idx]);
 }
 
-//Call getDataFromServer() first so that you have the most recent data from the socket.r.
+//Call ServerConnection::update() first so that you have the most recent data from the socket.
 std::optional<std::vector<std::byte>> ServerConnection::read(std::size_t len)
 {
     if(mReadBuff.size() < len)
         return std::nullopt;
 
-    std::vector<std::byte> ret {mReadBuff.begin(), mReadBuff.begin() + len};
+    std::vector<std::byte> ret 
+    {
+        reinterpret_cast<std::byte*>(mReadBuff.data()), 
+        reinterpret_cast<std::byte*>(mReadBuff.data() + len)
+    };
+
     mReadBuff.erase(mReadBuff.begin(), mReadBuff.begin() + len);
 
     return std::make_optional(std::move(ret));
@@ -95,7 +123,7 @@ std::optional<std::vector<std::byte>> ServerConnection::read(std::size_t len)
 
 void ServerConnection::write(std::span<std::byte> buffer)
 {
-    int32_t numBytesWritten {0}, numBytesToWrite {buffer.size()};
+    int32_t numBytesWritten {0}, numBytesToWrite {static_cast<int32_t>(buffer.size())};
     while(numBytesWritten < buffer.size())
     {
         int res {send(mSocket, reinterpret_cast<char*>(buffer.data() + numBytesWritten),
@@ -129,13 +157,14 @@ ServerConnection::ServerConnection()
         FileErrorLogger::get().log(std::format("WSAStartup() failed with error {}", result));
 }
 
-static std::optional<SOCKET> connectToServerImpl(std::filesystem::path const& fname, 
-std::string_view defaultPort, std::string_view defaultIP);
+//arguments pass by value to avoid any potential race conditions
+//fname is the .txt file where the server address should be stored (ServerIP.txt)
+static std::optional<SOCKET> connectToServerImpl(std::filesystem::path fname, 
+    std::string defaultPort, std::string defaultIP);
 
 void ServerConnection::connectToServerAsync()
 {
-    if(mIsConnected)
-        return;
+    if(mIsConnected) { return; }
 
     mFutureSocket = std::async
     (
@@ -175,9 +204,9 @@ static bool verifyFileIP(std::string_view ip)
 
 //Generates a new ServerIP.txt file. If ServerIP.txt already exists, it generate a new one.
 static void generateDefaultServerIPFile(SettingsManager& manager, 
-std::string_view defaultPort, std::string_view defaultIP)
+    std::string_view defaultPort, std::string_view defaultIP)
 {
-    std::string const comments[]
+    std::array<std::string, 8> const comments
     {
         "Enter the IP and PORT of the chess server below.",
         "The server source can be found at https://github.com/oskarGrr/chessServer if you want",
@@ -189,27 +218,23 @@ std::string_view defaultPort, std::string_view defaultIP)
         "by default this will be the loopback IP. Change it to your server's IP and port."
     };
 
-    SettingsManager::KVPair const data[]
+    std::array<SettingsManager::KVPair, 2> const kvPairs
     {
-        {"IP", defaultIP.data()},
-        {"PORT", defaultPort.data()}
+        SettingsManager::KVPair{"IP", defaultIP.data()},
+        SettingsManager::KVPair{"PORT", defaultPort.data()}
     };
 
-    std::for_each(std::begin(comments), std::end(comments), 
-        [&manager](auto const& str){manager.writeComment(str);});
-
-    std::for_each(std::begin(data), std::end(data),
-        [&manager](auto const& str){manager.createKVPair(str);});
+    manager.generateNewFile(comments, kvPairs);
 }
 
 static void handleSettingsFileErr(SettingsManager::Error const& err, SettingsManager& manager,
-std::string_view defaultIP, std::string_view defaultPort)
+    std::string_view defaultIP, std::string_view defaultPort)
 {
     FileErrorLogger::get().log(err.msg);
 
     switch(err.code)
     {
-    case SettingsManager::Error::Code::FILE_NOT_FOUND: [[fallthrough]]
+    case SettingsManager::Error::Code::FILE_NOT_FOUND: [[fallthrough]];
     case SettingsManager::Error::Code::KEY_NOT_FOUND:
     {
         manager.deleteFile();
@@ -220,12 +245,12 @@ std::string_view defaultIP, std::string_view defaultPort)
 }
 
 static std::optional<std::string> getPortFromFile(std::filesystem::path const& fname,
-std::string_view defaultPort, std::string_view defaultIP)
+    std::string_view defaultPort, std::string_view defaultIP)
 {
     SettingsManager manager {fname};
 
     //Try to get the port from the settings txt file.
-    auto const maybeFilePort {manager.getValue("PORT")};
+    auto maybeFilePort {manager.getValue("PORT")};
     if( ! maybeFilePort )
     {
         handleSettingsFileErr(maybeFilePort.error(), manager, defaultIP, defaultPort);
@@ -235,17 +260,17 @@ std::string_view defaultPort, std::string_view defaultIP)
     if(verifyFilePort(*maybeFilePort))
         return std::make_optional(std::move(*maybeFilePort));
 
-    auto const msg {std::format("The PORT value in {} is invalid", fname)};
+    auto const msg {std::format("The PORT value in {} is invalid", fname.string())};
     FileErrorLogger::get().log(msg);
     return std::nullopt;
 }
 
 static std::optional<std::string> getIPFromFile(std::filesystem::path const& fname, 
-std::string_view defaultPort, std::string_view defaultIP)
+    std::string_view defaultPort, std::string_view defaultIP)
 {
     SettingsManager manager {fname};
 
-    auto const maybeFileIP {manager.getValue("IP")};
+    auto maybeFileIP {manager.getValue("IP")};
     if( ! maybeFileIP )
     {
         handleSettingsFileErr(maybeFileIP.error(), manager, defaultIP, defaultPort);
@@ -255,14 +280,15 @@ std::string_view defaultPort, std::string_view defaultIP)
     if(verifyFileIP(*maybeFileIP))
         return std::make_optional(std::move(*maybeFileIP));
 
-    auto const msg {std::format("The IP value in {} is invalid", fname)};
+    auto const msg {std::format("The IP value in {} is invalid", fname.string())};
     FileErrorLogger::get().log(msg);
     return std::nullopt;
 }
 
-//fname is the .txt file where the server address should be stored (ServerIP.txt).
-static std::optional<SOCKET> connectToServerImpl(std::filesystem::path const& fname, 
-std::string_view defaultPort, std::string_view defaultIP)
+//arguments pass by value to avoid any potential race conditions
+//fname is the .txt file where the server address should be stored (ServerIP.txt)
+static std::optional<SOCKET> connectToServerImpl(std::filesystem::path fname,
+    std::string defaultPort, std::string defaultIP)
 {
     addrinfo hints
     {
@@ -300,7 +326,7 @@ std::string_view defaultPort, std::string_view defaultIP)
             continue;
         }
 
-        if(connect(sock, list->ai_addr, list->ai_addrlen) == SOCKET_ERROR)
+        if(connect(sock, list->ai_addr, static_cast<int>(list->ai_addrlen)) == SOCKET_ERROR)
         {
             logLastError();
 
