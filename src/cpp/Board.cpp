@@ -251,7 +251,7 @@ void Board::pickUpPiece(Vec2i const chessPos) const
     if(Piece::getPieceOnMouse())
         return;
 
-    auto const p = getPieceAt(chessPos);
+    auto const p { getPieceAt(chessPos) };
     if(p && p->getSide() == getWhosTurnItIs())
         Piece::setPieceOnMouse(p);
 }
@@ -260,9 +260,9 @@ void Board::pickUpPiece(Vec2i const chessPos) const
 //is in the vector of fully legal moves for the piece on the mouse
 auto Board::requestMove(Vec2i const& destinationSquare)
 {
-    auto pom = Piece::getPieceOnMouse();
+    auto pom { Piece::getPieceOnMouse() };
 
-    auto end = pom->getLegalMoves().end();
+    auto end { pom->getLegalMoves().end() };
     for(auto it = pom->getLegalMoves().begin(); it != end; ++it)
     {
         if(it->dest == destinationSquare)
@@ -314,10 +314,10 @@ std::shared_ptr<Piece> Board::getPieceAt(Vec2i const& chessPos) const&
 
 void Board::handleKingMove()
 {
-    auto const king = getPieceAt(mLastMoveMade.dest);
-    bool const wasKingWhite = king->getSide() == Side::WHITE;
+    auto const king { getPieceAt(mLastMoveMade.dest) };
+    bool const wasKingWhite { king->getSide() == Side::WHITE };
     using enum CastleRights;
-    auto const bitMask = wasKingWhite ? (WLONG | WSHORT) : (BLONG | BSHORT); 
+    auto const bitMask { wasKingWhite ? (WLONG | WSHORT) : (BLONG | BSHORT) };
     removeCastlingRights(static_cast<CastleRights>(bitMask));
 }
 

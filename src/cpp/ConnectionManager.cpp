@@ -7,11 +7,11 @@
 #include <array>
 #include <utility>
 
-ConnectionManager::ConnectionManager(IncommingNetworkEventSystem const& networkInEventSys, 
-    GUIEventSystem& networkOutEventSys, BoardEventSystem& internalEventSys) 
-        : mNetworkIncommingPublisher{networkInEventSys}
+ConnectionManager::ConnectionManager(IncommingNetworkEventSystem const& incNetworkEventSys, 
+    GUIEventSystem& guiEventSys, BoardEventSystem& boardEventSys) 
+        : mNetworkIncommingPublisher{incNetworkEventSys}
 {
-    subToEvents(networkOutEventSys, internalEventSys);
+    subToEvents(guiEventSys, boardEventSys);
 }
 
 void ConnectionManager::subToEvents(GUIEventSystem& networkOutEventSys, 

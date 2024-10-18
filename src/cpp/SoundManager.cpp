@@ -28,9 +28,9 @@ void SoundManager::WavSound::stopSound() const
     SDL_PauseAudioDevice(m_deviceID, 1);
 }
 
-SoundManager::SoundManager(BoardEventSystem& internalEventSys)
+SoundManager::SoundManager(BoardEventSystem& boardEventSys)
 {
-    internalEventSys.sub<BoardEvents::MoveCompleted>([this](Event& e)
+    boardEventSys.sub<BoardEvents::MoveCompleted>([this](Event& e)
     {
         auto const evnt { static_cast<BoardEvents::MoveCompleted>(e) };
         playCorrectMoveAudio(evnt.move);
