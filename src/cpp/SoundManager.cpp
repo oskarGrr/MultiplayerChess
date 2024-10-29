@@ -1,5 +1,6 @@
 #include "SoundManager.hpp"
 #include "ChessEvents.hpp"
+#include <cassert>
 
 SoundManager::WavSound::WavSound(std::filesystem::path const& filePath) 
     : m_spec{}, m_audioBuffer{nullptr}, m_deviceID{}, m_audioLength{0u}
@@ -28,13 +29,20 @@ void SoundManager::WavSound::stopSound() const
     SDL_PauseAudioDevice(m_deviceID, 1);
 }
 
-SoundManager::SoundManager(BoardEventSystem& boardEventSys)
+SoundManager::SoundManager(BoardEventSystem::Subscriber& boardEventSubscriber)
+    : mBoardEventSubscriber{boardEventSubscriber}
 {
-    boardEventSys.sub<BoardEvents::MoveCompleted>([this](Event& e)
+    mChessMoveCompletedEventID = mBoardEventSubscriber.sub<BoardEvents::MoveCompleted>(
+    [this](Event const& e)
     {
-        auto const evnt { static_cast<BoardEvents::MoveCompleted>(e) };
+        auto const& evnt { e.unpack<BoardEvents::MoveCompleted>() };
         playCorrectMoveAudio(evnt.move);
     });
+}
+
+SoundManager::~SoundManager()
+{
+    mBoardEventSubscriber.unsub<BoardEvents::MoveCompleted>(mChessMoveCompletedEventID);
 }
 
 //to be called in postMoveUpdate() after the correct above single ha

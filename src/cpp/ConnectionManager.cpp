@@ -7,32 +7,83 @@
 #include <array>
 #include <utility>
 
-ConnectionManager::ConnectionManager(IncommingNetworkEventSystem const& incNetworkEventSys, 
-    GUIEventSystem& guiEventSys, BoardEventSystem& boardEventSys) 
-        : mNetworkIncommingPublisher{incNetworkEventSys}
+ConnectionManager::ConnectionManager(NetworkEventSystem::Publisher const& networkEventPublisher,
+    GUIEventSystem::Subscriber& guiEventSubscriber, BoardEventSystem::Subscriber& boardEventSubscriber)
+        : mGuiEventSubManager    {guiEventSubscriber},
+          mNetworkEventPublisher {networkEventPublisher},
+          mBoardEventSubscriber  {boardEventSubscriber},
+          mServerConn{ [this]{onConnect();}, [this]{onDisconnect();} }
 {
-    subToEvents(guiEventSys, boardEventSys);
+    subToEvents();
 }
 
-void ConnectionManager::subToEvents(GUIEventSystem& networkOutEventSys, 
-    BoardEventSystem& internalEventSys)
+ConnectionManager::~ConnectionManager()
 {
-    internalEventSys.sub<BoardEvents::MoveCompleted>([this](Event& e)
-    {
-        auto const& evnt {static_cast<BoardEvents::MoveCompleted&>(e)};
+    //manually ubsub from BoardEvents::MoveCompleted
+    mBoardEventSubscriber.unsub<BoardEvents::MoveCompleted>(mMoveCompletedSubID);
+
+    //mGuiEventSubManager will automatically unsub from the rest of the events...
+}
+
+void ConnectionManager::onConnect()
+{
+    mMoveCompletedSubID = mBoardEventSubscriber.sub<BoardEvents::MoveCompleted>(
+        [this](Event const& e){
+        auto const& evnt { e.unpack<BoardEvents::MoveCompleted>() };
         buildAndSendMoveMsgType(evnt.move);
     });
 
-    networkOutEventSys.sub<GUIEvents::PairRequest>([this](Event& e)
-    {
-        auto const& evnt {static_cast<GUIEvents::PairRequest&>(e)};
+    pubEvent<NetworkEvents::ConnectedToServer>();
+}
+
+void ConnectionManager::onDisconnect()
+{
+    assert(mBoardEventSubscriber.unsub<BoardEvents::MoveCompleted>(mMoveCompletedSubID));
+
+    mIsPairedWithOpponent = false;
+    mIsThereAPotentialOpponent = false;
+}
+
+void ConnectionManager::subToEvents()
+{
+    mGuiEventSubManager.sub<GUIEvents::PairRequest>(GuiSubscriptions::PAIR_REQUEST, 
+        [this](Event const& e){
+        auto const& evnt { e.unpack<GUIEvents::PairRequest>() };
         buildAndSendPairRequest(evnt.opponentID);
     });
 
-    networkOutEventSys.sub<GUIEvents::PairAccept>([this](Event& e)
-    {
-        buildAndSendPairAccept();
-    });
+    mGuiEventSubManager.sub<GUIEvents::PairAccept>(GuiSubscriptions::PAIR_ACCEPT,
+        [this](Event const& e){ buildAndSendPairAccept(); });
+
+    mGuiEventSubManager.sub<GUIEvents::PairDecline>(GuiSubscriptions::PAIR_DECLINE, 
+        [this](Event const& e){ buildAndSendPairDecline(); });
+
+    mGuiEventSubManager.sub<GUIEvents::DrawOffer>(GuiSubscriptions::DRAW_OFFER,
+        [this](Event const& e){ sendHeaderOnlyMessage(MessageType::DRAW_OFFER_MSGTYPE); });
+
+    mGuiEventSubManager.sub<GUIEvents::DrawAccept>(GuiSubscriptions::DRAW_ACCEPT,
+        [this](Event const& e){ sendHeaderOnlyMessage(MessageType::DRAW_ACCEPT_MSGTYPE); });
+
+    mGuiEventSubManager.sub<GUIEvents::DrawDecline>(GuiSubscriptions::DRAW_DECLINE,
+        [this](Event const& e){ sendHeaderOnlyMessage(MessageType::DRAW_DECLINE_MSGTYPE); });
+
+    mGuiEventSubManager.sub<GUIEvents::RematchRequest>(GuiSubscriptions::REMATCH_REQUEST,
+        [this](Event const& e){ sendHeaderOnlyMessage(MessageType::REMATCH_REQUEST_MSGTYPE); });
+
+    mGuiEventSubManager.sub<GUIEvents::RematchAccept>(GuiSubscriptions::REMATCH_ACCEPT,
+        [this](Event const& e){ sendHeaderOnlyMessage(MessageType::REMATCH_ACCEPT_MSGTYPE); });
+
+    mGuiEventSubManager.sub<GUIEvents::RematchDecline>(GuiSubscriptions::REMATCH_DECLINE,
+        [this](Event const& e){ sendHeaderOnlyMessage(MessageType::REMATCH_DECLINE_MSGTYPE); });
+
+    mGuiEventSubManager.sub<GUIEvents::Resign>(GuiSubscriptions::RESIGN,
+        [this](Event const& e){ sendHeaderOnlyMessage(MessageType::RESIGN_MSGTYPE); });
+
+    mGuiEventSubManager.sub<GUIEvents::Unpair>(GuiSubscriptions::UNPAIR,
+        [this](Event const& e){ sendHeaderOnlyMessage(MessageType::UNPAIR_MSGTYPE); });
+
+    //defer the subscription to BoardEvents::MoveCompleted until 
+    //ConnectionManager::onConnect() is called
 }
 
 //Call once per main loop iteration.
@@ -40,10 +91,14 @@ void ConnectionManager::update()
 {
     mServerConn.update();
 
-    if( ! mServerConn.isConnected() )
-    {
+    if( ! mServerConn.isConnected() ) { return; }
 
-    }
+    ////if we are no longer connected
+    //if( ! mServerConn.isConnected() )
+    //{
+    //    pubEvent<NetworkEvents::DisconnectedFromServer>();
+    //    return;
+    //}
 
     processNetworkMessages();
 }
@@ -70,7 +125,7 @@ auto ConnectionManager::retrieveNetworkMessages()
 
         assert(message);//At this point, this should always be true.
 
-        ret.push_back(std::move(*message));//message variable no longer valid
+        ret.push_back(std::move(*message));//careful! message variable has been moved from
 
         //mServerConn.read() will erase the last message. Now peek 0 and 1 will
         //get the next message header if there is one.
@@ -100,7 +155,7 @@ void ConnectionManager::handlePairDeclineMessage(NetworkMessage const& msg)
 
     mPotentialOpponentID = ntohl(potentialOpponentID);
 
-    pubEvent<IncommingNetworkEvents::PairDecline>();
+    pubEvent<NetworkEvents::PairDecline>();
 
     mIsThereAPotentialOpponent = false;
 }
@@ -112,7 +167,7 @@ void ConnectionManager::handleIDNotInLobbyMessage(NetworkMessage const& msg)
 
     mIsThereAPotentialOpponent = false;
     
-    pubEvent<IncommingNetworkEvents::IDNotInLobby>(ntohl(invalidID));
+    pubEvent<NetworkEvents::IDNotInLobby>(ntohl(invalidID));
 }
 
 //Helper to reduce processNetworkMessages() size.
@@ -125,14 +180,14 @@ void ConnectionManager::processNetworkMessage(NetworkMessage const& msg)
     {
     using enum MessageType;
     case MOVE_MSGTYPE:             handleMoveMessage(msg);                            break;
-    case ID_NOT_IN_LOBBY_MSGTYPE:  pubEvent<IncommingNetworkEvents::IDNotInLobby>();         break;
+    case ID_NOT_IN_LOBBY_MSGTYPE:  handleIDNotInLobbyMessage(msg);                    break;
     case UNPAIR_MSGTYPE:           handleUnpairMessage();                             break;
-    case RESIGN_MSGTYPE:           pubEvent<IncommingNetworkEvents::OpponentHasResigned>();  break;
-    case DRAW_OFFER_MSGTYPE:       pubEvent<IncommingNetworkEvents::DrawOffer>();            break;
-    case DRAW_DECLINE_MSGTYPE:     pubEvent<IncommingNetworkEvents::DrawDeclined>();         break;
-    case DRAW_ACCEPT_MSGTYPE:      pubEvent<IncommingNetworkEvents::DrawAccept>();           break;
-    case REMATCH_ACCEPT_MSGTYPE:   pubEvent<IncommingNetworkEvents::RematchAccept>();        break;
-    case REMATCH_REQUEST_MSGTYPE:  pubEvent<IncommingNetworkEvents::RematchRequest>();       break;
+    case RESIGN_MSGTYPE:           pubEvent<NetworkEvents::OpponentHasResigned>();    break;
+    case DRAW_OFFER_MSGTYPE:       pubEvent<NetworkEvents::DrawOffer>();              break;
+    case DRAW_DECLINE_MSGTYPE:     pubEvent<NetworkEvents::DrawDeclined>();           break;
+    case DRAW_ACCEPT_MSGTYPE:      pubEvent<NetworkEvents::DrawAccept>();             break;
+    case REMATCH_ACCEPT_MSGTYPE:   pubEvent<NetworkEvents::RematchAccept>();          break;
+    case REMATCH_REQUEST_MSGTYPE:  pubEvent<NetworkEvents::RematchRequest>();         break;
     case PAIR_REQUEST_MSGTYPE:     handlePairRequestMessage(msg);                     break;
     case PAIRING_COMPLETE_MSGTYPE: handlePairingCompleteMessage(msg);                 break;
     case REMATCH_DECLINE_MSGTYPE:  handleRematchDeclineMessage();                     break;
@@ -157,13 +212,13 @@ void ConnectionManager::processNetworkMessages()
 void ConnectionManager::handleOpponentClosedConnectionMessage()
 {
     mIsPairedWithOpponent = false;
-    pubEvent<IncommingNetworkEvents::OpponentClosedConnection>();
+    pubEvent<NetworkEvents::OpponentClosedConnection>();
 }
 
 void ConnectionManager::handleRematchDeclineMessage()
 {
     mIsPairedWithOpponent = false;
-    pubEvent<IncommingNetworkEvents::RematchDecline>();
+    pubEvent<NetworkEvents::RematchDecline>();
 }
 
 void ConnectionManager::handlePairingCompleteMessage(NetworkMessage const& msg)
@@ -175,7 +230,7 @@ void ConnectionManager::handlePairingCompleteMessage(NetworkMessage const& msg)
 
     mOpponentID = mPotentialOpponentID;
 
-    pubEvent<IncommingNetworkEvents::PairingComplete>(mOpponentID, side);
+    pubEvent<NetworkEvents::PairingComplete>(mOpponentID, side);
 }
 
 void ConnectionManager::handlePairRequestMessage(NetworkMessage const& msg)
@@ -187,7 +242,7 @@ void ConnectionManager::handlePairRequestMessage(NetworkMessage const& msg)
     mPotentialOpponentID = ntohl(potentialOpponentID);
     mIsThereAPotentialOpponent = true;
 
-    pubEvent<IncommingNetworkEvents::PairRequest>(mPotentialOpponentID);
+    pubEvent<NetworkEvents::PairRequest>(mPotentialOpponentID);
 }
 
 void ConnectionManager::handleMoveMessage(NetworkMessage const& netMsg)
@@ -216,7 +271,7 @@ void ConnectionManager::handleMoveMessage(NetworkMessage const& netMsg)
         static_cast<ChessMove::PromoTypes>(netMsg[7])
     };
 
-    pubEvent<IncommingNetworkEvents::OpponentMadeMove>(move);
+    pubEvent<NetworkEvents::OpponentMadeMove>(move);
 }
 
 bool ConnectionManager::isOpponentIDStringValid(std::string_view opponentID)
@@ -244,15 +299,14 @@ bool ConnectionManager::isOpponentIDStringValid(std::string_view opponentID)
 void ConnectionManager::handleUnpairMessage()
 {
     mIsPairedWithOpponent = false;
-    pubEvent<IncommingNetworkEvents::Unpair>();
+    pubEvent<NetworkEvents::Unpair>();
 }
 
 template<typename EventT, typename... EventArgs>
 void ConnectionManager::pubEvent(EventArgs&&... eventArgs)
 {
-    //The empty brace (for the Event base class) is necessary here for aggregate list initialization to work.
-    EventT evnt{ {}, std::forward<EventArgs>(eventArgs)...};
-    mNetworkIncommingPublisher.pub(evnt);
+    EventT evnt{std::forward<EventArgs>(eventArgs)...};
+    mNetworkEventPublisher.pub(evnt);
 }
 
 void ConnectionManager::buildAndSendMoveMsgType(ChessMove const& move)
@@ -322,11 +376,9 @@ void ConnectionManager::buildAndSendPairDecline()
 }
 
 //A lot of messages have no "payload", but just the two byte header.
-void ConnectionManager::sendHeaderOnlyMessage(MessageType msgType, MessageSize msgSize)
+void ConnectionManager::sendHeaderOnlyMessage(MessageType msgType)
 {
-    std::array<std::byte, 2> msgBuff{static_cast<std::byte>(msgType), 
-        static_cast<std::byte>(msgSize)};
-
+    std::array<std::byte, 2> msgBuff{ static_cast<std::byte>(msgType), std::byte{2} };
     mServerConn.write(msgBuff);
 }
 

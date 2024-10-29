@@ -38,17 +38,23 @@ void handleLeftClickReleaseEvent(Board&, ChessRenderer const&);
 
 static void runApplication()
 {
-    IncommingNetworkEventSystem incNetworkEventSys;
+    NetworkEventSystem networkEventSys;
     GUIEventSystem guiEventSys;
     BoardEventSystem boardEventSys;
 
-    ConnectionManager connectionManager {incNetworkEventSys, guiEventSys, boardEventSys};
-    ChessRenderer chessRenderer {incNetworkEventSys, boardEventSys, guiEventSys};
-    SoundManager soundManager {boardEventSys};
-    Board board {boardEventSys, guiEventSys, incNetworkEventSys};
+    ConnectionManager connectionManager {networkEventSys.getPublisher(), guiEventSys.getSubscriber(), 
+        boardEventSys.getSubscriber()};
+
+    ChessRenderer chessRenderer {networkEventSys.getSubscriber(), boardEventSys.getSubscriber(), 
+        guiEventSys.getPublisher()};
+
+    SoundManager soundManager {boardEventSys.getSubscriber()};
+
+    Board board {boardEventSys.getPublisher(), guiEventSys.getSubscriber(), networkEventSys.getSubscriber()};
 
     bool appRunning {true};
-    double deltaTime {0.0};
+    double deltaTime {0.0};//unused for now
+
     while(appRunning)
     {
         auto const start {std::chrono::steady_clock::now()};
@@ -85,7 +91,7 @@ static void runApplication()
         chessRenderer.renderAllTheThings(board, connectionManager);
         SDL_Delay(10);
 
-        auto const end {std::chrono::steady_clock::now()};
+        auto const end { std::chrono::steady_clock::now() };
         deltaTime = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / 1.0E9;
     }
 }

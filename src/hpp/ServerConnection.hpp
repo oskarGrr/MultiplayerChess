@@ -6,6 +6,7 @@
 #include <optional>
 #include <string_view>
 #include <future>
+#include <functional>
 
 class ServerConnection
 {
@@ -24,7 +25,7 @@ public:
     void write(std::span<std::byte>);
     auto isConnected() const {return mIsConnected;}
 
-    ServerConnection();
+    ServerConnection(std::function<void()> onConnect, std::function<void()> onDisconnect);
     ~ServerConnection();
 
 private:
@@ -46,8 +47,10 @@ private:
     std::string const mServerAddrFileName   {"ServerIP.txt"};
 
     bool mIsConnected {false};
-
     bool mConnectToServerThreadIsDone {false};
+
+    std::function<void()> mOnConnect;
+    std::function<void()> mOnDisconnect;
 
 public:
     ServerConnection(ServerConnection const&)=delete;

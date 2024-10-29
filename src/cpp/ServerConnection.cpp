@@ -9,6 +9,7 @@
 #include <string>
 #include <array>
 #include <chrono>
+#include <utility>
 
 static void logLastError()
 {
@@ -44,6 +45,23 @@ static void logLastError()
 #endif
 }
 
+ServerConnection::ServerConnection(std::function<void()> onConnect, std::function<void()> onDisconnect)
+    : mOnConnect{std::move(onConnect)}, mOnDisconnect{std::move(onDisconnect)}
+{
+    mReadBuff.resize(mReadBuffInitialSize);
+
+    if(int result {WSAStartup(MAKEWORD(2, 2), &mWinSockData)}; result == 0)
+        connectToServerAsync();
+    else
+        FileErrorLogger::get().log(std::format("WSAStartup() failed with error {}", result));
+}
+
+ServerConnection::~ServerConnection()
+{
+    closesocket(mSocket);
+    WSACleanup();
+}
+
 //Gets any new data that might have been sent from the server.
 void ServerConnection::update()
 {
@@ -57,6 +75,7 @@ void ServerConnection::update()
             {
                 mSocket = *maybeSocket;
                 mIsConnected = true;
+                mOnConnect();
             }
             
             mConnectToServerThreadIsDone = true;
@@ -139,22 +158,6 @@ void ServerConnection::write(std::span<std::byte> buffer)
         numBytesWritten += res;
         numBytesToWrite -= res;
     }
-}
-
-ServerConnection::~ServerConnection()
-{
-    closesocket(mSocket);
-    WSACleanup();
-}
-
-ServerConnection::ServerConnection()
-{
-    mReadBuff.resize(mReadBuffInitialSize);
-
-    if(int result {WSAStartup(MAKEWORD(2, 2), &mWinSockData)}; result == 0)
-        connectToServerAsync();
-    else
-        FileErrorLogger::get().log(std::format("WSAStartup() failed with error {}", result));
 }
 
 //arguments pass by value to avoid any potential race conditions

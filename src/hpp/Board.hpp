@@ -5,24 +5,23 @@
 #include <string>
 #include <array>
 #include <vector>
-#include <memory>//std::shared_ptr
+#include <memory> //std::shared_ptr
 #include <optional>
+#include <unordered_map>
 
 #include "ChessEvents.hpp"
 #include "ChessMove.hpp"
 #include "castleRights.h"
 
-//forward declarations
 class Piece;
 class ConnectionManager;
 class SoundManager;
 
-//Board object only instantiated as a member of the chessApplication.
 class Board
 {
 public:
 
-    Board(BoardEventSystem&, GUIEventSystem&, IncommingNetworkEventSystem&);
+    Board(BoardEventSystem::Publisher const&, GUIEventSystem::Subscriber&, NetworkEventSystem::Subscriber&);
 
     //factory method for placing a piece at the specified location on the board
     //these should only be called in the boards constructor ideally to follow RAII.
@@ -42,7 +41,6 @@ public:
     //supply with one of the enums above and will respond with true or false
     void removeCastlingRights(CastleRights);
     std::shared_ptr<Piece> getPieceAt(Vec2i const& chessPos) const&;
-    std::shared_ptr<Piece> getPieceAt(Vec2i const& chessPos) const&&;
 
     Side getWhosTurnItIs() const {return mWhiteOrBlacksTurn;}
     std::vector<Vec2i> getAttackedSquares(Side) const; //Get all the squares that are under attack for a given side.
@@ -70,7 +68,22 @@ public:
 
 private:
 
-    BoardEventSystem const& mBoardEventPublisher;
+    BoardEventSystem::Publisher const& mBoardEventPublisher;
+
+    enum struct SubscriptionTypes
+    {
+        RESET_BOARD,
+        PROMOTION_END,
+        PAIRING_COMPLETE,
+        OPPONENT_MADE_MOVE,
+        UNPAIRED
+    };
+
+    SubscriptionManager<SubscriptionTypes,
+        GUIEventSystem::Subscriber> mGuiSubManager;
+
+    SubscriptionManager<SubscriptionTypes,
+        NetworkEventSystem::Subscriber> mNetworkSubManager;
 
     std::array<std::shared_ptr<Piece>, 64> m_pieces {};
     std::shared_ptr<Piece> m_lastCapturedPiece {nullptr};
@@ -118,7 +131,7 @@ private:
     std::optional<MateTypes> hasCheckOrStalemateOccurred();
 
     //Helper function to reduce constructor size.
-    void subToEvents(GUIEventSystem& internalEventSys, IncommingNetworkEventSystem& outgoingEventSys);
+    void subToEvents();
 
 public:
     Board(Board const&)=delete;

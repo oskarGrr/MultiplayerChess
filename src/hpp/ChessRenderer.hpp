@@ -16,13 +16,16 @@ class ChessRenderer
 {
 public:
 
-    ChessRenderer(IncommingNetworkEventSystem&, BoardEventSystem&, GUIEventSystem const&);
+    ChessRenderer(NetworkEventSystem::Subscriber&,
+        BoardEventSystem::Subscriber&, GUIEventSystem::Publisher const&);
+
+    ~ChessRenderer();
 
     auto static getSquareSize() {return sSquareSize;}
 
-    bool isScreenPositionOnBoard(Vec2i const screenPos) const;
+    bool isScreenPositionOnBoard(Vec2i) const;
     void renderAllTheThings(Board const& b, ConnectionManager const& cm);
-    Vec2i screen2ChessPos(Vec2i const pos) const;
+    Vec2i screen2ChessPos(Vec2i) const;
 
     struct PromotionWindowContext
     {
@@ -33,6 +36,22 @@ public:
     };
 
 private:
+
+    //Methods to reduce the size of subToEvents()
+    void onPairingCompleteEvent(NetworkEvents::PairingComplete const&);
+    void onDrawDeclinedEvent();
+    void onIDNotInLobbyEvent(NetworkEvents::IDNotInLobby const&);
+    void onDrawOfferEvent();
+    void onRematchRequestEvent();
+    void onRematchDeclineEvent();
+    void onPairRequestEvent(NetworkEvents::PairRequest const&);
+    void onPairDeclineEvent();
+    void onGameOverEventWhilePaired(BoardEvents::GameOver const & evnt);
+    void onGameOverEventWhileNotPaired(BoardEvents::GameOver const&);
+    void onUnpairEvent();
+    void onPromotionBeginEvent(BoardEvents::PromotionBegin const&);
+    void onDisconnectedEvent();
+    void onConnectedEvent();
 
     void drawPromotionPopup();
     void drawColorEditor();
@@ -45,11 +64,34 @@ private:
 
     //methods to reduce ctor size
     void initSquareColorData();
-    void subToEvents(IncommingNetworkEventSystem&, BoardEventSystem&);
+    void subToEvents();
     
+    enum struct NetworkSubscriptions
+    {
+        PAIRING_COMPLETE,
+        DRAW_DECLINED,
+        ID_NOT_IN_LOBBY,
+        DRAW_OFFER,
+        REMATCH_REQUEST,
+        REMATCH_DECLINE,
+        PAIR_REQUEST,
+        PAIR_DECLINE,
+        UNPAIR,
+        DISCONNECTED,
+        CONNECTED,
+        NEW_ID
+    };
+
+    SubscriptionManager<NetworkSubscriptions,
+        NetworkEventSystem::Subscriber> mNetworkSubManager;
+
+    BoardEventSystem::Subscriber& mBoardSubscriber;
+    SubscriptionID mGameOverSubID {INVALID_SUBSCRIPTION_ID};
+    SubscriptionID mPromotionBeginEventID {INVALID_SUBSCRIPTION_ID};
+
     //Takes a chess position, and returns the pixel screen coords
     //of where that is (the middle of the square).
-    Vec2i chess2ScreenPos(Vec2i const pos);
+    Vec2i chess2ScreenPos(Vec2i);
 
 private:
 
@@ -66,7 +108,7 @@ private:
     TextureManager mTextureManager {mWindow.renderer};
     PopupManager mPopupManager;
 
-    GUIEventSystem const& mGuiEventPublisher;
+    GUIEventSystem::Publisher const& mGuiEventPublisher;
 
     bool mIsColorEditorWindowOpen {false};
     bool mIsConnectionWindowOpen  {false};

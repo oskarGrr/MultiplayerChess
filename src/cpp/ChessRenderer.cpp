@@ -25,13 +25,23 @@
 #include "SDL_image.h"
 
 //board width, height and square size are initialized with their setters later
-ChessRenderer::ChessRenderer(IncommingNetworkEventSystem& incNetworkEventSys, 
-    BoardEventSystem& boardEventSys, GUIEventSystem const& guiEventSys) 
-    : mGuiEventPublisher{guiEventSys}
+ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys, 
+    BoardEventSystem::Subscriber& boardEventSubscriber, GUIEventSystem::Publisher const& guiEventPublisher) 
+    : mGuiEventPublisher{guiEventPublisher}, 
+      mNetworkSubManager{networkEventSys}, 
+      mBoardSubscriber{boardEventSubscriber}
 {
-    subToEvents(incNetworkEventSys, boardEventSys);
+    subToEvents();
     ImGui::StyleColorsLight();
     initSquareColorData();
+}
+
+ChessRenderer::~ChessRenderer()
+{
+    mBoardSubscriber.unsub<BoardEvents::GameOver>(mGameOverSubID);
+    mBoardSubscriber.unsub<BoardEvents::PromotionBegin>(mPromotionBeginEventID);
+
+    //mNetworkSubManager will automatically unsub from the rest of the events...
 }
 
 void ChessRenderer::initSquareColorData()
@@ -203,7 +213,7 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
 
                 if(ImGui::SmallButton("draw"))
                 {
-                    GUIEvents::DrawRequest evnt{};
+                    GUIEvents::DrawOffer evnt{};
                     mGuiEventPublisher.pub(evnt);
                 }
             }
@@ -409,28 +419,28 @@ void ChessRenderer::drawPromotionPopup()
     if(ImGui::ImageButton(static_cast<ImTextureID>(queenTex.getTexture().get()), queenTex.getSize(), 
         {}, {1, 1}, -1, {}, {1, 1, 1, 0.25f}))
     {
-        GUIEvents::PromotionEnd evnt{.promoType = ChessMove::PromoTypes::QUEEN};
+        GUIEvents::PromotionEnd evnt{ChessMove::PromoTypes::QUEEN};
         mGuiEventPublisher.pub(evnt);
         mIsPromotionWindowOpen = false;
     }
     if(ImGui::ImageButton(static_cast<ImTextureID>(rookTex.getTexture().get()), rookTex.getSize(), 
         {}, {1, 1}, -1, {}, {1, 1, 1, 0.25f}))
     {
-        GUIEvents::PromotionEnd evnt{.promoType = ChessMove::PromoTypes::ROOK};
+        GUIEvents::PromotionEnd evnt{ChessMove::PromoTypes::ROOK};
         mGuiEventPublisher.pub(evnt);
         mIsPromotionWindowOpen = false;
     }
     if(ImGui::ImageButton(static_cast<ImTextureID>(knightTex.getTexture().get()), knightTex.getSize(), 
         {}, {1, 1}, -1, {}, {1, 1, 1, 0.25f}))
     {
-        GUIEvents::PromotionEnd evnt{.promoType = ChessMove::PromoTypes::KNIGHT};
+        GUIEvents::PromotionEnd evnt{ChessMove::PromoTypes::KNIGHT};
         mGuiEventPublisher.pub(evnt);
         mIsPromotionWindowOpen = false;
     }
     if(ImGui::ImageButton(static_cast<ImTextureID>(bishopTex.getTexture().get()),  bishopTex.getSize(),
         {}, {1, 1}, -1, {}, {1, 1, 1, 0.25f}))
     {
-        GUIEvents::PromotionEnd evnt{.promoType = ChessMove::PromoTypes::BISHOP};
+        GUIEvents::PromotionEnd evnt{ChessMove::PromoTypes::BISHOP};
         mGuiEventPublisher.pub(evnt);
         mIsPromotionWindowOpen = false;
     }
@@ -528,7 +538,7 @@ void ChessRenderer::drawConnectionWindow()
     {
         if(isIDStringValid(opponentID))
         {
-            GUIEvents::PairRequest evnt{.opponentID = std::strtoul(opponentID, nullptr, 10)};
+            GUIEvents::PairRequest evnt{std::strtoul(opponentID, nullptr, 10)};
             mGuiEventPublisher.pub(evnt);
             isInputValid = true;
         }
@@ -541,192 +551,246 @@ void ChessRenderer::drawConnectionWindow()
     ImGui::End();
 }
 
-void ChessRenderer::subToEvents(IncommingNetworkEventSystem& incNetworkEventSys, 
-    BoardEventSystem& boardEventSys)
+void ChessRenderer::onPairingCompleteEvent(NetworkEvents::PairingComplete const& evnt)
 {
-    incNetworkEventSys.sub<IncommingNetworkEvents::PairingComplete>([this](Event& e)
+    std::string popupText {"you are playing with the "};
+    popupText.append(evnt.side == Side::WHITE ? "white " : "black ");
+    popupText.append(std::format("pieces against the user with ID: {}", evnt.opponentID));
+    
+    mPopupManager.openPopup(PopupManager::Popup
     {
-        auto const& evnt {static_cast<IncommingNetworkEvents::PairingComplete&>(e)};
-        std::string popupText {"you are playing with the "};
-        popupText.append(evnt.side == Side::WHITE ? "white " : "black ");
-        popupText.append(std::format("pieces against the user with ID: {}", evnt.opponentID));
-
-        mPopupManager.openPopup(PopupManager::Popup
-        {
-            .text = std::move(popupText), //careful, popupText moved from!
-            .buttons = {{"Let's play!", []{return true;}}}
-        });
-
-        mViewingPerspective = evnt.side;
-    });
-
-    incNetworkEventSys.sub<IncommingNetworkEvents::DrawDeclined>([this](Event& e)
-    {
-        mPopupManager.openPopup(PopupManager::Popup
-        {
-            .text = "draw declined", .buttons ={{"okay", []{return true;}}}
-        });
-    });
-
-    incNetworkEventSys.sub<IncommingNetworkEvents::IDNotInLobby>([this](Event& e)
-    {
-        auto const& evnt {static_cast<IncommingNetworkEvents::IDNotInLobby&>(e)};
-        auto popupText {std::format("The ID you supplied ({}) was invalid", evnt.ID)};
-        mPopupManager.openPopup(PopupManager::Popup
-        {
-            .text = std::move(popupText), //careful, popupText moved from!
-            .buttons = {{"okay", []{return true;}}}
-        });
-    });
-
-    incNetworkEventSys.sub<IncommingNetworkEvents::DrawOffer>([this](Event& e)
-    {
-        mPopupManager.openPopup(PopupManager::Popup
-        {
-            .text = "Your opponent has offered a draw.",
-            .buttons =
-            {
-                {
-                    .text = "Accept",
-                    .callback = [this]
-                    {
-                        GUIEvents::DrawAccepted evnt{};
-                        mGuiEventPublisher.pub(evnt);
-                        return true;
-                    }
-                },
-                {
-                    .text = "Decline",
-                    .callback = [this]
-                    {
-                        GUIEvents::DrawDeclined evnt{};
-                        mGuiEventPublisher.pub(evnt);
-                        return true;
-                    }
-                }
-            }
-        });
+        .text = std::move(popupText), //careful, popupText moved from!
+        .buttons = { {"Let's play!", []{return true;} } }
     });
     
-    incNetworkEventSys.sub<IncommingNetworkEvents::RematchRequest>([this](Event& e)
-    {
-        mPopupManager.openPopup(PopupManager::Popup
-        {
-            .text = "Your opponent offered a rematch",
-            .buttons =
-            {
-                {
-                    .text = "accept rematch",
-                    .callback = [this]
-                    {
-                        GUIEvents::RematchAccept evnt{};
-                        mGuiEventPublisher.pub(evnt); return true; 
-                    }
-                },
-                {
-                    .text = "decline rematch",
-                    .callback = [this]
-                    {
-                        mPopupManager.openPopup(PopupManager::Popup
-                        {
-                            "You have been disconnected from your opponent and put back in the server lobby",
-                            { {"Okay", []{return true;}} }
-                        });
+    mViewingPerspective = evnt.side;
+    mIsConnectionWindowOpen = false;
 
-                        GUIEvents::RematchDecline evnt{};
-                        mGuiEventPublisher.pub(evnt);
-                        return true;
-                    }
-                }
-            }
-        });
+
+}
+
+void ChessRenderer::onDrawDeclinedEvent()
+{
+    mPopupManager.openPopup(PopupManager::Popup{
+        .text = "draw declined", .buttons = { {"okay", []{return true;} } }
     });
+}
 
-    incNetworkEventSys.sub<IncommingNetworkEvents::RematchDecline>([this](Event& e)
-    {
-        mPopupManager.openPopup(PopupManager::Popup
-        {
-            "You have been disconnected from your opponent and put back in the server lobby",
-            { {"Okay", []{return true;}} }
-        });
+void ChessRenderer::onIDNotInLobbyEvent(NetworkEvents::IDNotInLobby const& evnt)
+{
+    auto popupText {std::format("The ID you supplied ({}) was invalid", evnt.ID)};
+    mPopupManager.openPopup(PopupManager::Popup{
+        .text = std::move(popupText), //careful, popupText moved from!
+        .buttons = {{"okay", []{return true;}}}
     });
+}
 
-    incNetworkEventSys.sub<IncommingNetworkEvents::PairRequest>([this](Event& e)
+void ChessRenderer::onDrawOfferEvent()
+{
+    mPopupManager.openPopup(PopupManager::Popup
     {
-        auto const& evnt { static_cast<IncommingNetworkEvents::PairRequest&>(e) };
-
-        mPopupManager.openPopup(PopupManager::Popup
+        .text = "Your opponent has offered a draw.",
+        .buttons =
         {
-            .text = std::format("Request from {} to play chess!", evnt.potentialOpponentID),
-            .buttons = {
             {
-                "Accept", 
-                [this]
+                .text = "Accept",
+                .callback = [this]
                 {
-                    GUIEvents::PairAccept evnt{};
-                    mGuiEventPublisher.pub(evnt); return true;
+                    GUIEvents::DrawAccept evnt{};
+                    mGuiEventPublisher.pub(evnt);
+                    return true;
                 }
             },
             {
-                "Decline", 
-                [this]
+                .text = "Decline",
+                .callback = [this]
                 {
-                    GUIEvents::PairDecline evnt{};
-                    mGuiEventPublisher.pub(evnt); return true;
+                    GUIEvents::DrawDecline evnt{};
+                    mGuiEventPublisher.pub(evnt);
+                    return true;
                 }
             }
-            }
-        });
-    });
-
-    incNetworkEventSys.sub<IncommingNetworkEvents::PairDecline>([this](Event& e)
-    {
-        mPopupManager.openPopup(PopupManager::Popup
-        {
-            "Your offer to play chess was declined", { {"okay", []{return true;}} }
-        });
-    });
-
-    incNetworkEventSys.sub<IncommingNetworkEvents::Unpair>([this](Event& e)
-    {
-        mPopupManager.openPopup(PopupManager::Popup
-        {
-            "Your offer to play chess was declined", { {"okay", []{return true;}} }
-        });
-    });
-
-    boardEventSys.sub<BoardEvents::GameOver>([this](Event& e)
-    {
-        auto const& evnt {static_cast<BoardEvents::GameOver&>(e)};
-        PopupManager::Popup gameOverPopup {.text = evnt.reason};
-        if(evnt.isPaired)
-        {
-            gameOverPopup.buttons.emplace_back("request rematch", [this]
-            {
-                GUIEvents::RematchRequest evnt{};
-                mGuiEventPublisher.pub(evnt); return true;
-            });
-            gameOverPopup.buttons.emplace_back("disconnect from opponent", [this]
-            {
-                mPopupManager.openPopup(PopupManager::Popup
-                {
-                    "Your offer to play chess was declined", { {"okay", []{return true;}} }
-                });
-                GUIEvents::Unpair evnt{};
-                mGuiEventPublisher.pub(evnt);
-                return true;
-            });
         }
-        gameOverPopup.buttons.emplace_back("Okay", []{return true;});
-        mPopupManager.openPopup(std::move(gameOverPopup));
+    });
+}
+
+void ChessRenderer::onRematchRequestEvent()
+{
+    mPopupManager.openPopup(PopupManager::Popup
+    {
+        .text = "Your opponent offered a rematch",
+        .buttons =
+        {
+            {
+                .text = "accept rematch",
+                .callback = [this]
+                {
+                    GUIEvents::RematchAccept evnt{};
+                    mGuiEventPublisher.pub(evnt); return true; 
+                }
+            },
+            {
+                .text = "decline rematch",
+                .callback = [this]
+                {
+                    mPopupManager.openPopup(PopupManager::Popup
+                    {
+                        "You have been disconnected from your opponent and put back in the server lobby",
+                        { {"Okay", []{return true;}} }
+                    });
+    
+                    GUIEvents::RematchDecline evnt{};
+                    mGuiEventPublisher.pub(evnt);
+                    return true;
+                }
+            }
+        }
+    });
+}
+
+void ChessRenderer::onRematchDeclineEvent()
+{
+    mPopupManager.openPopup(PopupManager::Popup
+    {
+        "You have been disconnected from your opponent and put back in the server lobby",
+        { {"Okay", []{return true;}} }
+    });
+}
+
+void ChessRenderer::onPairRequestEvent(NetworkEvents::PairRequest const& evnt)
+{
+    mPopupManager.openPopup(PopupManager::Popup
+    {
+        .text = std::format("Request from {} to play chess!", evnt.potentialOpponentID),
+        .buttons = {
+        {
+            "Accept", 
+            [this]
+            {
+                GUIEvents::PairAccept evnt{};
+                mGuiEventPublisher.pub(evnt); return true;
+            }
+        },
+        {
+            "Decline", 
+            [this]
+            {
+                GUIEvents::PairDecline evnt{};
+                mGuiEventPublisher.pub(evnt); return true;
+            }
+        }
+        }
+    });
+}
+
+void ChessRenderer::onPairDeclineEvent()
+{
+    mPopupManager.openPopup(PopupManager::Popup
+    {
+        "Your offer to play chess was declined", { {"okay", []{return true;}} }
+    });
+}
+
+void ChessRenderer::onGameOverEventWhilePaired(BoardEvents::GameOver const& evnt)
+{
+    PopupManager::Popup gameOverPopup {evnt.reason, 
+    {
+        {
+            "Request rematch", 
+            [this]{ GUIEvents::RematchRequest e; mGuiEventPublisher.pub(e);  return true;}
+        },
+        {
+            "Disconnect from opponent", 
+            [this]
+            {
+                GUIEvents::Unpair e; mGuiEventPublisher.pub(e); 
+                mViewingPerspective = Side::WHITE; 
+                return true;
+            }
+        }
+    }
+    };
+}
+
+void ChessRenderer::onGameOverEventWhileNotPaired(BoardEvents::GameOver const& evnt)
+{
+    PopupManager::Popup gameOverPopup {evnt.reason, { {"okay", []{return true;} }} };
+    gameOverPopup.buttons.emplace_back();
+    mPopupManager.openPopup(std::move(gameOverPopup));
+}
+
+void ChessRenderer::onUnpairEvent()
+{
+    mPopupManager.openPopup(PopupManager::Popup
+    {
+        "You have been unpaired with your opponent", { {"okay", []{return true;}} }
     });
 
-    boardEventSys.sub<BoardEvents::PromotionBegin>([this](Event& e)
-    {
-        auto const& evnt {static_cast<BoardEvents::PromotionBegin&>(e)};
-        mIsPromotionWindowOpen = true;
-        mPromotionContext.promotingSide = evnt.promotingSide;
-        mPromotionContext.promotingSquare = evnt.promotingSquare;
+    mViewingPerspective = Side::WHITE;
+}
+
+void ChessRenderer::onPromotionBeginEvent(BoardEvents::PromotionBegin const& evnt)
+{
+    mIsPromotionWindowOpen = true;
+    mPromotionContext.promotingSide = evnt.promotingSide;
+    mPromotionContext.promotingSquare = evnt.promotingSquare;
+}
+
+void ChessRenderer::onDisconnectedEvent()
+{
+    mViewingPerspective = Side::WHITE;
+
+    mPopupManager.openPopup(PopupManager::Popup {"You are no longer connected to the server.",
+        { {"okay", []{return true;}} } });
+}
+
+void ChessRenderer::onConnectedEvent()
+{
+    mPopupManager.openPopup(PopupManager::Popup {"You have successfully connected to the server.",
+        { {"okay", []{return true;}} } });
+}
+
+void ChessRenderer::subToEvents()
+{
+    mNetworkSubManager.sub<NetworkEvents::PairingComplete>(NetworkSubscriptions::PAIRING_COMPLETE,
+        [this](Event const& e){ onPairingCompleteEvent( e.unpack<NetworkEvents::PairingComplete>() ); });
+
+    mNetworkSubManager.sub<NetworkEvents::DrawDeclined>(NetworkSubscriptions::DRAW_DECLINED, 
+        [this](Event const&){ onDrawDeclinedEvent(); });
+
+    mNetworkSubManager.sub<NetworkEvents::IDNotInLobby>(NetworkSubscriptions::ID_NOT_IN_LOBBY,
+        [this](Event const& e){ onIDNotInLobbyEvent( e.unpack<NetworkEvents::IDNotInLobby>() ); });
+
+    mNetworkSubManager.sub<NetworkEvents::DrawOffer>(NetworkSubscriptions::DRAW_OFFER,
+        [this](Event const&){ onDrawOfferEvent(); });
+    
+    mNetworkSubManager.sub<NetworkEvents::RematchRequest>(NetworkSubscriptions::REMATCH_REQUEST,
+        [this](Event const&){ onRematchRequestEvent(); });
+
+    mNetworkSubManager.sub<NetworkEvents::RematchDecline>(NetworkSubscriptions::REMATCH_DECLINE,
+        [this](Event const&){ onRematchDeclineEvent(); });
+
+    mNetworkSubManager.sub<NetworkEvents::PairRequest>(NetworkSubscriptions::PAIR_REQUEST,
+        [this](Event const& e){ onPairRequestEvent( e.unpack<NetworkEvents::PairRequest>() ); });
+
+    mNetworkSubManager.sub<NetworkEvents::PairDecline>(NetworkSubscriptions::PAIR_DECLINE, 
+        [this](Event const&){ onPairDeclineEvent(); });
+
+    mNetworkSubManager.sub<NetworkEvents::Unpair>(NetworkSubscriptions::UNPAIR,
+        [this](Event const&){ onUnpairEvent(); });
+
+    mNetworkSubManager.sub<NetworkEvents::DisconnectedFromServer>(NetworkSubscriptions::DISCONNECTED,
+        [this](Event const&){ onDisconnectedEvent(); });
+
+    mNetworkSubManager.sub<NetworkEvents::ConnectedToServer>(NetworkSubscriptions::CONNECTED,
+        [this](Event const&){ onConnectedEvent(); });
+
+    mGameOverSubID = mBoardSubscriber.sub<BoardEvents::GameOver>([this](Event const& e){ 
+         onGameOverEventWhileNotPaired(e.unpack<BoardEvents::GameOver>());
+    });
+
+    mPromotionBeginEventID = mBoardSubscriber.sub<BoardEvents::PromotionBegin>([this](Event const& e){
+        onPromotionBeginEvent(e.unpack<BoardEvents::PromotionBegin>() );
     });
 }
 

@@ -7,7 +7,8 @@
 class SoundManager
 {
 public:
-    SoundManager(BoardEventSystem&);
+    SoundManager(BoardEventSystem::Subscriber&);
+    ~SoundManager();
 
 private:
 
@@ -41,6 +42,10 @@ private:
     WavSound mCaptureMoveSound {"sounds/woodCaptureMove.wav"};
 
 public:
+    
+    BoardEventSystem::Subscriber& mBoardEventSubscriber;
+    SubscriptionID mChessMoveCompletedEventID {INVALID_SUBSCRIPTION_ID};
+
     SoundManager(SoundManager const&)=delete;
     SoundManager(SoundManager&&)=delete;
     SoundManager& operator=(SoundManager const&)=delete;

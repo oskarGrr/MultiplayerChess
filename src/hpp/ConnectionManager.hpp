@@ -15,7 +15,10 @@ class ConnectionManager
 {
 public:
 
-    ConnectionManager(IncommingNetworkEventSystem const&, GUIEventSystem&, BoardEventSystem&);
+    ConnectionManager(NetworkEventSystem::Publisher const&, GUIEventSystem::Subscriber&, 
+        BoardEventSystem::Subscriber&);
+
+    ~ConnectionManager();
     
     //Call once per main loop iteration.
     void update();
@@ -38,12 +41,39 @@ private:
 
     ServerConnection mServerConn;
 
-    IncommingNetworkEventSystem const& mNetworkIncommingPublisher;
+    enum struct GuiSubscriptions
+    {
+        PAIR_REQUEST,
+        PAIR_ACCEPT,
+        PAIR_DECLINE,
+
+        DRAW_OFFER,
+        DRAW_ACCEPT,
+        DRAW_DECLINE,
+
+        REMATCH_REQUEST,
+        REMATCH_ACCEPT,
+        REMATCH_DECLINE,
+
+        RESIGN,
+        UNPAIR
+    };
+
+    //Manager for the many GUI events
+    SubscriptionManager<GuiSubscriptions, GUIEventSystem::Subscriber> mGuiEventSubManager;
+
+    NetworkEventSystem::Publisher const& mNetworkEventPublisher;
+
+    BoardEventSystem::Subscriber& mBoardEventSubscriber;
+    SubscriptionID mMoveCompletedSubID {INVALID_SUBSCRIPTION_ID};
 
 private:
 
     using NetworkMessage  = std::vector<std::byte>;
     using NetworkMessages = std::vector<NetworkMessage>;
+
+    void onConnect();
+    void onDisconnect();
 
     std::optional<NetworkMessages> retrieveNetworkMessages();
 
@@ -54,13 +84,13 @@ private:
     void buildAndSendPairRequest(uint32_t potentialOpponent);
     void buildAndSendPairAccept();
     void buildAndSendPairDecline();
-    void sendHeaderOnlyMessage(MessageType msgType, MessageSize msgSize);
+    void sendHeaderOnlyMessage(MessageType msgType);
     
     template<typename EventT, typename... EventArgs>
     void pubEvent(EventArgs&&...);
 
     //helper method to reduce ctor size
-    void subToEvents(GUIEventSystem&, BoardEventSystem&);
+    void subToEvents();
 
     //The message types that do not have a corresponding handle message 
     //function simply call publishEventNoData() inside of processNetworkMessage().
@@ -76,7 +106,6 @@ private:
     void handleIDNotInLobbyMessage(NetworkMessage const& msg);
 
 public:
-    ~ConnectionManager()=default;
     ConnectionManager(ConnectionManager const&)=delete;
     ConnectionManager(ConnectionManager&&)=delete;
     ConnectionManager& operator=(ConnectionManager const&)=delete;

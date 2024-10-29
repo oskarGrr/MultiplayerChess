@@ -9,6 +9,7 @@
 #include <exception>
 #include <fstream>
 #include <cassert>
+#include <ranges>
 
 static constexpr auto startingPosFEN {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
 //static constexpr auto stalemateTestPositionFEN {"7k/8/8/8/8/8/6q1/K7 w - 0 1"};
@@ -23,10 +24,14 @@ static Vec2i index2ChessPos(int const index)
     return {index % 8, index / 8};
 }
 
-Board::Board(BoardEventSystem& boardEventSys, GUIEventSystem& guiEventSys,
-    IncommingNetworkEventSystem& incNetworkEventSys) : mBoardEventPublisher {boardEventSys}
+Board::Board(BoardEventSystem::Publisher const& boardEventPublisher, 
+    GUIEventSystem::Subscriber& guiEventSubscriber, 
+    NetworkEventSystem::Subscriber& networkEventSubscriber) 
+    : mBoardEventPublisher {boardEventPublisher},
+      mGuiSubManager{guiEventSubscriber},
+      mNetworkSubManager{networkEventSubscriber}
 {
-    subToEvents(guiEventSys, incNetworkEventSys);
+    subToEvents();
 
     loadFENIntoBoard(startingPosFEN);
     
@@ -35,29 +40,34 @@ Board::Board(BoardEventSystem& boardEventSys, GUIEventSystem& guiEventSys,
 }
 
 //Helper function to reduce constructor size.
-void Board::subToEvents(GUIEventSystem& guiEventSys, IncommingNetworkEventSystem& incNetworkEventSys)
+void Board::subToEvents()
 {
-    guiEventSys.sub<GUIEvents::ResetBoard>([this](Event& e)
-    {
-        resetBoard();
-    });
+    mGuiSubManager.sub<GUIEvents::ResetBoard>(SubscriptionTypes::RESET_BOARD, 
+        [this](Event const&){ resetBoard(); });
 
-    guiEventSys.sub<GUIEvents::PromotionEnd>([this](Event& e)
+    mGuiSubManager.sub<GUIEvents::PromotionEnd>(SubscriptionTypes::PROMOTION_END, 
+    [this](Event const& e)
     {
-        auto const& evnt {static_cast<GUIEvents::PromotionEnd&>(e)};
+        auto const& evnt { e.unpack<GUIEvents::PromotionEnd>() };
         mLastMoveMade.promoType = evnt.promoType;
         postMoveUpdate();
     });
 
-    incNetworkEventSys.sub<IncommingNetworkEvents::PairingComplete>([this](Event& e)
+    mNetworkSubManager.sub<NetworkEvents::Unpair>(SubscriptionTypes::UNPAIRED,
+        [this](Event const&){ resetBoard(); });
+
+    mNetworkSubManager.sub<NetworkEvents::PairingComplete>(SubscriptionTypes::PAIRING_COMPLETE,
+    [this](Event const& e)
     {
-        auto const& evnt {static_cast<IncommingNetworkEvents::PairingComplete&>(e)};
+        auto const& evnt { e.unpack<NetworkEvents::PairingComplete>() };
         setSideUserIsPlayingAs(evnt.side);
+        resetBoard();
     });
 
-    incNetworkEventSys.sub<IncommingNetworkEvents::OpponentMadeMove>([this](Event& e)
+    mNetworkSubManager.sub<NetworkEvents::OpponentMadeMove>(SubscriptionTypes::OPPONENT_MADE_MOVE,
+    [this](Event const& e)
     {
-        auto const& evnt {static_cast<IncommingNetworkEvents::OpponentMadeMove&>(e)};
+        auto const& evnt { e.unpack<NetworkEvents::OpponentMadeMove>() };
         movePiece(evnt.move);
         postMoveUpdate();
     });
@@ -291,7 +301,7 @@ void Board::putPieceDown(Vec2i const chessPos)
         if(it->moveType == ChessMove::MoveTypes::PROMOTION || 
             it->moveType == ChessMove::MoveTypes::ROOK_CAPTURE_AND_PROMOTION)
         {
-            BoardEvents::PromotionBegin evnt{.promotingSide = getWhosTurnItIs(), .promotingSquare = it->dest};
+            BoardEvents::PromotionBegin evnt{getWhosTurnItIs(), it->dest};
             mBoardEventPublisher.pub(evnt);
 
             Piece::resetPieceOnMouse();
@@ -461,8 +471,11 @@ void Board::postMoveUpdate()
     if(mLastMoveMade.moveType != ChessMove::MoveTypes::DOUBLE_PUSH)
         resetEnPassant();
 
-    BoardEvents::MoveCompleted evnt{.move = mLastMoveMade};
-    mBoardEventPublisher.pub(evnt);
+    if(getSideUserIsPlayingAs() == getWhosTurnItIs())
+    {
+        BoardEvents::MoveCompleted moveCompletedEvent{mLastMoveMade};
+        mBoardEventPublisher.pub(moveCompletedEvent);
+    }
 
     toggleTurn();
     setLastCapturedPiece(nullptr);
@@ -475,8 +488,8 @@ void Board::postMoveUpdate()
         std::string gameOverReason {*maybeCheckOrStaleMate == MateTypes::CHECKMATE ? 
             "You lost by checkmate" : "Draw by stalemate"};
         
-        BoardEvents::GameOver evnt {.reason = std::move(gameOverReason)};//careful! gameOverReason has been moved from
-        mBoardEventPublisher.pub(evnt);
+        BoardEvents::GameOver gameOverEvent {std::move(gameOverReason)};//careful! gameOverReason has been moved from
+        mBoardEventPublisher.pub(gameOverEvent);
     }
 }
 
@@ -537,13 +550,13 @@ void Board::updatePseudoLegalsAndAttackedSquares()
 
 std::vector<Vec2i> Board::getAttackedSquares(Side side) const
 {
-    std::vector<Vec2i> ret{};
+    std::vector<Vec2i> ret;
     for(auto const& p : m_pieces)
     {
         if(p && side == p->getSide())
         {
-            auto cbegin = p->getAttackedSquares().cbegin();
-            auto cend = p->getAttackedSquares().cend();
+            auto const cbegin { p->getAttackedSquares().cbegin() };
+            auto const cend { p->getAttackedSquares().cend() };
             ret.insert(ret.cend(), cbegin, cend);
         }
     }
