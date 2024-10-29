@@ -27,18 +27,12 @@ ConnectionManager::~ConnectionManager()
 
 void ConnectionManager::onConnect()
 {
-    mMoveCompletedSubID = mBoardEventSubscriber.sub<BoardEvents::MoveCompleted>(
-        [this](Event const& e){
-        auto const& evnt { e.unpack<BoardEvents::MoveCompleted>() };
-        buildAndSendMoveMsgType(evnt.move);
-    });
-
     pubEvent<NetworkEvents::ConnectedToServer>();
 }
 
 void ConnectionManager::onDisconnect()
 {
-    assert(mBoardEventSubscriber.unsub<BoardEvents::MoveCompleted>(mMoveCompletedSubID));
+    mBoardEventSubscriber.unsub<BoardEvents::MoveCompleted>(mMoveCompletedSubID);
 
     mIsPairedWithOpponent = false;
     mIsThereAPotentialOpponent = false;
@@ -81,9 +75,6 @@ void ConnectionManager::subToEvents()
 
     mGuiEventSubManager.sub<GUIEvents::Unpair>(GuiSubscriptions::UNPAIR,
         [this](Event const& e){ sendHeaderOnlyMessage(MessageType::UNPAIR_MSGTYPE); });
-
-    //defer the subscription to BoardEvents::MoveCompleted until 
-    //ConnectionManager::onConnect() is called
 }
 
 //Call once per main loop iteration.
@@ -230,6 +221,12 @@ void ConnectionManager::handlePairingCompleteMessage(NetworkMessage const& msg)
 
     mOpponentID = mPotentialOpponentID;
 
+    mMoveCompletedSubID = mBoardEventSubscriber.sub<BoardEvents::MoveCompleted>(
+        [this](Event const& e){
+        auto const& evnt { e.unpack<BoardEvents::MoveCompleted>() };
+        buildAndSendMoveMsgType(evnt.move);
+    });
+
     pubEvent<NetworkEvents::PairingComplete>(mOpponentID, side);
 }
 
@@ -299,6 +296,9 @@ bool ConnectionManager::isOpponentIDStringValid(std::string_view opponentID)
 void ConnectionManager::handleUnpairMessage()
 {
     mIsPairedWithOpponent = false;
+
+    assert(mBoardEventSubscriber.unsub<BoardEvents::MoveCompleted>(mMoveCompletedSubID));
+
     pubEvent<NetworkEvents::Unpair>();
 }
 
