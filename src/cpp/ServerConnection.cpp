@@ -335,6 +335,8 @@ static std::optional<SOCKET> connectToServerImpl(std::filesystem::path fname,
 
             if(closesocket(sock) == SOCKET_ERROR)
                 logLastError();
+
+            sock = INVALID_SOCKET;
         }
     }
 
