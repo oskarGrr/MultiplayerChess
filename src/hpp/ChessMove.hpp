@@ -34,11 +34,16 @@ struct ChessMove
     Vec2i      dest        {INVALID_VEC2I};  //where the piece moved from
     PromoTypes promoType   {PromoTypes::INVALID};
     MoveTypes  moveType    {MoveTypes::INVALID};
+
+    bool       wasOpponentsMove {false}; //ignored if playing offline
     
     ChessMove()=default;
 
-    ChessMove(Vec2i src, Vec2i dest, MoveTypes mType, PromoTypes pType = PromoTypes::INVALID) :
-        src{src}, dest{dest}, moveType{mType}, promoType{pType} {}
+    ChessMove(Vec2i src, Vec2i dest, MoveTypes mType,
+        PromoTypes pType = PromoTypes::INVALID, bool wasOpponentsMove_ = false) :
+        src{src}, dest{dest},
+        moveType{mType}, promoType{pType},
+        wasOpponentsMove{wasOpponentsMove_} {}
 
     //Defaulted c++20 spaceship operator allows compiler 
     //to supply default comparison operators for this struct.

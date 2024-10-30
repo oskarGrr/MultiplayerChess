@@ -439,13 +439,9 @@ void Board::handleEnPassantMove()
 
 void Board::postMoveUpdate()
 {
-    if(getSideUserIsPlayingAs() == getWhosTurnItIs())
-    {
-        BoardEvents::MoveCompleted moveCompletedEvent{mLastMoveMade};
-        mBoardEventPublisher.pub(moveCompletedEvent);
-    }
+    auto move {mLastMoveMade};
 
-    switch(mLastMoveMade.moveType)
+    switch(move.moveType)
     {
     case ChessMove::MoveTypes::DOUBLE_PUSH:   { handleDoublePushMove(); break; }
     case ChessMove::MoveTypes::ENPASSANT:     { handleEnPassantMove();  break; }
@@ -456,26 +452,33 @@ void Board::postMoveUpdate()
     case ChessMove::MoveTypes::ROOK_CAPTURE_AND_PROMOTION: { handleRookCapture(); [[fallthrough]]; } 
     case ChessMove::MoveTypes::PROMOTION:
     {
-        capturePiece(mLastMoveMade.dest);//capture the pawn before we make the new piece
+        capturePiece(move.dest);//capture the pawn before we make the new piece
 
-        auto const& pType {mLastMoveMade.promoType};//shorter name
+        auto const& pType {move.promoType};//shorter name
 
         assert(pType != ChessMove::PromoTypes::INVALID);
 
         auto const whosTurn = getWhosTurnItIs();
 
-        if(pType == ChessMove::PromoTypes::QUEEN) makeNewPieceAt<Queen>(mLastMoveMade.dest, whosTurn);
-        else if(pType == ChessMove::PromoTypes::ROOK) makeNewPieceAt<Rook>(mLastMoveMade.dest, whosTurn);
-        else if(pType == ChessMove::PromoTypes::KNIGHT) makeNewPieceAt<Knight>(mLastMoveMade.dest, whosTurn);
-        else /*if pType is a bishop promotion*/ makeNewPieceAt<Bishop>(mLastMoveMade.dest, whosTurn);
+        if(pType == ChessMove::PromoTypes::QUEEN) makeNewPieceAt<Queen>(move.dest, whosTurn);
+        else if(pType == ChessMove::PromoTypes::ROOK) makeNewPieceAt<Rook>(move.dest, whosTurn);
+        else if(pType == ChessMove::PromoTypes::KNIGHT) makeNewPieceAt<Knight>(move.dest, whosTurn);
+        else /*if pType is a bishop promotion*/ makeNewPieceAt<Bishop>(move.dest, whosTurn);
 
         Piece::resetPieceOnMouse();
         break;
     }
     }
 
-    if(mLastMoveMade.moveType != ChessMove::MoveTypes::DOUBLE_PUSH)
+    if(move.moveType != ChessMove::MoveTypes::DOUBLE_PUSH)
         resetEnPassant();
+
+    {
+        bool const wasOpponentsMove {getSideUserIsPlayingAs() == getWhosTurnItIs()}; 
+        move.wasOpponentsMove = wasOpponentsMove;
+        BoardEvents::MoveCompleted moveCompletedEvent{move};
+        mBoardEventPublisher.pub(moveCompletedEvent);
+    }
 
     toggleTurn();
     setLastCapturedPiece(nullptr);
