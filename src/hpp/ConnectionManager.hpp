@@ -80,12 +80,14 @@ private:
     //Helper to reduce processNetworkMessages() size.
     void processNetworkMessage(NetworkMessage const&);//Helper to reduce processNetworkMessages() size.
     void processNetworkMessages();//Processes incoming network messages.
+
+    void sendHeaderOnlyMessage(MessageType msgType);
+
     void buildAndSendMoveMsgType(ChessMove const& move);
     void buildAndSendPairRequest(uint32_t potentialOpponent);
     void buildAndSendPairAccept();
     void buildAndSendPairDecline();
-    void sendHeaderOnlyMessage(MessageType msgType);
-    
+
     template<typename EventT, typename... EventArgs>
     void pubEvent(EventArgs&&...);
 

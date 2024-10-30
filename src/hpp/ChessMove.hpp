@@ -32,14 +32,12 @@ struct ChessMove
 
     Vec2i      src         {INVALID_VEC2I};  //where the piece is moving to
     Vec2i      dest        {INVALID_VEC2I};  //where the piece moved from
-    MoveTypes  moveType    {MoveTypes::INVALID};
     PromoTypes promoType   {PromoTypes::INVALID};
-    bool       wasACapture {false}; //did this move capture an enemy piece
-
+    MoveTypes  moveType    {MoveTypes::INVALID};
+    
     ChessMove()=default;
 
-    ChessMove(Vec2i src, Vec2i dest, MoveTypes mType,
-        bool wasCapture, PromoTypes pType = PromoTypes::INVALID) :
+    ChessMove(Vec2i src, Vec2i dest, MoveTypes mType, PromoTypes pType = PromoTypes::INVALID) :
         src{src}, dest{dest}, moveType{mType}, promoType{pType} {}
 
     //Defaulted c++20 spaceship operator allows compiler 

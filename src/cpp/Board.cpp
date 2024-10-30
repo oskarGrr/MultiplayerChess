@@ -418,7 +418,7 @@ void Board::handleCastleMove()
 
     //Move the rook to the other side of the king.
     movePiece(ChessMove{preCastleRookPos, postCastleRookPos, ChessMove::MoveTypes::CASTLE, 
-        false, ChessMove::PromoTypes::INVALID});
+        ChessMove::PromoTypes::INVALID});
 
     using enum CastleRights;     
     auto const bitMask = wasRookWhite ? (WLONG | WSHORT) : (BLONG | BSHORT);
@@ -439,6 +439,12 @@ void Board::handleEnPassantMove()
 
 void Board::postMoveUpdate()
 {
+    if(getSideUserIsPlayingAs() == getWhosTurnItIs())
+    {
+        BoardEvents::MoveCompleted moveCompletedEvent{mLastMoveMade};
+        mBoardEventPublisher.pub(moveCompletedEvent);
+    }
+
     switch(mLastMoveMade.moveType)
     {
     case ChessMove::MoveTypes::DOUBLE_PUSH:   { handleDoublePushMove(); break; }
@@ -470,12 +476,6 @@ void Board::postMoveUpdate()
 
     if(mLastMoveMade.moveType != ChessMove::MoveTypes::DOUBLE_PUSH)
         resetEnPassant();
-
-    if(getSideUserIsPlayingAs() == getWhosTurnItIs())
-    {
-        BoardEvents::MoveCompleted moveCompletedEvent{mLastMoveMade};
-        mBoardEventPublisher.pub(moveCompletedEvent);
-    }
 
     toggleTurn();
     setLastCapturedPiece(nullptr);

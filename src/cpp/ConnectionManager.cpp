@@ -246,26 +246,26 @@ void ConnectionManager::handleMoveMessage(NetworkMessage const& netMsg)
 {
     //The size of netMsg is asserted to be correct in processNetworkMessage()
 
-    //The layout of the MessageType::MOVE_MSGTYPE type of message (class ChessMove defined in move.h client code):
-    //|0|1|2|3|4|5|6|7|8|
-    //Byte 0 will be MessageType::MOVE_MSGTYPE.
-    //Byte 1 will be MessageSize::MOVE_MSGSIZE.
-    //--------------------------------------------------------------------------------------
-    //Byte 2 will be the file (0-7) of the square where the piece is moving from.
-    //Byte 3 will be the rank (0-7) of the square where the piece is moving from.
-    //Byte 4 will be the file (0-7) of the square where the piece is moving to.
-    //Byte 5 will be the rank (0-7) of the square where the piece is moving to.
-    //Byte 6 will be the ChessMove::PromoTypes (enum defined in (client source)moveInfo.h) of the promotion if there was one.
-    //Byte 7 will be the ChessMove::MoveTypes (enum defined in (client source)moveInfo.h) of the move that is happening.
-    //Byte 8 will be the bool which signifies whether or not the move was a capture of an enemy piece (true means it was a capture)
+    //The layout of the MOVE_MSGTYPE type of message (class ChessMove defined in move.h client code):
+    //|0|1|2|3|4|5|6|
+    //byte 0 will be the MOVE_MSGTYPE  <--- header bytes
+    //byte 1 will be the MOVE_MSGSIZE  <---
+    //
+    //byte 2 will be the file (0-7) the piece if moving from   <--- source square
+    //byte 3 will be the rank (0-7) the piece if moving from   <---
+    // 
+    //byte 4 will be the file (0-7) the piece if moving to   <--- destination square
+    //byte 5 will be the rank (0-7) the piece if moving to   <---
+    // 
+    //byte 6 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one
+    //byte 7 will be the MoveInfo (enum defined in (client source)moveInfo.h)
 
     ChessMove const move
     {
         {static_cast<int>(netMsg[2]), static_cast<int>(netMsg[3])}, //source square
         {static_cast<int>(netMsg[4]), static_cast<int>(netMsg[5])}, //destination square
-        static_cast<ChessMove::MoveTypes>(netMsg[6]),
-        static_cast<bool>(netMsg[8]), //bool ChessMove::wasACapture (true means it was a capture of an enemy piece) 
-        static_cast<ChessMove::PromoTypes>(netMsg[7])
+        static_cast<ChessMove::MoveTypes>(netMsg[7]),
+        static_cast<ChessMove::PromoTypes>(netMsg[6]),
     };
 
     pubEvent<NetworkEvents::OpponentMadeMove>(move);
@@ -316,13 +316,16 @@ void ConnectionManager::buildAndSendMoveMsgType(ChessMove const& move)
 
     //the layout of the MOVE_MSGTYPE type of message: 
     //|0|1|2|3|4|5|6|
-    //byte 0 will be the MOVE_MSGTYPE
-    //byte 1 will be the file (0-7) of the square where the piece is that will be moving
-    //byte 2 will be the rank (0-7) of the square where the piece is that will be moving
-    //byte 3 will be the file (0-7) of the square where the piece will be moving to
-    //byte 4 will be the rank (0-7) of the square where the piece will be moving to
-    //byte 5 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one
-    //byte 6 will be the MoveInfo (enum defined in (client source)moveInfo.h) of the move that is happening
+    //byte 0 will be the MOVE_MSGTYPE and byte 1 will be the MOVE_MSGSIZE
+    //
+    //byte 2 will be the file (0-7) the piece if moving from 
+    //byte 3 will be the rank (0-7) the piece if moving from 
+    // 
+    //byte 4 will be the file (0-7) the piece if moving to
+    //byte 5 will be the rank (0-7) the piece if moving to
+    // 
+    //byte 6 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one
+    //byte 7 will be the MoveInfo (enum defined in (client source)moveInfo.h)
     msgBuff[0] = static_cast<std::byte>(MessageType::MOVE_MSGTYPE);
     msgBuff[1] = static_cast<std::byte>(MessageSize::MOVE_MSGSIZE);
     msgBuff[2] = static_cast<std::byte>(move.src.x);
@@ -331,7 +334,6 @@ void ConnectionManager::buildAndSendMoveMsgType(ChessMove const& move)
     msgBuff[5] = static_cast<std::byte>(move.dest.y);
     msgBuff[6] = static_cast<std::byte>(move.promoType);
     msgBuff[7] = static_cast<std::byte>(move.moveType);
-    msgBuff[8] = static_cast<std::byte>(move.wasACapture);
 
     mServerConn.write(msgBuff);
 }
