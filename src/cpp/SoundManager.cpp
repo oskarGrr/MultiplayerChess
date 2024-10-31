@@ -49,15 +49,7 @@ SoundManager::~SoundManager()
 //method was called and before m_lastCapturedPiece is reset to null
 void SoundManager::playCorrectMoveAudio(ChessMove const& move)
 {
-    bool const wasACapture 
-    {
-        move.moveType == ChessMove::MoveTypes::NORMAL_CAPTURE ||
-        move.moveType == ChessMove::MoveTypes::ROOK_CAPTURE ||
-        move.moveType == ChessMove::MoveTypes::ROOK_CAPTURE_AND_PROMOTION ||
-        move.moveType == ChessMove::MoveTypes::ENPASSANT 
-    };
-
-    if(wasACapture) { mCaptureMoveSound.playFullSound(); }
+    if(move.wasMoveACapture()) { mCaptureMoveSound.playFullSound(); }
     else if(move.moveType == ChessMove::MoveTypes::CASTLE) { mCastleMoveSound.playFullSound(); }
     else { mNormalMoveSound.playFullSound(); }
 }

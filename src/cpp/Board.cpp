@@ -13,6 +13,7 @@
 
 static constexpr auto startingPosFEN {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
 //static constexpr auto stalemateTestPositionFEN {"7k/8/8/8/8/8/6q1/K7 w - 0 1"};
+static constexpr auto promotionTestPositionFEN {"rnbqkbnr/ppPppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"};
 
 static int chessPos2Index(Vec2i const pos)
 {
@@ -33,7 +34,7 @@ Board::Board(BoardEventSystem::Publisher const& boardEventPublisher,
 {
     subToEvents();
 
-    loadFENIntoBoard(startingPosFEN);
+    loadFENIntoBoard(promotionTestPositionFEN);
     
     //update the pieces internal legal moves
     updateLegalMoves();
@@ -78,7 +79,7 @@ void Board::resetBoard()
     for(int i = 0; i < 64; ++i) 
         capturePiece(index2ChessPos(i));
 
-    loadFENIntoBoard(startingPosFEN);
+    loadFENIntoBoard(promotionTestPositionFEN);
     setLastCapturedPiece(nullptr);
     updateLegalMoves();
     mLastMoveMade = ChessMove{};
@@ -299,7 +300,8 @@ void Board::putPieceDown(Vec2i const chessPos)
         movePiece(*it);
 
         if(it->moveType == ChessMove::MoveTypes::PROMOTION || 
-            it->moveType == ChessMove::MoveTypes::ROOK_CAPTURE_AND_PROMOTION)
+            it->moveType == ChessMove::MoveTypes::PROMOTION_ROOK_CAPTURE ||
+            it->moveType == ChessMove::MoveTypes::PROMOTION_CAPTURE)
         {
             BoardEvents::PromotionBegin evnt{getWhosTurnItIs(), it->dest};
             mBoardEventPublisher.pub(evnt);
@@ -437,6 +439,7 @@ void Board::handleEnPassantMove()
     capturePiece(doublePushedPawnPosition);
 }
 
+//called after movePiece()
 void Board::postMoveUpdate()
 {
     auto move {mLastMoveMade};
@@ -449,7 +452,9 @@ void Board::postMoveUpdate()
     case ChessMove::MoveTypes::ROOK_MOVE:     { handleRookMove();       break; }
     case ChessMove::MoveTypes::ROOK_CAPTURE:  { handleRookCapture();    break; }
     case ChessMove::MoveTypes::KING_MOVE:     { handleKingMove();       break; }
-    case ChessMove::MoveTypes::ROOK_CAPTURE_AND_PROMOTION: { handleRookCapture(); [[fallthrough]]; } 
+
+    case ChessMove::MoveTypes::PROMOTION_ROOK_CAPTURE: { handleRookCapture(); [[fallthrough]]; }
+    case ChessMove::MoveTypes::PROMOTION_CAPTURE: [[fallthrough]];
     case ChessMove::MoveTypes::PROMOTION:
     {
         capturePiece(move.dest);//capture the pawn before we make the new piece
@@ -474,7 +479,7 @@ void Board::postMoveUpdate()
         resetEnPassant();
 
     {
-        bool const wasOpponentsMove {getSideUserIsPlayingAs() == getWhosTurnItIs()}; 
+        bool const wasOpponentsMove {getSideUserIsPlayingAs() == getWhosTurnItIs()};
         move.wasOpponentsMove = wasOpponentsMove;
         BoardEvents::MoveCompleted moveCompletedEvent{move};
         mBoardEventPublisher.pub(moveCompletedEvent);

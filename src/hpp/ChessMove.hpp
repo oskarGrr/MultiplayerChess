@@ -9,15 +9,16 @@ struct ChessMove
     {
         INVALID = 0,
         NORMAL,
-        NORMAL_CAPTURE, //a capture that inst an en passant or rook capture
-        DOUBLE_PUSH,    //a double pawn push
-        ENPASSANT,      //an en passant capture
-        PROMOTION,      //a pawn promotion
-        CASTLE,         //a castling move
+        NORMAL_CAPTURE,
+        DOUBLE_PUSH, 
+        ENPASSANT,
+        CASTLE,
         ROOK_MOVE,
         KING_MOVE,
         ROOK_CAPTURE,
-        ROOK_CAPTURE_AND_PROMOTION //case where a pawn catures a rook and promotes
+        PROMOTION,      
+        PROMOTION_CAPTURE,
+        PROMOTION_ROOK_CAPTURE
     };
 
     //The types of pieces you can promote a pawn to.
@@ -48,4 +49,13 @@ struct ChessMove
     //Defaulted c++20 spaceship operator allows compiler 
     //to supply default comparison operators for this struct.
     auto operator<=>(ChessMove const&) const = default;
+
+    bool wasMoveACapture() const
+    {
+        return moveType == MoveTypes::NORMAL_CAPTURE ||
+               moveType == MoveTypes::ROOK_CAPTURE ||
+               moveType == MoveTypes::PROMOTION_ROOK_CAPTURE ||
+               moveType == MoveTypes::ENPASSANT ||
+               moveType == MoveTypes::PROMOTION_CAPTURE;
+    }
 };

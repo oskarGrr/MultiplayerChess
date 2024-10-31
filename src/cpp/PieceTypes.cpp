@@ -218,11 +218,11 @@ void Pawn::updatePseudoLegalAndAttacked(Board const& b)
             if(piece->getSide() != m_side)//if piece is of the oposite color to *this
             {
                 bool const isPromotion = squareToCheck.y == 7 || squareToCheck.y == 0;
-                bool const isRookCapture = getType(*piece) == PieceTypes::ROOK;//did this pawn capture a rook
                 if(isPromotion)
                 {
+                    bool const isRookCapture { getType(*piece) == PieceTypes::ROOK };
                     m_pseudoLegals.emplace_back(m_chessPos, squareToCheck, isRookCapture ? 
-                        ROOK_CAPTURE_AND_PROMOTION : PROMOTION);
+                        PROMOTION_ROOK_CAPTURE : PROMOTION_CAPTURE);
                 }
                 else//if squareToCheck is a capture but not a promotion
                 {
@@ -366,13 +366,13 @@ void King::updatePseudoLegalAndAttacked(Board const& b)
     m_attackedSquares.clear();
     m_pseudoLegals.clear();
 
-    //(this is from whites perspective)  
+    //(this is from whites perspective)
     //check all 8 possible chess positions in this order
-    //when the loop gets to position 2 and 7 it will also 
-    //check if the king can castle on that side 
-    //|3|5|8|                    
-    //|2|K|7|                   
-    //|1|4|6|                   
+    //when the loop gets to position 2 and 7 it will also
+    //check if the king can castle on that side
+    //|3|5|8|
+    //|2|K|7|
+    //|1|4|6|
 
     for(int offsetFile = m_chessPos.x - 1; offsetFile < m_chessPos.x + 2; ++offsetFile)
     {
@@ -412,7 +412,7 @@ void King::updatePseudoLegalAndAttacked(Board const& b)
                         b.hasCastleRights(isWhite ? CastleRights::WSHORT : CastleRights::BSHORT))
                 {
                     Vec2i const twoToRight{offsetPosition + right};
-                    if(!b.getPieceAt(twoToRight))
+                    if( ! b.getPieceAt(twoToRight) )
                         m_pseudoLegals.emplace_back(m_chessPos, twoToRight, CASTLE);
                 }
             }
@@ -559,7 +559,7 @@ void Pawn::updateLegalMoves(Board const& b)
                         m_legalMoves.push_back(move);
                     }
                 }
-            }   
+            }
             else//if the pinning piece is on the same rank/file
             {
                 if(areSquaresOnSameRankOrFile(move.dest, m_chessPos))
