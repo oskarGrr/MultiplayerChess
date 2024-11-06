@@ -1,38 +1,23 @@
 #pragma once
 #include <cstdint>
+#include <bitset>
+#include "chessNetworkProtocol.h" //enum Side
 
 //this just holds some inline stuff for the castling rights stuff
 //so that it doesnt clutter up another header file
 
-//bit masks to indicate what castling rights are available.
-enum class CastleRights : uint32_t
+class CastleRights
 {
-    NONE = 0, WSHORT = 0b1, WLONG = 0b10, BSHORT = 0b100, BLONG = 0b1000
+public:
+    enum struct Rights { WSHORT, WLONG, BSHORT, BLONG };
+
+    bool hasRights(Rights) const;
+    bool hasRights(Side whiteOrBlack) const;
+    void revokeRights(Rights rights);
+    void revokeRights(Side whiteOrBlack);
+    void addRights(Rights);
+    void addRights(Side whiteOrBlack);
+    
+private:
+    std::bitset<4> mCastleRightsBits;
 };
-
-inline CastleRights operator~(CastleRights const& cr)
-{
-    return static_cast<CastleRights>(~static_cast<uint32_t>(cr));
-}
-
-inline CastleRights operator|(CastleRights const lhs, CastleRights const rhs)
-{
-    return static_cast<CastleRights>(static_cast<uint32_t>(lhs) | 
-        static_cast<uint32_t>(rhs));
-}
-
-inline CastleRights& operator|=(CastleRights& lhs, CastleRights const rhs)
-{
-    return lhs = static_cast<CastleRights>(lhs | rhs);
-}
-
-inline CastleRights operator&(CastleRights const lhs, CastleRights const rhs)
-{
-    return static_cast<CastleRights>(static_cast<uint32_t>(lhs) &
-        static_cast<uint32_t>(rhs));
-}
-
-inline CastleRights& operator&=(CastleRights& lhs, CastleRights const rhs)
-{
-    return lhs = static_cast<CastleRights>(lhs & rhs);
-}

@@ -401,7 +401,7 @@ void King::updatePseudoLegalAndAttacked(Board const& b)
                 Vec2i directionFromKing{offsetPosition - m_chessPos};
                 constexpr Vec2i left{-1, 0}, right{1, 0};
                 if(directionFromKing == left && 
-                   b.hasCastleRights(isWhite ? CastleRights::WLONG : CastleRights::BLONG))
+                   b.hasCastleRights(isWhite ? CastleRights::Rights::WLONG : CastleRights::Rights::BLONG))
                 {
                     Vec2i const twoToLeft   { offsetPosition + left };
                     Vec2i const threeToLeft { offsetPosition + left * 2 };
@@ -409,7 +409,7 @@ void King::updatePseudoLegalAndAttacked(Board const& b)
                         m_pseudoLegals.emplace_back(m_chessPos, twoToLeft, CASTLE);
                 }
                 else if(directionFromKing == right &&
-                        b.hasCastleRights(isWhite ? CastleRights::WSHORT : CastleRights::BSHORT))
+                        b.hasCastleRights(isWhite ? CastleRights::Rights::WSHORT : CastleRights::Rights::BSHORT))
                 {
                     Vec2i const twoToRight{offsetPosition + right};
                     if( ! b.getPieceAt(twoToRight) )
@@ -812,12 +812,16 @@ void King::updateLegalMoves(Board const& b)
     {
         b.getAttackedSquares(isWhite ? Side::BLACK : Side::WHITE)
     };
+
     auto const cend = attackedSquares.cend(), cbegin = attackedSquares.cbegin();
 
-    bool const hasShortCastleRights =
-        b.hasCastleRights(isWhite ? CastleRights::WSHORT : CastleRights::BSHORT);
-    bool const hasLongCastleRights  =
-        b.hasCastleRights(isWhite ? CastleRights::WLONG  : CastleRights::BLONG);
+    bool const hasShortCastleRights {
+        b.hasCastleRights((isWhite ? CastleRights::Rights::WSHORT : CastleRights::Rights::BSHORT))
+    };
+
+    bool const hasLongCastleRights {
+        b.hasCastleRights(isWhite ? CastleRights::Rights::WLONG  : CastleRights::Rights::BLONG)
+    };
 
     bool shouldEraseShortCastle = false, shouldEraseLongCastle = false;
 

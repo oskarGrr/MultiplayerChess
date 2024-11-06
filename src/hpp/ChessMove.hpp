@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "Vector2i.h"
+#include "castleRights.h"
 
 //a move is a vec2 of where the piece moves to, where it moved from, and the type of move
 struct ChessMove
@@ -35,7 +36,7 @@ struct ChessMove
     Vec2i      dest        {INVALID_VEC2I};  //where the piece moved from
     PromoTypes promoType   {PromoTypes::INVALID};
     MoveTypes  moveType    {MoveTypes::INVALID};
-
+    CastleRights effectedCastleRights {};
     bool       wasOpponentsMove {false}; //ignored if playing offline
     
     ChessMove()=default;

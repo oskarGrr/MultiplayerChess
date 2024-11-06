@@ -167,6 +167,7 @@
     <ClCompile Include="ImGui_Src\imgui_tables.cpp" />
     <ClCompile Include="ImGui_Src\imgui_widgets.cpp" />
     <ClCompile Include="src\cpp\Board.cpp" />
+    <ClCompile Include="src\cpp\CastleRights.cpp" />
     <ClCompile Include="src\cpp\main.cpp" />
     <ClCompile Include="src\cpp\ConnectionManager.cpp" />
     <ClCompile Include="src\cpp\ChessRenderer.cpp" />

@@ -34,12 +34,12 @@ public:
     void putPieceDown(Vec2i chessPos);
 
     void resetBoard();
-    bool hasCastleRights(CastleRights) const;
-    
+
     static bool isValidChessPosition(Vec2i);
 
+    bool hasCastleRights(CastleRights::Rights) const;
+
     //supply with one of the enums above and will respond with true or false
-    void removeCastlingRights(CastleRights);
     std::shared_ptr<Piece> getPieceAt(Vec2i const& chessPos) const&;
 
     Side getWhosTurnItIs() const {return mWhiteOrBlacksTurn;}
@@ -95,7 +95,7 @@ private:
     Side mWhiteOrBlacksTurn {Side::WHITE};
     Side m_sideUserIsPlayingAs {Side::INVALID}; //only used when playing against an opponent online
 
-    CastleRights m_castlingRights {CastleRights::NONE};
+    CastleRights m_castlingRights;
 
     //The position of the en passant square is (where the pawn will land after capturing).
     //INVALID_CHESS_SQUARE if there is no en passant available.

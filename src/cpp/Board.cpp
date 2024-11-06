@@ -13,7 +13,7 @@
 
 static constexpr auto startingPosFEN {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
 //static constexpr auto stalemateTestPositionFEN {"7k/8/8/8/8/8/6q1/K7 w - 0 1"};
-static constexpr auto promotionTestPositionFEN {"rnbqkbnr/ppPppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"};
+//static constexpr auto promotionTestPositionFEN {"rnbqkbnr/ppPppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"};
 
 static int chessPos2Index(Vec2i const pos)
 {
@@ -34,7 +34,7 @@ Board::Board(BoardEventSystem::Publisher const& boardEventPublisher,
 {
     subToEvents();
 
-    loadFENIntoBoard(promotionTestPositionFEN);
+    loadFENIntoBoard(startingPosFEN);
     
     //update the pieces internal legal moves
     updateLegalMoves();
@@ -79,7 +79,7 @@ void Board::resetBoard()
     for(int i = 0; i < 64; ++i) 
         capturePiece(index2ChessPos(i));
 
-    loadFENIntoBoard(promotionTestPositionFEN);
+    loadFENIntoBoard(startingPosFEN);
     setLastCapturedPiece(nullptr);
     updateLegalMoves();
     mLastMoveMade = ChessMove{};
@@ -185,7 +185,6 @@ void Board::loadFENIntoBoard(std::string_view fenString)
         if(*it == ' ')
             break;
 
-        using enum CastleRights;
         switch(*it)
         {
         case 'K'://if the FEN string has white king side castling encoded into it
@@ -194,7 +193,7 @@ void Board::loadFENIntoBoard(std::string_view fenString)
             assert(unmovedRook);//if white can castle short there should be a rook here
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::KING_SIDE);
             unmovedRook->setIfRookHasMoved(false);
-            m_castlingRights |= WSHORT; 
+            m_castlingRights.addRights(CastleRights::Rights::WSHORT);
             break;
         }
         case 'Q':
@@ -203,7 +202,7 @@ void Board::loadFENIntoBoard(std::string_view fenString)
             assert(unmovedRook);//if white can castle long there should be a rook here
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::QUEEN_SIDE);
             unmovedRook->setIfRookHasMoved(false);
-            m_castlingRights |= WLONG;
+            m_castlingRights.addRights(CastleRights::Rights::WLONG);
             break;
         }
         case 'k':
@@ -212,7 +211,7 @@ void Board::loadFENIntoBoard(std::string_view fenString)
             assert(unmovedRook);//if black can castle short there should be a rook here
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::KING_SIDE);
             unmovedRook->setIfRookHasMoved(false);
-            m_castlingRights |= BSHORT;
+            m_castlingRights.addRights(CastleRights::Rights::BSHORT);
             break;
         }
         case 'q':
@@ -221,7 +220,7 @@ void Board::loadFENIntoBoard(std::string_view fenString)
             assert(unmovedRook);//if black can castle long there should be a rook here
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::QUEEN_SIDE);
             unmovedRook->setIfRookHasMoved(false);
-            m_castlingRights |= BLONG;
+            m_castlingRights.addRights(CastleRights::Rights::BLONG);
         }
         }
     }
@@ -245,16 +244,6 @@ void Board::loadFENIntoBoard(std::string_view fenString)
     //if the FEN string doesnt have the last two fields
     if(it == fenString.cend())
         return;
-}
-
-void Board::removeCastlingRights(CastleRights const cr)
-{
-    m_castlingRights &= ~cr;
-}
-
-bool Board::hasCastleRights(CastleRights const cr) const
-{
-    return static_cast<bool>(m_castlingRights & cr);
 }
 
 void Board::pickUpPiece(Vec2i const chessPos) const
@@ -328,9 +317,7 @@ void Board::handleKingMove()
 {
     auto const king { getPieceAt(mLastMoveMade.dest) };
     bool const wasKingWhite { king->getSide() == Side::WHITE };
-    using enum CastleRights;
-    auto const bitMask { wasKingWhite ? (WLONG | WSHORT) : (BLONG | BSHORT) };
-    removeCastlingRights(static_cast<CastleRights>(bitMask));
+    m_castlingRights.revokeRights(wasKingWhite ? Side::WHITE : Side::BLACK);
 }
 
 //handle the most recent capture of a rook
@@ -348,13 +335,13 @@ void Board::handleRookCapture()
 
     if(koqs == KING_SIDE)
     {
-        removeCastlingRights(wasRookWhite ?
-            CastleRights::WSHORT : CastleRights::BSHORT);
+        m_castlingRights.revokeRights(wasRookWhite ?
+            CastleRights::Rights::WSHORT : CastleRights::Rights::BSHORT);
     }
     else//if queen side rook
     {
-        removeCastlingRights(wasRookWhite ?
-            CastleRights::WLONG : CastleRights::BLONG);
+        m_castlingRights.revokeRights(wasRookWhite ?
+            CastleRights::Rights::WLONG : CastleRights::Rights::BLONG);
     }
 }
 
@@ -365,20 +352,20 @@ void Board::handleRookMove()
 
     using enum Rook::KingOrQueenSide;
     auto const koqs = rook->getKingOrQueenSide();
-    bool const isRookWhite = rook->getSide() == Side::WHITE;
+    bool const wasRookWhite = rook->getSide() == Side::WHITE;
 
     //if the rook moved already then we can just leave
     if(rook->getHasMoved() || koqs == NEITHER) return;
 
     if(koqs == KING_SIDE)
     {
-        removeCastlingRights(isRookWhite ? 
-            CastleRights::WSHORT : CastleRights::BSHORT);
+        m_castlingRights.revokeRights(wasRookWhite ?
+            CastleRights::Rights::WSHORT : CastleRights::Rights::BSHORT);
     }
     else//if queen side rook
     {
-        removeCastlingRights(isRookWhite ? 
-            CastleRights::WLONG : CastleRights::BLONG);
+        m_castlingRights.revokeRights(wasRookWhite ?
+            CastleRights::Rights::WLONG : CastleRights::Rights::BLONG);
     }
 
     rook->setIfRookHasMoved(true);
@@ -421,10 +408,8 @@ void Board::handleCastleMove()
     //Move the rook to the other side of the king.
     movePiece(ChessMove{preCastleRookPos, postCastleRookPos, ChessMove::MoveTypes::CASTLE, 
         ChessMove::PromoTypes::INVALID});
-
-    using enum CastleRights;     
-    auto const bitMask = wasRookWhite ? (WLONG | WSHORT) : (BLONG | BSHORT);
-    removeCastlingRights(static_cast<CastleRights>(bitMask));
+    
+    m_castlingRights.revokeRights(wasRookWhite ? Side::WHITE : Side::BLACK);
 }
 
 void Board::handleEnPassantMove()
@@ -670,4 +655,9 @@ void Board::movePiece(ChessMove const& move)
 bool Board::isValidChessPosition(Vec2i chessPos)
 {
     return chessPos.x <= 7 && chessPos.x >= 0 && chessPos.y <= 7 && chessPos.y >= 0;
+}
+
+bool Board::hasCastleRights(CastleRights::Rights rights) const
+{
+    return m_castlingRights.hasRights(rights);
 }
