@@ -3,23 +3,16 @@
 #include "Vector2i.h"
 #include "castleRights.h"
 
-//a move is a vec2 of where the piece moves to, where it moved from, and the type of move
 struct ChessMove
 {
     enum struct MoveTypes : uint8_t
     {
         INVALID = 0,
         NORMAL,
-        NORMAL_CAPTURE,
-        DOUBLE_PUSH, 
+        DOUBLE_PUSH,
         ENPASSANT,
         CASTLE,
-        ROOK_MOVE,
-        KING_MOVE,
-        ROOK_CAPTURE,
-        PROMOTION,      
-        PROMOTION_CAPTURE,
-        PROMOTION_ROOK_CAPTURE
+        PROMOTION,
     };
 
     //The types of pieces you can promote a pawn to.
@@ -36,27 +29,22 @@ struct ChessMove
     Vec2i      dest        {INVALID_VEC2I};  //where the piece moved from
     PromoTypes promoType   {PromoTypes::INVALID};
     MoveTypes  moveType    {MoveTypes::INVALID};
-    CastleRights effectedCastleRights {};
-    bool       wasOpponentsMove {false}; //ignored if playing offline
+    CastleRights rightsToRevoke {};
+    bool wasOpponentsMove {false}; //ignored if playing offline
+    bool wasCapture {false};
     
     ChessMove()=default;
 
-    ChessMove(Vec2i src, Vec2i dest, MoveTypes mType,
-        PromoTypes pType = PromoTypes::INVALID, bool wasOpponentsMove_ = false) :
-        src{src}, dest{dest},
-        moveType{mType}, promoType{pType},
-        wasOpponentsMove{wasOpponentsMove_} {}
+    ChessMove(Vec2i src_, Vec2i dest_, bool wasCapture_,
+        MoveTypes moveType_ = MoveTypes::NORMAL,
+        CastleRights rightsToRevoke_ = {}, 
+        PromoTypes promoType_ = PromoTypes::INVALID) :  
+        src{src_}, dest{dest_}, wasCapture{wasCapture_},
+        moveType{moveType_}, promoType{promoType_},
+        rightsToRevoke{rightsToRevoke_}
+    {}
 
-    //Defaulted c++20 spaceship operator allows compiler 
-    //to supply default comparison operators for this struct.
+    //the defaulted c++20 spaceship operator allows compiler 
+    //to supply default comparison operators for ChessMove
     auto operator<=>(ChessMove const&) const = default;
-
-    bool wasMoveACapture() const
-    {
-        return moveType == MoveTypes::NORMAL_CAPTURE ||
-               moveType == MoveTypes::ROOK_CAPTURE ||
-               moveType == MoveTypes::PROMOTION_ROOK_CAPTURE ||
-               moveType == MoveTypes::ENPASSANT ||
-               moveType == MoveTypes::PROMOTION_CAPTURE;
-    }
 };

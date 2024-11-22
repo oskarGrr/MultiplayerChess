@@ -334,7 +334,7 @@ void ChessRenderer::drawMoveIndicatorCircles(Board const& b)
         };
 
         //If this legal move is a capture of another piece draw a red circle, otherwise draw a gray circle.
-        if(move.wasMoveACapture())
+        if(move.wasCapture)
             SDL_RenderCopy(mWindow.renderer, redCircleTex.getTexture().get(), nullptr, &redCircleDest);
         else 
             SDL_RenderCopy(mWindow.renderer, grayCircleTex.getTexture().get(), nullptr, &grayCircleDest);

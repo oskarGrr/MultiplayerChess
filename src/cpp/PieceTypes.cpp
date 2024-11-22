@@ -28,7 +28,7 @@ Knight::Knight(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
 }
 
 Rook::Rook(Side const side, Vec2i const chessPos) : Piece(side, chessPos),
-    m_hasMoved(true), m_koqs(KingOrQueenSide::NEITHER)
+    m_koqs(KingOrQueenSide::NEITHER)
 {
     using enum TextureManager::WhichTexture;
     m_type = PieceTypes::ROOK;
@@ -59,11 +59,34 @@ King::King(Side const side, Vec2i const chessPos) : Piece(side, chessPos)
     else s_bKingPos = m_chessPos;
 }
 
+static CastleRights getRightsToRevokeOnRookCapture(std::shared_ptr<Piece> rook)
+{
+    auto const downCastedRook{ std::dynamic_pointer_cast<const Rook>(rook) }; 
+    assert(downCastedRook);
+
+    bool const wasQueensRook { 
+        downCastedRook->getKingOrQueenSide() == Rook::KingOrQueenSide::QUEEN_SIDE 
+    };
+
+    CastleRights rightsToRevoke{};
+
+    if(downCastedRook->getSide() == Side::WHITE)
+    {
+        rightsToRevoke.addRights(wasQueensRook ? CastleRights::Rights::WLONG :
+            CastleRights::Rights::WSHORT);
+    }
+    else
+    {
+        rightsToRevoke.addRights(wasQueensRook ? CastleRights::Rights::BLONG :
+            CastleRights::Rights::BSHORT);
+    }
+
+    return rightsToRevoke;
+}
+
 //used by queens & rooks impl of virtual void updatePseudoLegalAndAttacked()=0; 
 void Piece::orthogonalSlide(Board const& b)
 {
-    using enum ChessMove::MoveTypes;
-
     //slide orthogonally left then right then down then up (from whites perspective)
     for(int i = 0; i < 4; ++i)
     {
@@ -78,31 +101,29 @@ void Piece::orthogonalSlide(Board const& b)
         //or the break occures below because the loop ran into a piece
         while(Board::isValidChessPosition(offsetPos))
         {
-            auto const piece = b.getPieceAt(offsetPos);
+            m_attackedSquares.push_back(offsetPos);
 
-            if( ! piece )//if there isnt a piece add it to the vectors
+            //if there is not a piece at offsetPos
+            if(auto const piece {b.getPieceAt(offsetPos)}; ! piece )
             {
-                m_pseudoLegals.emplace_back(m_chessPos, offsetPos, NORMAL);
-                m_attackedSquares.push_back(offsetPos);
+                m_pseudoLegals.emplace_back(m_chessPos, offsetPos, false);
             }
-            else//if there is a piece here
+            else//if there is a piece at offsetPos
             {
-                //if the piece we ran into is the oposite color then add it to the vector
+                //if we ran into an enemy piece
                 if(m_side != piece->getSide())
                 {
-                    m_pseudoLegals.emplace_back(m_chessPos, offsetPos, getType(*piece) == PieceTypes::ROOK ?
-                        ROOK_CAPTURE : NORMAL_CAPTURE);
+                    auto const rightsToRevoke {getType(*piece) == PieceTypes::ROOK ?
+                        getRightsToRevokeOnRookCapture(piece) : CastleRights{}
+                    };
 
-                    m_attackedSquares.push_back(offsetPos);
+                    m_pseudoLegals.emplace_back(m_chessPos, offsetPos, true, 
+                        ChessMove::MoveTypes::NORMAL, rightsToRevoke);
 
-                    if(piece->m_type != PieceTypes::KING) 
-                        break;//stop sliding.
+                    if(piece->m_type != PieceTypes::KING)
+                        break;//stop sliding in this direction
                 }
-                else//if the piece is the same color as *slidingPiece
-                {
-                    m_attackedSquares.push_back(offsetPos);
-                    break;//stop sliding
-                }
+                else break;//stop sliding in this direction if we ran into a friendly piece
             }
 
             //slide left or right or down or up depending on i 
@@ -115,11 +136,9 @@ void Piece::orthogonalSlide(Board const& b)
     }
 }
 
-//used by queens & bishops impl of virtual void updatePseudoLegalAndAttacked()=0; 
+//used by queens and bishops 
 void Piece::diagonalSlide(Board const& b)
 {
-    using enum ChessMove::MoveTypes;
-
     //slide diagonally bottom left then bottom right 
     //then top right then top left (from whites perspective)
     for(int i = 0; i < 4; ++i)
@@ -133,31 +152,28 @@ void Piece::diagonalSlide(Board const& b)
         //or the break occures below because the slide ran into a piece
         while(Board::isValidChessPosition(offsetPos))
         {
-            auto piece = b.getPieceAt(offsetPos);
+            m_attackedSquares.push_back(offsetPos);
 
-            if(!piece)//if there isnt a piece at offsetIndex add it to the vectors
+            //if there is not a piece at offsetPos
+            if( auto piece { b.getPieceAt(offsetPos) }; ! piece )
             {
-                m_pseudoLegals.emplace_back(m_chessPos, offsetPos, NORMAL);
-                m_attackedSquares.push_back(offsetPos);
+                m_pseudoLegals.emplace_back(m_chessPos, offsetPos, false);
             }
-            else//if there is a piece at offsetIndex
+            else//if there is a piece at offsetPos
             {
-                //if the piece we ran into is the oposite color then add it to the vector
+                //if we ran into an enemy piece
                 if(m_side != piece->getSide())
                 {
-                    m_pseudoLegals.emplace_back(m_chessPos, offsetPos, 
-                        getType(*piece) == PieceTypes::ROOK ? ROOK_CAPTURE : NORMAL_CAPTURE);
+                    auto const rightsToRevoke {getType(*piece) == PieceTypes::ROOK ?
+                        getRightsToRevokeOnRookCapture(piece) : CastleRights{}
+                    };
 
-                    m_attackedSquares.push_back(offsetPos);
+                    m_pseudoLegals.emplace_back(m_chessPos, offsetPos, true, 
+                        ChessMove::MoveTypes::NORMAL, rightsToRevoke);
 
-                    if(piece->m_type != PieceTypes::KING)
-                        break;//stop sliding
+                    if(piece->m_type != PieceTypes::KING) { break; }//stop sliding in this direction
                 }
-                else//if the piece is the same color as *slidingPiece
-                {
-                    m_attackedSquares.push_back(offsetPos);
-                    break;//stop sliding
-                }
+                else break;//stop sliding in this direction when we run into a friendly piece
             }
 
             if(i < 2)
@@ -180,68 +196,62 @@ void Pawn::updatePseudoLegalAndAttacked(Board const& b)
 {
     m_pseudoLegals.clear();
     m_attackedSquares.clear();
-    int const yDirection = m_side == Side::WHITE ? 1 : -1;//the direction that the pawn is moving
+    int const yDirection { m_side == Side::WHITE ? 1 : -1 };//the direction that the pawn is moving
     Vec2i const oneInFront{m_chessPos.x, m_chessPos.y + yDirection};
-    using enum ChessMove::MoveTypes;
 
-    //check the spot right in front of the pawn
+    //if there is not a piece right in front of the pawn
     if( ! b.getPieceAt(oneInFront) )
     {
         m_pseudoLegals.emplace_back
         (
             m_chessPos, 
             oneInFront,
-            oneInFront.y == 7 || oneInFront.y == 0 ? PROMOTION : NORMAL
+            false,
+            oneInFront.y == 7 || oneInFront.y == 0 ? ChessMove::MoveTypes::PROMOTION : 
+                ChessMove::MoveTypes::NORMAL
         );
 
-        //we know there isnt a piece in front of the pawn
-        //lets also check if it hasnt moved yet and if so 
-        //then also check if the pawn can perform a double push
-        Vec2i const twoInFront{oneInFront.x, oneInFront.y + yDirection};
-        if(Board::isValidChessPosition(twoInFront) && !b.getPieceAt(twoInFront))
-        {          
-            if(m_chessPos.y == 1 && m_side == Side::WHITE)
-                m_pseudoLegals.emplace_back(m_chessPos, twoInFront, DOUBLE_PUSH);
-            else if(m_chessPos.y == 6 && m_side == Side::BLACK)
-                m_pseudoLegals.emplace_back(m_chessPos, twoInFront, DOUBLE_PUSH);
+        Vec2i const twoInFront { oneInFront.x, oneInFront.y + yDirection };
+        if(Board::isValidChessPosition(twoInFront) && ! b.getPieceAt(twoInFront) )
+        {
+            //if the pawn is still on it's starting square, then double pawn pushing is available
+            if((m_chessPos.y == 1 && m_side == Side::WHITE) ||
+               (m_chessPos.y == 6 && m_side == Side::BLACK))
+            {
+                m_pseudoLegals.emplace_back(m_chessPos, twoInFront, false,
+                    ChessMove::MoveTypes::DOUBLE_PUSH);
+            }
         }
     }
 
     auto const checkAttackingSquare = [this, &b](Vec2i squareToCheck)
     {
-        if( ! Board::isValidChessPosition(squareToCheck) )
-            return;
-
-        auto const piece = b.getPieceAt(squareToCheck);
-        if(piece)//if there is a piece at squareToCheck
-        {
-            if(piece->getSide() != m_side)//if piece is of the oposite color to *this
-            {
-                bool const isPromotion = squareToCheck.y == 7 || squareToCheck.y == 0;
-                if(isPromotion)
-                {
-                    bool const isRookCapture { getType(*piece) == PieceTypes::ROOK };
-                    m_pseudoLegals.emplace_back(m_chessPos, squareToCheck, isRookCapture ? 
-                        PROMOTION_ROOK_CAPTURE : PROMOTION_CAPTURE);
-                }
-                else//if squareToCheck is a capture but not a promotion
-                {
-                    //the only rook capture we care about is one where the rook 
-                    //hasnt moved yet. If the capture here is a rook, then the rook has
-                    //already moved and so we can just emplace a NORMAL moveInfo enum instead
-                    m_pseudoLegals.emplace_back(m_chessPos, squareToCheck, NORMAL_CAPTURE);
-                }
-            }
-        }
-        else//if there is not a piece at squareToCheck
-        {
-            //if the attacking square is the en passant target square
-            if(squareToCheck == b.getEnPassantLocation())
-                m_pseudoLegals.emplace_back(m_chessPos, squareToCheck, ENPASSANT);
-        }
+        if( ! Board::isValidChessPosition(squareToCheck) ) { return; }
 
         m_attackedSquares.push_back(squareToCheck);
-        
+
+        if(auto const piece { b.getPieceAt(squareToCheck) }; piece)//if there is a piece at squareToCheck
+        {
+            if(piece->getSide() != m_side)//if there is an enemy piece at squareToCheck
+            {
+                bool const isPromotion { squareToCheck.y == 7 || squareToCheck.y == 0 };
+
+                CastleRights rightsToRevoke {};
+                if(Piece::getType(*piece) == PieceTypes::ROOK)
+                    rightsToRevoke = getRightsToRevokeOnRookCapture(piece);
+
+                m_pseudoLegals.emplace_back(m_chessPos, squareToCheck, true, 
+                    isPromotion ? ChessMove::MoveTypes::PROMOTION : ChessMove::MoveTypes::NORMAL, 
+                    rightsToRevoke
+                );
+            }
+        }
+        //there is not a piece at squareToCheck, and it is the en passant target square
+        else if(squareToCheck == b.getEnPassantLocation())
+        {
+            m_pseudoLegals.emplace_back(m_chessPos, squareToCheck, true, 
+                ChessMove::MoveTypes::ENPASSANT);
+        }
     };
 
     //next im going to check if the pawn is attacking anything 
@@ -259,33 +269,25 @@ void Knight::updatePseudoLegalAndAttacked(Board const& b)
     m_pseudoLegals.clear();
     m_attackedSquares.clear();
     Vec2i offsetPos{m_chessPos};
-    using enum ChessMove::MoveTypes;
     
     auto potentialPushBack = [&b, this](Vec2i offsetPos)
     {
-        if( ! Board::isValidChessPosition(offsetPos) )
-            return;
+        if( ! Board::isValidChessPosition(offsetPos) ) { return; }
         
-        auto const piece = b.getPieceAt(offsetPos);
-        if( ! piece )
+        m_attackedSquares.push_back(offsetPos);
+
+        if(auto const piece = b.getPieceAt(offsetPos); ! piece )//there is no piece at offsetPos
         {
-            m_attackedSquares.push_back(offsetPos);
-            m_pseudoLegals.emplace_back(m_chessPos, offsetPos, NORMAL);
+            m_pseudoLegals.emplace_back(m_chessPos, offsetPos, false);
         }
-        else if(m_side != piece->getSide())
+        else if(m_side != piece->getSide())//there is a piece at offsetPos, and it's an enemy piece
         {
-            //if there is a piece here and its the oposite color of the knight
-            m_attackedSquares.push_back(offsetPos);
-            m_pseudoLegals.emplace_back
-            (
-                m_chessPos,
-                offsetPos, 
-                getType(*piece) == PieceTypes::ROOK ? ROOK_CAPTURE : NORMAL_CAPTURE
-            );
-        }
-        else//if the piece is the same color as the knight
-        {
-            m_attackedSquares.push_back(offsetPos);
+            CastleRights rightsToRevoke {};
+            if(getType(*piece) == PieceTypes::ROOK)
+                rightsToRevoke = getRightsToRevokeOnRookCapture(piece);
+
+            m_pseudoLegals.emplace_back(m_chessPos, offsetPos, true, 
+                ChessMove::MoveTypes::NORMAL, rightsToRevoke);
         }
     };
 
@@ -330,13 +332,23 @@ void Rook::updatePseudoLegalAndAttacked(Board const& b)
     m_attackedSquares.clear();
     orthogonalSlide(b);//slide the piece in all 4 orthogonal directions
 
-    std::for_each(m_pseudoLegals.begin(), m_pseudoLegals.end(),
-        [](auto& move)
+    for(auto& move : m_pseudoLegals)
+    {
+        bool const isThisAQueensRook { 
+            getKingOrQueenSide() == KingOrQueenSide::QUEEN_SIDE 
+        };
+
+        if(m_side == Side::WHITE)
         {
-            if(move.moveType == ChessMove::MoveTypes::NORMAL) 
-                move.moveType = ChessMove::MoveTypes::ROOK_MOVE;
+            move.rightsToRevoke.addRights(isThisAQueensRook ? CastleRights::Rights::WLONG : 
+                CastleRights::Rights::WSHORT);
         }
-    );
+        else
+        {
+            move.rightsToRevoke.addRights(isThisAQueensRook ? CastleRights::Rights::BLONG : 
+                CastleRights::Rights::BSHORT);
+        }
+    }
 }
 
 //calculate the pseudo legal moves for a bishop and store then in Piece::m_pseudoLegals
@@ -362,66 +374,94 @@ void Queen::updatePseudoLegalAndAttacked(Board const& b)
 //also calculates Piece::m_attackedSquares
 void King::updatePseudoLegalAndAttacked(Board const& b)
 {
-    bool const isWhite = (m_side == Side::WHITE);
+    bool const isKingWhite = (m_side == Side::WHITE);
     m_attackedSquares.clear();
     m_pseudoLegals.clear();
 
-    //(this is from whites perspective)
-    //check all 8 possible chess positions in this order
-    //when the loop gets to position 2 and 7 it will also
-    //check if the king can castle on that side
-    //|3|5|8|
-    //|2|K|7|
-    //|1|4|6|
+    //left and right used in this function refer to left and right from white's perspective.
+    Vec2i const left  {-1, 0};
+    Vec2i const right {1, 0};
+    bool squareToLeftIsEmpty{false};
+    bool squareToRightIsEmpty{false};
 
+    CastleRights rightsToRevoke;
+    rightsToRevoke.addRights(m_side);
+
+    //Check all 8 squares around the king.
     for(int offsetFile = m_chessPos.x - 1; offsetFile < m_chessPos.x + 2; ++offsetFile)
-    {
         for(int offsetRank = m_chessPos.y - 1; offsetRank < m_chessPos.y + 2; ++offsetRank)
         {
-            using enum ChessMove::MoveTypes;
-            Vec2i const offsetPosition{offsetFile, offsetRank};
+            Vec2i const offsetPos{offsetFile, offsetRank};
+            if( ! Board::isValidChessPosition(offsetPos) ) { continue; }
 
-            if( ! Board::isValidChessPosition(offsetPosition) )
-                continue;
+            m_attackedSquares.push_back(offsetPos);
 
-            auto const piece = b.getPieceAt(offsetPosition);
+            auto const piece = b.getPieceAt(offsetPos);
+            if(piece.get() == this) { continue; }
 
-            //when the loop gets the the position in between 4 and 5
-            //in the diagram above it will be on the same square as the king
-            //so continue to the next loop iteration
-            if(piece.get() == this)
-                continue;                                     
-
-            if( ! piece )//there isnt a piece at the offset position
+            if( ! piece )//there is not a piece at offsetPos
             {
-                m_pseudoLegals.emplace_back(m_chessPos, offsetPosition, KING_MOVE);
-                m_attackedSquares.push_back(offsetPosition);
+                m_pseudoLegals.emplace_back(m_chessPos, offsetPos, false, 
+                    ChessMove::MoveTypes::NORMAL, rightsToRevoke);
 
-                //check if the location for castling is available
-                Vec2i directionFromKing{offsetPosition - m_chessPos};
-                constexpr Vec2i left{-1, 0}, right{1, 0};
-                if(directionFromKing == left && 
-                   b.hasCastleRights(isWhite ? CastleRights::Rights::WLONG : CastleRights::Rights::BLONG))
+                Vec2i const directionFromKing{offsetPos - m_chessPos};
+                if(directionFromKing == left) { squareToLeftIsEmpty = true; }
+                else if(directionFromKing == right) { squareToRightIsEmpty = true; }
+            }
+            else if(piece->getSide() != m_side)//if there is a piece at offsetPos that is an enemy piece
+            {
+                if(Piece::getType(*piece) == PieceTypes::ROOK)
                 {
-                    Vec2i const twoToLeft   { offsetPosition + left };
-                    Vec2i const threeToLeft { offsetPosition + left * 2 };
-                    if( ! b.getPieceAt(twoToLeft) && ! b.getPieceAt(threeToLeft) )
-                        m_pseudoLegals.emplace_back(m_chessPos, twoToLeft, CASTLE);
+                    auto rook { std::dynamic_pointer_cast<Rook>(piece) }; assert(rook);
+                    bool isQueensRook { rook->getKingOrQueenSide() == Rook::KingOrQueenSide::QUEEN_SIDE };
+                    CastleRights extraRightsToRevoke {rightsToRevoke};
+
+                    //it's fine to assume the rook has not moved yet
+                    if(rook->getSide() == Side::WHITE)
+                    {
+                        extraRightsToRevoke.addRights(isQueensRook ? CastleRights::Rights::WLONG : 
+                            CastleRights::Rights::WSHORT);
+                    }
+                    else
+                    {
+                        extraRightsToRevoke.addRights(isQueensRook ? CastleRights::Rights::BLONG : 
+                            CastleRights::Rights::BSHORT);
+                    }
+
+                    m_pseudoLegals.emplace_back(m_chessPos, offsetPos, true, 
+                        ChessMove::MoveTypes::NORMAL, extraRightsToRevoke);
                 }
-                else if(directionFromKing == right &&
-                        b.hasCastleRights(isWhite ? CastleRights::Rights::WSHORT : CastleRights::Rights::BSHORT))
+                else
                 {
-                    Vec2i const twoToRight{offsetPosition + right};
-                    if( ! b.getPieceAt(twoToRight) )
-                        m_pseudoLegals.emplace_back(m_chessPos, twoToRight, CASTLE);
+                    m_pseudoLegals.emplace_back(m_chessPos, offsetPos, true, 
+                        ChessMove::MoveTypes::NORMAL, rightsToRevoke);
                 }
             }
-            else if(piece->getSide() != m_side)//there is a piece at offset pos of the oposite color
-            {
-                m_pseudoLegals.emplace_back(m_chessPos, offsetPosition, KING_MOVE);
-                m_attackedSquares.push_back(offsetPosition);
-            }
-            else m_attackedSquares.push_back(offsetPosition);
+        }
+
+    auto const shortRights {isKingWhite ? CastleRights::Rights::WSHORT : 
+        CastleRights::Rights::BSHORT};
+    if(squareToRightIsEmpty && b.hasCastleRights(shortRights))
+    {
+        Vec2i const twoToRight { m_chessPos + Vec2i{2, 0} };
+        if( ! b.getPieceAt(twoToRight) )
+        {
+            m_pseudoLegals.emplace_back(m_chessPos, twoToRight, false,
+                ChessMove::MoveTypes::CASTLE, rightsToRevoke);
+            
+        }
+    }
+
+    auto const longRights {isKingWhite ? CastleRights::Rights::WLONG : 
+        CastleRights::Rights::BLONG};
+    if(squareToLeftIsEmpty && b.hasCastleRights(longRights))
+    {
+        Vec2i const twoToLeft   { m_chessPos + Vec2i{-2, 0} };
+        Vec2i const threeToLeft { m_chessPos + Vec2i{-3, 0} };
+        if( ! b.getPieceAt(twoToLeft) && ! b.getPieceAt(threeToLeft) )
+        {
+            m_pseudoLegals.emplace_back(m_chessPos, twoToLeft, false,
+                ChessMove::MoveTypes::CASTLE, rightsToRevoke);
         }
     }
 }

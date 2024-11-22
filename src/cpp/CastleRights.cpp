@@ -1,6 +1,8 @@
 #include "castleRights.h"
 #include <cassert>
 
+CastleRights::CastleRights(unsigned char rights) : mCastleRightsBits{rights} {}
+
 bool CastleRights::hasRights(Rights rights) const
 {
     return mCastleRightsBits.test(static_cast<size_t>(rights));
@@ -39,6 +41,11 @@ void CastleRights::revokeRights(Side whiteOrBlack)
     }
 }
 
+void CastleRights::revokeRights(CastleRights const& rightsToRevoke)
+{
+    mCastleRightsBits &= ~rightsToRevoke.mCastleRightsBits;
+}
+
 void CastleRights::addRights(Rights rights)
 {
     mCastleRightsBits.set(static_cast<size_t>(rights));
@@ -56,4 +63,14 @@ void CastleRights::addRights(Side whiteOrBlack)
         mCastleRightsBits.set(static_cast<size_t>(Rights::BLONG));
         mCastleRightsBits.set(static_cast<size_t>(Rights::BSHORT));
     }
+}
+
+void CastleRights::addRights(CastleRights const& rightsToAdd)
+{
+    mCastleRightsBits |= rightsToAdd.mCastleRightsBits;
+}
+
+unsigned char CastleRights::getRights() const
+{
+    return mCastleRightsBits.to_ulong();
 }

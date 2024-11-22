@@ -11,9 +11,12 @@
 #include <cassert>
 #include <ranges>
 
-static constexpr auto startingPosFEN {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
-//static constexpr auto stalemateTestPositionFEN {"7k/8/8/8/8/8/6q1/K7 w - 0 1"};
-//static constexpr auto promotionTestPositionFEN {"rnbqkbnr/ppPppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"};
+static constexpr auto defaultPositionFEN{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
+static constexpr auto stalemateTestPositionFEN {"7k/8/8/8/8/8/6q1/K7 b - 0 1"};
+static constexpr auto promotionTestPositionFEN {"rnbqkbnr/ppPppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"};
+static constexpr auto castleTestPositionFEN{"r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1"};
+
+static constexpr auto startingFEN {stalemateTestPositionFEN};
 
 static int chessPos2Index(Vec2i const pos)
 {
@@ -34,7 +37,7 @@ Board::Board(BoardEventSystem::Publisher const& boardEventPublisher,
 {
     subToEvents();
 
-    loadFENIntoBoard(startingPosFEN);
+    loadFENIntoBoard(startingFEN);
     
     //update the pieces internal legal moves
     updateLegalMoves();
@@ -79,7 +82,7 @@ void Board::resetBoard()
     for(int i = 0; i < 64; ++i) 
         capturePiece(index2ChessPos(i));
 
-    loadFENIntoBoard(startingPosFEN);
+    loadFENIntoBoard(startingFEN);
     setLastCapturedPiece(nullptr);
     updateLegalMoves();
     mLastMoveMade = ChessMove{};
@@ -190,36 +193,32 @@ void Board::loadFENIntoBoard(std::string_view fenString)
         case 'K'://if the FEN string has white king side castling encoded into it
         {   
             auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(h1));
-            assert(unmovedRook);//if white can castle short there should be a rook here
+            assert(unmovedRook);//if white can castle short there should be a rook on h1
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::KING_SIDE);
-            unmovedRook->setIfRookHasMoved(false);
             m_castlingRights.addRights(CastleRights::Rights::WSHORT);
             break;
         }
         case 'Q':
         {
             auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(a1));
-            assert(unmovedRook);//if white can castle long there should be a rook here
+            assert(unmovedRook);//if white can castle long there should be a rook on a1
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::QUEEN_SIDE);
-            unmovedRook->setIfRookHasMoved(false);
             m_castlingRights.addRights(CastleRights::Rights::WLONG);
             break;
         }
         case 'k':
         {   
             auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(h8));
-            assert(unmovedRook);//if black can castle short there should be a rook here
+            assert(unmovedRook);//if black can castle short there should be a rook on h8
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::KING_SIDE);
-            unmovedRook->setIfRookHasMoved(false);
             m_castlingRights.addRights(CastleRights::Rights::BSHORT);
             break;
         }
         case 'q':
         {   
             auto const unmovedRook = std::dynamic_pointer_cast<Rook>(getPieceAt(a8));
-            assert(unmovedRook);//if black can castle long there should be a rook here
+            assert(unmovedRook);//if black can castle long there should be a rook on a8
             unmovedRook->setKingOrQueenSide(Rook::KingOrQueenSide::QUEEN_SIDE);
-            unmovedRook->setIfRookHasMoved(false);
             m_castlingRights.addRights(CastleRights::Rights::BLONG);
         }
         }
@@ -288,9 +287,7 @@ void Board::putPieceDown(Vec2i const chessPos)
     {
         movePiece(*it);
 
-        if(it->moveType == ChessMove::MoveTypes::PROMOTION || 
-            it->moveType == ChessMove::MoveTypes::PROMOTION_ROOK_CAPTURE ||
-            it->moveType == ChessMove::MoveTypes::PROMOTION_CAPTURE)
+        if(ChessMove::MoveTypes::PROMOTION == it->moveType)
         {
             BoardEvents::PromotionBegin evnt{getWhosTurnItIs(), it->dest};
             mBoardEventPublisher.pub(evnt);
@@ -311,65 +308,6 @@ void Board::putPieceDown(Vec2i const chessPos)
 std::shared_ptr<Piece> Board::getPieceAt(Vec2i const& chessPos) const&
 {
     return m_pieces[chessPos2Index(chessPos)];
-}
-
-void Board::handleKingMove()
-{
-    auto const king { getPieceAt(mLastMoveMade.dest) };
-    bool const wasKingWhite { king->getSide() == Side::WHITE };
-    m_castlingRights.revokeRights(wasKingWhite ? Side::WHITE : Side::BLACK);
-}
-
-//handle the most recent capture of a rook
-void Board::handleRookCapture()
-{
-    assert(m_lastCapturedPiece);
-    auto const rook = std::dynamic_pointer_cast<Rook>(m_lastCapturedPiece);
-    assert(rook);
-
-    bool const wasRookWhite = rook->getSide() == Side::WHITE;
-    auto const koqs = rook->getKingOrQueenSide();
-    using enum Rook::KingOrQueenSide;
-
-    if(koqs == NEITHER) return;
-
-    if(koqs == KING_SIDE)
-    {
-        m_castlingRights.revokeRights(wasRookWhite ?
-            CastleRights::Rights::WSHORT : CastleRights::Rights::BSHORT);
-    }
-    else//if queen side rook
-    {
-        m_castlingRights.revokeRights(wasRookWhite ?
-            CastleRights::Rights::WLONG : CastleRights::Rights::BLONG);
-    }
-}
-
-void Board::handleRookMove()
-{
-    auto const rook = std::dynamic_pointer_cast<Rook>(getPieceAt(mLastMoveMade.dest));
-    assert(rook);
-
-    using enum Rook::KingOrQueenSide;
-    auto const koqs = rook->getKingOrQueenSide();
-    bool const wasRookWhite = rook->getSide() == Side::WHITE;
-
-    //if the rook moved already then we can just leave
-    if(rook->getHasMoved() || koqs == NEITHER) return;
-
-    if(koqs == KING_SIDE)
-    {
-        m_castlingRights.revokeRights(wasRookWhite ?
-            CastleRights::Rights::WSHORT : CastleRights::Rights::BSHORT);
-    }
-    else//if queen side rook
-    {
-        m_castlingRights.revokeRights(wasRookWhite ?
-            CastleRights::Rights::WLONG : CastleRights::Rights::BLONG);
-    }
-
-    rook->setIfRookHasMoved(true);
-    rook->setKingOrQueenSide(NEITHER);
 }
 
 void Board::handleDoublePushMove()
@@ -406,8 +344,7 @@ void Board::handleCastleMove()
     };
 
     //Move the rook to the other side of the king.
-    movePiece(ChessMove{preCastleRookPos, postCastleRookPos, ChessMove::MoveTypes::CASTLE, 
-        ChessMove::PromoTypes::INVALID});
+    movePiece(ChessMove{preCastleRookPos, postCastleRookPos, false, ChessMove::MoveTypes::CASTLE});
     
     m_castlingRights.revokeRights(wasRookWhite ? Side::WHITE : Side::BLACK);
 }
@@ -429,18 +366,14 @@ void Board::postMoveUpdate()
 {
     auto move {mLastMoveMade};
 
+    m_castlingRights.revokeRights(move.rightsToRevoke);
+
     switch(move.moveType)
     {
     case ChessMove::MoveTypes::DOUBLE_PUSH:   { handleDoublePushMove(); break; }
     case ChessMove::MoveTypes::ENPASSANT:     { handleEnPassantMove();  break; }
     case ChessMove::MoveTypes::CASTLE:        { handleCastleMove();     break; }
-    case ChessMove::MoveTypes::ROOK_MOVE:     { handleRookMove();       break; }
-    case ChessMove::MoveTypes::ROOK_CAPTURE:  { handleRookCapture();    break; }
-    case ChessMove::MoveTypes::KING_MOVE:     { handleKingMove();       break; }
-
-    case ChessMove::MoveTypes::PROMOTION_ROOK_CAPTURE: { handleRookCapture(); [[fallthrough]]; }
-    case ChessMove::MoveTypes::PROMOTION_CAPTURE: [[fallthrough]];
-    case ChessMove::MoveTypes::PROMOTION:
+    case ChessMove::MoveTypes::PROMOTION: 
     {
         capturePiece(move.dest);//capture the pawn before we make the new piece
 
@@ -464,7 +397,7 @@ void Board::postMoveUpdate()
         resetEnPassant();
 
     {
-        bool const wasOpponentsMove {getSideUserIsPlayingAs() == getWhosTurnItIs()};
+        bool const wasOpponentsMove {getSideUserIsPlayingAs() != getWhosTurnItIs()};
         move.wasOpponentsMove = wasOpponentsMove;
         BoardEvents::MoveCompleted moveCompletedEvent{move};
         mBoardEventPublisher.pub(moveCompletedEvent);

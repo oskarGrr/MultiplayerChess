@@ -101,7 +101,8 @@ void ServerConnection::update()
     }
     else if(selectResult > 0)//select() has indicated that there is a message on the socket ready to be read.
     {
-        int const recvResult { recv(mSocket, mReadBuff.data(), static_cast<int>(mReadBuff.size()), 0) };
+        int const recvResult { recv(mSocket, mReadBuff.data(), 
+            static_cast<int>(mReadBuff.size()), 0) };
 
         if(recvResult == SOCKET_ERROR)
         {
@@ -142,11 +143,11 @@ std::optional<std::vector<std::byte>> ServerConnection::read(std::size_t len)
 
 void ServerConnection::write(std::span<std::byte> buffer)
 {
-    int32_t numBytesWritten {0}, numBytesToWrite {static_cast<int32_t>(buffer.size())};
-    while(numBytesWritten < buffer.size())
+    int32_t numBytesSent {0}, numBytesToSend {static_cast<int32_t>(buffer.size())};
+    while(numBytesSent < buffer.size())
     {
-        int res {send(mSocket, reinterpret_cast<char*>(buffer.data() + numBytesWritten),
-            numBytesToWrite, 0)};
+        int res {send(mSocket, reinterpret_cast<char*>(buffer.data() + numBytesSent),
+            numBytesToSend, 0)};
 
         if(res == SOCKET_ERROR)
         {
@@ -155,8 +156,8 @@ void ServerConnection::write(std::span<std::byte> buffer)
             return;
         }
 
-        numBytesWritten += res;
-        numBytesToWrite -= res;
+        numBytesSent += res;
+        numBytesToSend -= res;
     }
 }
 

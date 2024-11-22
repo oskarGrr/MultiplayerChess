@@ -17,7 +17,7 @@ public:
     {
         struct Button
         {
-            std::string text;
+            std::string text;//the text inside the button
             std::function<bool(void)> callback;//callback returns true to close the popup
         };
 

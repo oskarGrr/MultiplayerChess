@@ -66,11 +66,7 @@ protected:
 
     Vec2i m_locationOfPiecePinningThis;//the location of the piece (if there is one otherwise INVALID_VEC2I) pinning *this to its king
 
-    //used by queens and rooks to calculate their legal moves
-    //changes _psuedoLegals and pushes the squares being attacked by *this into the vector passed in
     void orthogonalSlide(Board const& b);
-
-    //same thing as orthogonal slide except used by queens and bishops
     void diagonalSlide(Board const& b);
 
     //this function assumes Board::m_checkState is equal to SINGLE_CHECK.
@@ -111,18 +107,12 @@ public:
     Rook(Side side, Vec2i chessPos);
 
     enum struct KingOrQueenSide{NEITHER, QUEEN_SIDE, KING_SIDE};
-    void setKingOrQueenSide(KingOrQueenSide koqs){m_koqs = koqs;}//change m_koqs
+    void setKingOrQueenSide(KingOrQueenSide koqs){m_koqs = koqs;}
     KingOrQueenSide getKingOrQueenSide() const {return m_koqs;}
-    void setIfRookHasMoved(bool hasMoved){m_hasMoved = hasMoved;}//set m_hasMoved
-    bool getHasMoved() const {return m_hasMoved;}
 
 private:
 
-    bool m_hasMoved;
-
-    //will be set to NEITHER when FEN string is loaded.
-    //will only be set to queen or king side if the FEN string
-    //has castling rights for the given rook.
+    //did this rook start as a queen's rook or a king's rook
     KingOrQueenSide m_koqs;
 
     void updatePseudoLegalAndAttacked(Board const& b) override;

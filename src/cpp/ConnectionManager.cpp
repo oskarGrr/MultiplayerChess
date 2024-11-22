@@ -224,7 +224,7 @@ void ConnectionManager::handlePairingCompleteMessage(NetworkMessage const& msg)
     mMoveCompletedSubID = mBoardEventSubscriber.sub<BoardEvents::MoveCompleted>(
         [this](Event const& e){
         auto const& evnt { e.unpack<BoardEvents::MoveCompleted>() };
-        buildAndSendMoveMsgType(evnt.move);
+        if( ! evnt.move.wasOpponentsMove) { buildAndSendMoveMsgType(evnt.move); }
     });
 
     pubEvent<NetworkEvents::PairingComplete>(mOpponentID, side);
@@ -246,8 +246,7 @@ void ConnectionManager::handleMoveMessage(NetworkMessage const& netMsg)
 {
     //The size of netMsg is asserted to be correct in processNetworkMessage()
 
-    //The layout of the MOVE_MSGTYPE type of message (class ChessMove defined in move.h client code):
-    //|0|1|2|3|4|5|6|
+    // |0|1|2|3|4|5|6|7|8|9|
     //byte 0 will be the MOVE_MSGTYPE  <--- header bytes
     //byte 1 will be the MOVE_MSGSIZE  <---
     //
@@ -259,13 +258,17 @@ void ConnectionManager::handleMoveMessage(NetworkMessage const& netMsg)
     // 
     //byte 6 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one
     //byte 7 will be the MoveInfo (enum defined in (client source)moveInfo.h)
+    //byte 8 will be the ChessMove::rightsToRevoke as a uint32_t
+    //byte 9 will be the ChessMove::wasCapture bool
 
     ChessMove const move
     {
-        {static_cast<int>(netMsg[2]), static_cast<int>(netMsg[3])}, //source square
-        {static_cast<int>(netMsg[4]), static_cast<int>(netMsg[5])}, //destination square
+        {static_cast<int>(netMsg[2]), static_cast<int>(netMsg[3])},//source square
+        {static_cast<int>(netMsg[4]), static_cast<int>(netMsg[5])},//dest square
+        static_cast<bool>(netMsg[9]),
         static_cast<ChessMove::MoveTypes>(netMsg[7]),
-        static_cast<ChessMove::PromoTypes>(netMsg[6]),
+        static_cast<unsigned char>(netMsg[8]),
+        static_cast<ChessMove::PromoTypes>(netMsg[6])
     };
 
     pubEvent<NetworkEvents::OpponentMadeMove>(move);
@@ -297,7 +300,7 @@ void ConnectionManager::handleUnpairMessage()
 {
     mIsPairedWithOpponent = false;
 
-    assert(mBoardEventSubscriber.unsub<BoardEvents::MoveCompleted>(mMoveCompletedSubID));
+    mBoardEventSubscriber.unsub<BoardEvents::MoveCompleted>(mMoveCompletedSubID);
 
     pubEvent<NetworkEvents::Unpair>();
 }
@@ -314,18 +317,21 @@ void ConnectionManager::buildAndSendMoveMsgType(ChessMove const& move)
     //Pack all of the move information into a buffer to be sent over the network.
     std::array<std::byte, static_cast<size_t>(MessageSize::MOVE_MSGSIZE)> msgBuff {};
 
-    //the layout of the MOVE_MSGTYPE type of message: 
-    //|0|1|2|3|4|5|6|
-    //byte 0 will be the MOVE_MSGTYPE and byte 1 will be the MOVE_MSGSIZE
+    // |0|1|2|3|4|5|6|7|8|9|
+    //byte 0 will be the MOVE_MSGTYPE  <--- header bytes
+    //byte 1 will be the MOVE_MSGSIZE  <---
     //
-    //byte 2 will be the file (0-7) the piece if moving from 
-    //byte 3 will be the rank (0-7) the piece if moving from 
+    //byte 2 will be the file (0-7) the piece if moving from   <--- source square
+    //byte 3 will be the rank (0-7) the piece if moving from   <---
     // 
-    //byte 4 will be the file (0-7) the piece if moving to
-    //byte 5 will be the rank (0-7) the piece if moving to
+    //byte 4 will be the file (0-7) the piece if moving to   <--- destination square
+    //byte 5 will be the rank (0-7) the piece if moving to   <---
     // 
     //byte 6 will be the PromoType (enum defined in (client source)moveInfo.h) of the promotion if there is one
     //byte 7 will be the MoveInfo (enum defined in (client source)moveInfo.h)
+    //byte 8 will be the ChessMove::rightsToRevoke as an unsigned char
+    //byte 9 will be the ChessMove::wasCapture bool
+
     msgBuff[0] = static_cast<std::byte>(MessageType::MOVE_MSGTYPE);
     msgBuff[1] = static_cast<std::byte>(MessageSize::MOVE_MSGSIZE);
     msgBuff[2] = static_cast<std::byte>(move.src.x);
@@ -334,6 +340,8 @@ void ConnectionManager::buildAndSendMoveMsgType(ChessMove const& move)
     msgBuff[5] = static_cast<std::byte>(move.dest.y);
     msgBuff[6] = static_cast<std::byte>(move.promoType);
     msgBuff[7] = static_cast<std::byte>(move.moveType);
+    msgBuff[8] = static_cast<std::byte>(move.rightsToRevoke.getRights());
+    msgBuff[9] = static_cast<std::byte>(move.wasCapture);
 
     mServerConn.write(msgBuff);
 }

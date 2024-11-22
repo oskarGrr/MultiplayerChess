@@ -49,7 +49,7 @@ SoundManager::~SoundManager()
 //method was called and before m_lastCapturedPiece is reset to null
 void SoundManager::playCorrectMoveAudio(ChessMove const& move)
 {
-    if(move.wasMoveACapture()) { mCaptureMoveSound.playFullSound(); }
+    if(move.wasCapture) { mCaptureMoveSound.playFullSound(); }
     else if(move.moveType == ChessMove::MoveTypes::CASTLE) { mCastleMoveSound.playFullSound(); }
     else { mNormalMoveSound.playFullSound(); }
 }

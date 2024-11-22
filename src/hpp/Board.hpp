@@ -107,9 +107,6 @@ private:
     void handleDoublePushMove();
     void handleCastleMove();
     void handleEnPassantMove();
-    void handleRookMove();
-    void handleRookCapture();
-    void handleKingMove();
 
     void postMoveUpdate();
     void movePiece(ChessMove const& move);
