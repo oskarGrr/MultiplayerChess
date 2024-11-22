@@ -710,12 +710,13 @@ void ChessRenderer::onGameOverEventWhilePaired(BoardEvents::GameOver const& evnt
         }
     }
     };
+
+    mPopupManager.openPopup(gameOverPopup);
 }
 
 void ChessRenderer::onGameOverEventWhileNotPaired(BoardEvents::GameOver const& evnt)
 {
     PopupManager::Popup gameOverPopup {evnt.reason, { {"okay", []{return true;} }} };
-    gameOverPopup.buttons.emplace_back();
     mPopupManager.openPopup(std::move(gameOverPopup));
 }
 
