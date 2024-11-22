@@ -566,7 +566,11 @@ void ChessRenderer::onPairingCompleteEvent(NetworkEvents::PairingComplete const&
     mViewingPerspective = evnt.side;
     mIsConnectionWindowOpen = false;
 
+    mBoardSubscriber.unsub<BoardEvents::GameOver>(mGameOverSubID);
 
+    mBoardSubscriber.sub<BoardEvents::GameOver>(
+        [this](Event const& e){onGameOverEventWhilePaired(e.unpack<BoardEvents::GameOver>());
+    });
 }
 
 void ChessRenderer::onDrawDeclinedEvent()
@@ -728,6 +732,12 @@ void ChessRenderer::onUnpairEvent()
     });
 
     mViewingPerspective = Side::WHITE;
+
+    mBoardSubscriber.unsub<BoardEvents::GameOver>(mGameOverSubID);
+
+    mBoardSubscriber.sub<BoardEvents::GameOver>(
+        [this](Event const& e){ onGameOverEventWhileNotPaired(e.unpack<BoardEvents::GameOver>()); 
+    });
 }
 
 void ChessRenderer::onPromotionBeginEvent(BoardEvents::PromotionBegin const& evnt)
