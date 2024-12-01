@@ -1,9 +1,11 @@
 #include "PopupManager.hpp"
 #include "imgui.h"
 
-void PopupManager::drawPopups()
+void PopupManager::drawPopup()
 {
-    //return true if the popup should close
+    if( ! mIsPopupOpen ) { return; }
+
+    //returns true if the popup should close
     auto const checkButtons = [](auto const& buttons) -> bool
     {
         for(auto const& button : buttons)
@@ -19,35 +21,34 @@ void PopupManager::drawPopups()
 
         return false;
     };
-
-    auto const wndFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
     
-    for(auto it = mOpenPopups.begin(); it != mOpenPopups.end(); /*increment it at end of loop scope*/)
+    //put the popup in the center of the screen
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2{0.5f, 0.5f});
+
+    ImGui::OpenPopup(mCurrentPopup.text.c_str());
+
+    if(ImGui::BeginPopup(mCurrentPopup.text.c_str()))
     {
-        centerNextWindow();
-        ImGui::OpenPopup(it->text.c_str());   
+        ImGui::TextUnformatted(mCurrentPopup.text.c_str());
 
-        if(ImGui::BeginPopup(it->text.c_str()), wndFlags)
+        if(checkButtons(mCurrentPopup.buttons))
         {
-            ImGui::TextUnformatted(it->text.c_str());
-
-            if(checkButtons(it->buttons))
-            {
-                ImGui::CloseCurrentPopup();
-                it = mOpenPopups.erase(it);
-                ImGui::EndPopup();
-                continue;
-            }
-
-            ImGui::EndPopup();
+            mIsPopupOpen = false;
+            mCurrentPopup.buttons.clear();
+            ImGui::CloseCurrentPopup();
         }
 
-        ++it;
+        ImGui::EndPopup();
     }
 }
 
-void PopupManager::centerNextWindow()
+void PopupManager::openPopup(std::string popupText, bool shouldHaveOkayButton)
 {
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2{0.5f, 0.5f});
+    mCurrentPopup.text = std::move(popupText);
+
+    if(shouldHaveOkayButton)
+        mCurrentPopup.buttons.emplace_back("Okay", []{return true;});
+
+    mIsPopupOpen = true;
 }

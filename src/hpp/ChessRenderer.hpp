@@ -112,7 +112,6 @@ private:
 
     bool mIsColorEditorWindowOpen {false};
     bool mIsConnectionWindowOpen  {false};
-    bool mImguiDemoWindowIsOpen   {false};
     bool mIsPromotionWindowOpen   {false};
 
     std::array<uint32_t, 4> const mDefaultLightSquareColor {214, 235, 225, 255};

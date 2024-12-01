@@ -16,7 +16,7 @@ static constexpr auto stalemateTestPositionFEN {"7k/8/8/8/8/8/6q1/K7 b - 0 1"};
 static constexpr auto promotionTestPositionFEN {"rnbqkbnr/ppPppppp/8/8/8/8/PPPPPPpP/RNBQKBNR w KQkq - 0 1"};
 static constexpr auto castleTestPositionFEN{"r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1"};
 
-static constexpr auto startingFEN {stalemateTestPositionFEN};
+static constexpr auto startingFEN {defaultPositionFEN};
 
 static int chessPos2Index(Vec2i const pos)
 {
