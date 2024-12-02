@@ -43,9 +43,11 @@ void PopupManager::drawPopup()
     }
 }
 
-void PopupManager::openPopup(std::string popupText, bool shouldHaveOkayButton)
+void PopupManager::startNewPopup(std::string popupText, bool shouldHaveOkayButton)
 {
     mCurrentPopup.text = std::move(popupText);
+
+    mCurrentPopup.buttons.clear();
 
     if(shouldHaveOkayButton)
         mCurrentPopup.buttons.emplace_back("Okay", []{return true;});

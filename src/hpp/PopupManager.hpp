@@ -15,7 +15,7 @@ public:
 
     //if shouldHaveOkayButton is true, then the popup will have a button 
     //that says "Okay" and simply closes the popup.
-    void openPopup(std::string popupText, bool shouldHaveOkayButton);
+    void startNewPopup(std::string popupText, bool shouldHaveOkayButton);
 
     struct Button
     {

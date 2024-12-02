@@ -182,7 +182,7 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
 
             if(cm.isPairedOnline())
             {
-                mPopupManager.openPopup(
+                mPopupManager.startNewPopup(
                     "You can't reset the board while connected with another player.", true
                 );
             }
@@ -202,7 +202,7 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
                     GUIEvents::Resign resignEvnt{};
                     mGuiEventPublisher.pub(resignEvnt);
 
-                    mPopupManager.openPopup("You lost (you resigned).", true);
+                    mPopupManager.startNewPopup("You lost (you resigned).", true);
                 }
 
                 if(ImGui::SmallButton("draw"))
@@ -550,7 +550,7 @@ void ChessRenderer::onPairingCompleteEvent(NetworkEvents::PairingComplete const&
     popupText.append(evnt.side == Side::WHITE ? "white " : "black ");
     popupText.append(std::format("pieces against the user with ID: {}", evnt.opponentID));
     
-    mPopupManager.openPopup(std::move(popupText), false);//careful popupText has been moved from!
+    mPopupManager.startNewPopup(std::move(popupText), false);//careful popupText has been moved from!
     mPopupManager.addButton( {"Let's play!", []{return true;} } );
     
     mViewingPerspective = evnt.side;
@@ -565,19 +565,19 @@ void ChessRenderer::onPairingCompleteEvent(NetworkEvents::PairingComplete const&
 
 void ChessRenderer::onDrawDeclinedEvent()
 {
-    mPopupManager.openPopup("draw declined", true);
+    mPopupManager.startNewPopup("draw declined", true);
 }
 
 void ChessRenderer::onIDNotInLobbyEvent(NetworkEvents::IDNotInLobby const& evnt)
 {
-    mPopupManager.openPopup(
+    mPopupManager.startNewPopup(
         std::format("The ID you supplied ({}) was invalid", evnt.ID), true
     );
 }
 
 void ChessRenderer::onDrawOfferEvent()
 {
-    mPopupManager.openPopup("Your opponent has offered a draw.", false);
+    mPopupManager.startNewPopup("Your opponent has offered a draw.", false);
 
     mPopupManager.addButton({
         .text = "Accept",
@@ -600,7 +600,7 @@ void ChessRenderer::onDrawOfferEvent()
 
 void ChessRenderer::onRematchRequestEvent()
 {
-    mPopupManager.openPopup("Your opponent offered a rematch", false);
+    mPopupManager.startNewPopup("Your opponent offered a rematch", false);
 
     mPopupManager.addButton({
         .text = "accept rematch",
@@ -615,7 +615,7 @@ void ChessRenderer::onRematchRequestEvent()
         .text = "decline rematch",
         .callback = [this]
         {
-            mPopupManager.openPopup(
+            mPopupManager.startNewPopup(
                 "You have been disconnected from your opponent and put back in the server lobby", true
             );
         
@@ -628,14 +628,14 @@ void ChessRenderer::onRematchRequestEvent()
 
 void ChessRenderer::onRematchDeclineEvent()
 {
-    mPopupManager.openPopup(
+    mPopupManager.startNewPopup(
         "You have been disconnected from your opponent and put back in the server lobby", true
     );
 }
 
 void ChessRenderer::onPairRequestEvent(NetworkEvents::PairRequest const& evnt)
 {
-    mPopupManager.openPopup(std::format(
+    mPopupManager.startNewPopup(std::format(
         "Request from {} to play chess!", evnt.potentialOpponentID), false
     );
 
@@ -658,12 +658,12 @@ void ChessRenderer::onPairRequestEvent(NetworkEvents::PairRequest const& evnt)
 
 void ChessRenderer::onPairDeclineEvent()
 {
-    mPopupManager.openPopup("Your offer to play chess was declined", true);
+    mPopupManager.startNewPopup("Your offer to play chess was declined", true);
 }
 
 void ChessRenderer::onGameOverEventWhilePaired(BoardEvents::GameOver const& evnt)
 {
-    mPopupManager.openPopup(evnt.reason, false);
+    mPopupManager.startNewPopup(evnt.reason, false);
 
     mPopupManager.addButton({
         "Request rematch", 
@@ -683,12 +683,12 @@ void ChessRenderer::onGameOverEventWhilePaired(BoardEvents::GameOver const& evnt
 
 void ChessRenderer::onGameOverEventWhileNotPaired(BoardEvents::GameOver const& evnt)
 {
-    mPopupManager.openPopup(evnt.reason, true);
+    mPopupManager.startNewPopup(evnt.reason, true);
 }
 
 void ChessRenderer::onUnpairEvent()
 {
-    mPopupManager.openPopup("You have been unpaired with your opponent", true);
+    mPopupManager.startNewPopup("You have been unpaired with your opponent", true);
 
     mViewingPerspective = Side::WHITE;
 
@@ -709,12 +709,12 @@ void ChessRenderer::onPromotionBeginEvent(BoardEvents::PromotionBegin const& evn
 void ChessRenderer::onDisconnectedEvent()
 {
     mViewingPerspective = Side::WHITE;
-    mPopupManager.openPopup("You are no longer connected to the server.", true);
+    mPopupManager.startNewPopup("You are no longer connected to the server.", true);
 }
 
 void ChessRenderer::onConnectedEvent()
 {
-    mPopupManager.openPopup("You have successfully connected to the server.", true);
+    mPopupManager.startNewPopup("You have successfully connected to the server.", true);
 }
 
 void ChessRenderer::subToEvents()
