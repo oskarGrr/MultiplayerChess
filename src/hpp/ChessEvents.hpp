@@ -314,6 +314,8 @@ using BoardEventSystem = EventSystem
 
 namespace NetworkEvents
 {
+    struct PairRequestWhilePaired : Event {};
+
     struct OpponentMadeMove : Event 
     {
         OpponentMadeMove(ChessMove move_) : move{move_} {}
@@ -364,6 +366,7 @@ namespace NetworkEvents
 
 using NetworkEventSystem = EventSystem
 <
+    NetworkEvents::PairRequestWhilePaired,
     NetworkEvents::OpponentMadeMove,
     NetworkEvents::DrawOffer, 
     NetworkEvents::DrawDeclined,

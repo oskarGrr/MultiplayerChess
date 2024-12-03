@@ -91,6 +91,9 @@ private:
     template<typename EventT, typename... EventArgs>
     void pubEvent(EventArgs&&...);
 
+    //just to save space in subToEvents
+    void onPairRequestEvent(GUIEvents::PairRequest const&);
+
     //helper method to reduce ctor size
     void subToEvents();
 

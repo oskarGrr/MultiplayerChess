@@ -52,6 +52,7 @@ private:
     void onPromotionBeginEvent(BoardEvents::PromotionBegin const&);
     void onDisconnectedEvent();
     void onConnectedEvent();
+    void onPairRequestWhilePairedEvent();
 
     void drawPromotionPopup();
     void drawColorEditor();
@@ -68,6 +69,7 @@ private:
     
     enum struct NetworkSubscriptions
     {
+        PAIR_REQUEST_WHILE_PAIRED,
         PAIRING_COMPLETE,
         DRAW_DECLINED,
         ID_NOT_IN_LOBBY,

@@ -666,16 +666,21 @@ void ChessRenderer::onGameOverEventWhilePaired(BoardEvents::GameOver const& evnt
     mPopupManager.startNewPopup(evnt.reason, false);
 
     mPopupManager.addButton({
-        "Request rematch", 
-        [this]{ GUIEvents::RematchRequest e; mGuiEventPublisher.pub(e);  return true;}
+        "Request rematch",
+        [this]
+        {
+            GUIEvents::RematchRequest e;
+            mGuiEventPublisher.pub(e);
+            return true;
+        }
     });
 
     mPopupManager.addButton({
         "Disconnect from opponent",
         [this]
         {
-            GUIEvents::Unpair e; mGuiEventPublisher.pub(e);
-            mViewingPerspective = Side::WHITE;
+            GUIEvents::Unpair e;
+            mGuiEventPublisher.pub(e);
             return true;
         }
     });
@@ -717,8 +722,20 @@ void ChessRenderer::onConnectedEvent()
     mPopupManager.startNewPopup("You have successfully connected to the server.", true);
 }
 
+void ChessRenderer::onPairRequestWhilePairedEvent()
+{
+    mIsConnectionWindowOpen = false;
+
+    mPopupManager.startNewPopup(
+        "you can't connect to another player while paired with an opponent", true
+    );
+}
+
 void ChessRenderer::subToEvents()
 {
+    mNetworkSubManager.sub<NetworkEvents::PairRequestWhilePaired>(NetworkSubscriptions::PAIR_REQUEST_WHILE_PAIRED,
+        [this](Event const&){ onPairRequestWhilePairedEvent(); });
+
     mNetworkSubManager.sub<NetworkEvents::PairingComplete>(NetworkSubscriptions::PAIRING_COMPLETE,
         [this](Event const& e){ onPairingCompleteEvent( e.unpack<NetworkEvents::PairingComplete>() ); });
 

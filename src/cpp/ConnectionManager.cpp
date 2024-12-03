@@ -38,13 +38,23 @@ void ConnectionManager::onDisconnect()
     mIsThereAPotentialOpponent = false;
 }
 
+//just to save space in subToEvents
+void ConnectionManager::onPairRequestEvent(GUIEvents::PairRequest const& evnt)
+{
+    if(mIsPairedWithOpponent)
+    {
+        pubEvent<NetworkEvents::PairRequestWhilePaired>();
+        return;
+    }
+
+    auto const& e { evnt.unpack<GUIEvents::PairRequest>() };
+    buildAndSendPairRequest(e.opponentID);
+}
+
 void ConnectionManager::subToEvents()
 {
-    mGuiEventSubManager.sub<GUIEvents::PairRequest>(GuiSubscriptions::PAIR_REQUEST, 
-        [this](Event const& e){
-        auto const& evnt { e.unpack<GUIEvents::PairRequest>() };
-        buildAndSendPairRequest(evnt.opponentID);
-    });
+    mGuiEventSubManager.sub<GUIEvents::PairRequest>(GuiSubscriptions::PAIR_REQUEST,
+        [this](Event const& e){ onPairRequestEvent(e.unpack<GUIEvents::PairRequest>()); });
 
     mGuiEventSubManager.sub<GUIEvents::PairAccept>(GuiSubscriptions::PAIR_ACCEPT,
         [this](Event const& e){ buildAndSendPairAccept(); });
