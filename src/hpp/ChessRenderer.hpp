@@ -53,6 +53,7 @@ private:
     void onDisconnectedEvent();
     void onConnectedEvent();
     void onPairRequestWhilePairedEvent();
+    void onRematchAcceptEvent();
 
     void drawPromotionPopup();
     void drawColorEditor();
@@ -76,6 +77,7 @@ private:
         DRAW_OFFER,
         REMATCH_REQUEST,
         REMATCH_DECLINE,
+        REMATCH_ACCEPT,
         PAIR_REQUEST,
         PAIR_DECLINE,
         UNPAIR,

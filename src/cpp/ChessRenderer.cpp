@@ -731,6 +731,11 @@ void ChessRenderer::onPairRequestWhilePairedEvent()
     );
 }
 
+void ChessRenderer::onRematchAcceptEvent()
+{
+    mPopupManager.startNewPopup("your opponent accepted your rematch request!", true);
+}
+
 void ChessRenderer::subToEvents()
 {
     mNetworkSubManager.sub<NetworkEvents::PairRequestWhilePaired>(NetworkSubscriptions::PAIR_REQUEST_WHILE_PAIRED,
@@ -753,6 +758,9 @@ void ChessRenderer::subToEvents()
 
     mNetworkSubManager.sub<NetworkEvents::RematchDecline>(NetworkSubscriptions::REMATCH_DECLINE,
         [this](Event const&){ onRematchDeclineEvent(); });
+
+    mNetworkSubManager.sub<NetworkEvents::RematchAccept>(NetworkSubscriptions::REMATCH_ACCEPT,
+        [this](Event const&){ onRematchAcceptEvent(); });
 
     mNetworkSubManager.sub<NetworkEvents::PairRequest>(NetworkSubscriptions::PAIR_REQUEST,
         [this](Event const& e){ onPairRequestEvent( e.unpack<NetworkEvents::PairRequest>() ); });
