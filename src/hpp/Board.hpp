@@ -76,7 +76,8 @@ private:
         PROMOTION_END,
         PAIRING_COMPLETE,
         OPPONENT_MADE_MOVE,
-        UNPAIRED
+        UNPAIRED,
+        REMATCH_ACCEPT
     };
 
     SubscriptionManager<SubscriptionTypes,

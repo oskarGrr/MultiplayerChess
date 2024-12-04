@@ -607,8 +607,9 @@ void ChessRenderer::onRematchRequestEvent()
         .callback = [this]
         {
             GUIEvents::RematchAccept evnt{};
-            mGuiEventPublisher.pub(evnt); return true;       
-        }     
+            mGuiEventPublisher.pub(evnt);
+            return true;
+        }
     });
 
     mPopupManager.addButton({

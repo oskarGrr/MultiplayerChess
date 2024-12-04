@@ -46,6 +46,12 @@ Board::Board(BoardEventSystem::Publisher const& boardEventPublisher,
 //Helper function to reduce constructor size.
 void Board::subToEvents()
 {
+    mNetworkSubManager.sub<NetworkEvents::RematchAccept>(SubscriptionTypes::REMATCH_ACCEPT,
+        [this](Event const&){ resetBoard(); });
+
+    mGuiSubManager.sub<GUIEvents::RematchAccept>(SubscriptionTypes::REMATCH_ACCEPT,
+        [this](Event const&){ resetBoard(); });
+
     mGuiSubManager.sub<GUIEvents::ResetBoard>(SubscriptionTypes::RESET_BOARD, 
         [this](Event const&){ resetBoard(); });
 
