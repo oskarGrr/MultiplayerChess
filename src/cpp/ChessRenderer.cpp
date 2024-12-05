@@ -606,6 +606,7 @@ void ChessRenderer::onRematchRequestEvent()
         .text = "accept rematch",
         .callback = [this]
         {
+            mPopupManager.startNewPopup("you have accepted the rematch. Time to play again!", true);
             GUIEvents::RematchAccept evnt{};
             mGuiEventPublisher.pub(evnt);
             return true;

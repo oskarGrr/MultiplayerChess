@@ -6,14 +6,22 @@ void PopupManager::drawPopup()
     if( ! mIsPopupOpen ) { return; }
 
     //returns true if the popup should close
-    auto const checkButtons = [](auto const& buttons) -> bool
+    auto const checkButtons = [this]() -> bool
     {
-        for(auto const& button : buttons)
+        std::string const popupTxt {mCurrentPopup.text};
+
+        for(auto const& button : mCurrentPopup.buttons)
         {
             if(ImGui::Button(button.text.c_str()))
             {
-                if(button.callback())//the callback returned true meaning this popup should close
-                    return true;
+                //the callback returned true meaning this popup should close
+                if(button.callback())
+                {
+                    //check to see if the popup text has changed
+                    bool const wasNewPopupOpened { popupTxt != mCurrentPopup.text };
+                    
+                    return ! wasNewPopupOpened;
+                }
             }
 
             ImGui::SameLine();
@@ -32,7 +40,7 @@ void PopupManager::drawPopup()
     {
         ImGui::TextUnformatted(mCurrentPopup.text.c_str());
 
-        if(checkButtons(mCurrentPopup.buttons))
+        if(checkButtons())
         {
             mIsPopupOpen = false;
             mCurrentPopup.buttons.clear();
