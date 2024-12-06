@@ -209,7 +209,7 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
                     "You can't reset the board while connected with another player.", true
                 );
             }
-            else 
+            else
             {
                 GUIEvents::ResetBoard evnt{};
                 mGuiEventPublisher.pub(evnt);
@@ -243,7 +243,10 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
             ImGui::Separator();
 
             if(cm.isPairedOnline())
+            {
                 ImGui::Text("opponentID: %u", cm.getOpponentID());
+                ImGui::Separator();
+            }
         }
         else
         {
@@ -253,7 +256,6 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
         }
 
         auto whosTurn {b.getWhosTurnItIs() == Side::WHITE ? "it's white's turn" : "it's black's turn"};
-        ImGui::SameLine( -(ImGui::CalcTextSize(whosTurn).x + 18) );
         ImGui::TextUnformatted(whosTurn);
 
         static bool firstPass {true};
