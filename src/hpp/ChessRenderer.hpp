@@ -54,6 +54,7 @@ private:
     void onConnectedEvent();
     void onPairRequestWhilePairedEvent();
     void onRematchAcceptEvent();
+    void onOpponentHasResignedEvent();
 
     void drawPromotionPopup();
     void drawColorEditor();
@@ -70,6 +71,7 @@ private:
     
     enum struct NetworkSubscriptions
     {
+        OPPONENT_RESIGNED,
         PAIR_REQUEST_WHILE_PAIRED,
         PAIRING_COMPLETE,
         DRAW_DECLINED,
@@ -85,6 +87,8 @@ private:
         CONNECTED,
         NEW_ID
     };
+
+    void addRematchAndUnpairPopupButtons();
 
     SubscriptionManager<NetworkSubscriptions,
         NetworkEventSystem::Subscriber> mNetworkSubManager;

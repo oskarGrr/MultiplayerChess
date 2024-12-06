@@ -17,10 +17,8 @@ void PopupManager::drawPopup()
                 //the callback returned true meaning this popup should close
                 if(button.callback())
                 {
-                    //check to see if the popup text has changed
-                    bool const wasNewPopupOpened { popupTxt != mCurrentPopup.text };
-                    
-                    return ! wasNewPopupOpened;
+                    //actually close if the text of the popup did not change
+                    return popupTxt == mCurrentPopup.text;
                 }
             }
 

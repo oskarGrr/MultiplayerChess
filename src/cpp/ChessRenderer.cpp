@@ -135,6 +135,29 @@ void ChessRenderer::drawSquares()
     }
 }
 
+void ChessRenderer::addRematchAndUnpairPopupButtons()
+{
+    mPopupManager.addButton({
+        "Request rematch",
+        [this]
+        {
+            GUIEvents::RematchRequest e;
+            mGuiEventPublisher.pub(e);
+            return true;
+        }
+    });
+
+    mPopupManager.addButton({
+        "Disconnect from opponent",
+        [this]
+        {
+            GUIEvents::Unpair e;
+            mGuiEventPublisher.pub(e);
+            return true;
+        }
+    });
+}
+
 struct MenuBarStyles //RAII style push and pop imgui styles
 {
     MenuBarStyles() 
@@ -202,7 +225,8 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
                     GUIEvents::Resign resignEvnt{};
                     mGuiEventPublisher.pub(resignEvnt);
 
-                    mPopupManager.startNewPopup("You lost (you resigned).", true);
+                    mPopupManager.startNewPopup("You have resigned", false);
+                    addRematchAndUnpairPopupButtons();
                 }
 
                 if(ImGui::SmallButton("draw"))
@@ -666,26 +690,7 @@ void ChessRenderer::onPairDeclineEvent()
 void ChessRenderer::onGameOverEventWhilePaired(BoardEvents::GameOver const& evnt)
 {
     mPopupManager.startNewPopup(evnt.reason, false);
-
-    mPopupManager.addButton({
-        "Request rematch",
-        [this]
-        {
-            GUIEvents::RematchRequest e;
-            mGuiEventPublisher.pub(e);
-            return true;
-        }
-    });
-
-    mPopupManager.addButton({
-        "Disconnect from opponent",
-        [this]
-        {
-            GUIEvents::Unpair e;
-            mGuiEventPublisher.pub(e);
-            return true;
-        }
-    });
+    addRematchAndUnpairPopupButtons();
 }
 
 void ChessRenderer::onGameOverEventWhileNotPaired(BoardEvents::GameOver const& evnt)
@@ -738,8 +743,17 @@ void ChessRenderer::onRematchAcceptEvent()
     mPopupManager.startNewPopup("your opponent accepted your rematch request!", true);
 }
 
+void ChessRenderer::onOpponentHasResignedEvent()
+{
+    mPopupManager.startNewPopup("your opponent has resigned", false);
+    addRematchAndUnpairPopupButtons();
+}
+
 void ChessRenderer::subToEvents()
 {
+    mNetworkSubManager.sub<NetworkEvents::OpponentHasResigned>(NetworkSubscriptions::OPPONENT_RESIGNED,
+        [this](Event const&){ onOpponentHasResignedEvent(); });
+
     mNetworkSubManager.sub<NetworkEvents::PairRequestWhilePaired>(NetworkSubscriptions::PAIR_REQUEST_WHILE_PAIRED,
         [this](Event const&){ onPairRequestWhilePairedEvent(); });
 
