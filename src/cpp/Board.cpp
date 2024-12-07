@@ -417,10 +417,12 @@ void Board::postMoveUpdate()
     //std::nullopt means no check/stalemate has occurred.
     if(auto maybeCheckOrStaleMate{hasCheckOrStalemateOccurred()})
     {
-        std::string gameOverReason {*maybeCheckOrStaleMate == MateTypes::CHECKMATE ? 
-            "You lost by checkmate" : "Draw by stalemate"};
+        std::string gameOverReason {*maybeCheckOrStaleMate == MateTypes::STALEMATE ? 
+            "Draw by stalemate" : this->getWhosTurnItIs() == Side::WHITE ? 
+            "Black won by checkmate" : "White won by checkmate"};
         
-        BoardEvents::GameOver gameOverEvent {std::move(gameOverReason)};//careful! gameOverReason has been moved from
+        //careful! gameOverReason has been moved from
+        BoardEvents::GameOver gameOverEvent {std::move(gameOverReason)};
         mBoardEventPublisher.pub(gameOverEvent);
     }
 }
