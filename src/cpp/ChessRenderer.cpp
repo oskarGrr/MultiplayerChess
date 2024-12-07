@@ -710,7 +710,7 @@ void ChessRenderer::onGameOverEventWhileNotPaired(BoardEvents::GameOver const& e
 
 void ChessRenderer::onUnpairEvent()
 {
-    mPopupManager.startNewPopup("You have been unpaired with your opponent", true);
+    mPopupManager.startNewPopup("You have been unpaired with your opponent and put back into the lobby", true);
 
     mViewingPerspective = Side::WHITE;
 
