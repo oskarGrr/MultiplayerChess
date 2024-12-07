@@ -1,6 +1,6 @@
 #include "ServerConnection.hpp"
 #include "SettingsFileManager.hpp"
-#include "errorLogger.h"
+#include "errorLogger.hpp"
 #include <ws2tcpip.h>
 #include <cassert>
 #include <optional>

@@ -2,7 +2,7 @@
 #include "ChessRenderer.hpp"
 #include "SDL_image.h"
 #include "SDL.h"
-#include "errorLogger.h"
+#include "errorLogger.hpp"
 
 TextureManager::TextureManager(SDL_Renderer* renderer)
 {

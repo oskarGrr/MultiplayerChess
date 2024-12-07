@@ -1,4 +1,4 @@
-#include "Window.h"
+#include "Window.hpp"
 #include "SDL.h"
 #include "imgui.h"
 #include "imgui_impl_sdl.h"

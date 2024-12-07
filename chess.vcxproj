@@ -189,21 +189,21 @@
     <ClInclude Include="ImGui_Src\imstb_textedit.h" />
     <ClInclude Include="ImGui_Src\imstb_truetype.h" />
     <ClInclude Include="src\hpp\Board.hpp" />
-    <ClInclude Include="src\hpp\castleRights.h" />
+    <ClInclude Include="src\hpp\castleRights.hpp" />
     <ClInclude Include="src\hpp\ChessEvents.hpp" />
     <ClInclude Include="src\hpp\ConnectionManager.hpp" />
     <ClInclude Include="src\hpp\ChessRenderer.hpp" />
     <ClInclude Include="src\hpp\chessNetworkProtocol.h" />
-    <ClInclude Include="src\hpp\errorLogger.h" />
+    <ClInclude Include="src\hpp\errorLogger.hpp" />
     <ClInclude Include="src\hpp\ChessMove.hpp" />
-    <ClInclude Include="src\hpp\PieceTypes.h" />
+    <ClInclude Include="src\hpp\PieceTypes.hpp" />
     <ClInclude Include="src\hpp\PopupManager.hpp" />
     <ClInclude Include="src\hpp\ServerConnection.hpp" />
     <ClInclude Include="src\hpp\SettingsFileManager.hpp" />
     <ClInclude Include="src\hpp\SoundManager.hpp" />
     <ClInclude Include="src\hpp\TextureManager.hpp" />
-    <ClInclude Include="src\hpp\Vector2i.h" />
-    <ClInclude Include="src\hpp\Window.h" />
+    <ClInclude Include="src\hpp\Vector2i.hpp" />
+    <ClInclude Include="src\hpp\Window.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

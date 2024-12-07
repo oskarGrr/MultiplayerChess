@@ -1,4 +1,4 @@
-#include "PieceTypes.h"
+#include "PieceTypes.hpp"
 #include "Board.hpp"
 #include "SDL_image.h"
 #include "SDL.h"

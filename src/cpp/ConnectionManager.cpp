@@ -1,6 +1,6 @@
 #include "ConnectionManager.hpp"
 #include "chessNetworkProtocol.h"
-#include "errorLogger.h"
+#include "errorLogger.hpp"
 #include "ChessMove.hpp"
 #include <cassert>
 #include <optional>

@@ -3,7 +3,7 @@
 #include "imgui_impl_sdl.h"
 #include "SDL.h"
 #include "ChessEvents.hpp"
-#include "errorLogger.h"
+#include "errorLogger.hpp"
 #include "Board.hpp"
 #include "ChessRenderer.hpp"
 #include "ConnectionManager.hpp"
@@ -53,11 +53,11 @@ static void runApplication()
     Board board {boardEventSys.getPublisher(), guiEventSys.getSubscriber(), networkEventSys.getSubscriber()};
 
     bool appRunning {true};
-    double deltaTime {0.0};//unused for now
+    //double deltaTime {0.0};//unused for now
 
     while(appRunning)
     {
-        auto const start {std::chrono::steady_clock::now()};
+        //auto const start {std::chrono::steady_clock::now()};
 
         connectionManager.update();
 
@@ -91,8 +91,8 @@ static void runApplication()
         chessRenderer.renderAllTheThings(board, connectionManager);
         SDL_Delay(10);
 
-        auto const end { std::chrono::steady_clock::now() };
-        deltaTime = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / 1.0E9;
+        //auto const end { std::chrono::steady_clock::now() };
+        //deltaTime = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / 1.0E9;
     }
 }
 

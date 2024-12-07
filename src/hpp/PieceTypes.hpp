@@ -1,6 +1,6 @@
 #pragma once
 #include "SDL.h"
-#include "Vector2i.h"
+#include "Vector2i.hpp"
 #include "chessNetworkProtocol.h" //enum Side
 #include "TextureManager.hpp" //enum TextureManager::WhichTexture
 #include "ChessMove.hpp"

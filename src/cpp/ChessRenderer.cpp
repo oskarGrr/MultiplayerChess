@@ -11,9 +11,9 @@
 #include "ChessEvents.hpp"
 #include "Board.hpp"
 #include "ChessRenderer.hpp"
-#include "PieceTypes.h"
-#include "Vector2i.h"
-#include "errorLogger.h"
+#include "PieceTypes.hpp"
+#include "Vector2i.hpp"
+#include "errorLogger.hpp"
 #include "SettingsFileManager.hpp"
 #include "chessNetworkProtocol.h" //enum Side
 

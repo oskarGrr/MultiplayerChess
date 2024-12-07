@@ -1,6 +1,6 @@
 #pragma once
 #include "SDL.h"
-#include "Vector2i.h"
+#include "Vector2i.hpp"
 #include <unordered_map>
 #include <type_traits>
 #include <string_view>

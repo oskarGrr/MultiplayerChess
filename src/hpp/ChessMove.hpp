@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
-#include "Vector2i.h"
-#include "castleRights.h"
+#include "Vector2i.hpp"
+#include "castleRights.hpp"
 
 struct ChessMove
 {

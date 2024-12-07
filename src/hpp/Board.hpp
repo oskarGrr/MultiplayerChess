@@ -1,7 +1,6 @@
 #pragma once
-#include "Vector2i.h"
-#include "chessNetworkProtocol.h" //enum Side
 #include "SDL.h"
+
 #include <string>
 #include <array>
 #include <vector>
@@ -9,9 +8,11 @@
 #include <optional>
 #include <unordered_map>
 
+#include "Vector2i.hpp"
+#include "chessNetworkProtocol.h" //enum Side
 #include "ChessEvents.hpp"
 #include "ChessMove.hpp"
-#include "castleRights.h"
+#include "castleRights.hpp"
 
 class Piece;
 class ConnectionManager;

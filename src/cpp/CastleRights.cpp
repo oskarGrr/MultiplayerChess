@@ -1,4 +1,4 @@
-#include "castleRights.h"
+#include "castleRights.hpp"
 #include <cassert>
 
 CastleRights::CastleRights(unsigned char rights) : mCastleRightsBits{rights} {}

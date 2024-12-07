@@ -1,8 +1,8 @@
 #include "Board.hpp"
 #include "SDL.h"
-#include "PieceTypes.h"
+#include "PieceTypes.hpp"
 #include "ChessEvents.hpp"
-#include "errorLogger.h"
+#include "errorLogger.hpp"
 #include "SoundManager.hpp"
 
 #include <string>

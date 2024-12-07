@@ -2,11 +2,11 @@
 #include <array>
 #include <cstdint>
 #include "SDL.h"
-#include "Vector2i.h"
+#include "Vector2i.hpp"
 #include "PopupManager.hpp"
 #include "ChessEvents.hpp"
 #include "TextureManager.hpp"
-#include "Window.h"
+#include "Window.hpp"
 #include "chessNetworkProtocol.h" //enum Side
 
 class Board;
