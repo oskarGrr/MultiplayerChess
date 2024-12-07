@@ -351,6 +351,7 @@ static std::optional<SOCKET> connectToServerImpl(std::filesystem::path fname,
 
 void ServerConnection::disconnect()
 {
+    mOnDisconnect();
     closesocket(mSocket);
     mIsConnected = false;
 }

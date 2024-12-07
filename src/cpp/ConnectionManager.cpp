@@ -36,6 +36,8 @@ void ConnectionManager::onDisconnect()
 
     mIsPairedWithOpponent = false;
     mIsThereAPotentialOpponent = false;
+
+    pubEvent<NetworkEvents::DisconnectedFromServer>();
 }
 
 //just to save space in subToEvents
@@ -93,13 +95,6 @@ void ConnectionManager::update()
     mServerConn.update();
 
     if( ! mServerConn.isConnected() ) { return; }
-
-    ////if we are no longer connected
-    //if( ! mServerConn.isConnected() )
-    //{
-    //    pubEvent<NetworkEvents::DisconnectedFromServer>();
-    //    return;
-    //}
 
     processNetworkMessages();
 }
