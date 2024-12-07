@@ -55,6 +55,7 @@ private:
     void onPairRequestWhilePairedEvent();
     void onRematchAcceptEvent();
     void onOpponentHasResignedEvent();
+    void onDrawAcceptedEvent();
 
     void drawPromotionPopup();
     void drawColorEditor();
@@ -71,6 +72,7 @@ private:
     
     enum struct NetworkSubscriptions
     {
+        DRAW_ACCEPTED,
         OPPONENT_RESIGNED,
         PAIR_REQUEST_WHILE_PAIRED,
         PAIRING_COMPLETE,

@@ -608,8 +608,13 @@ void ChessRenderer::onDrawOfferEvent()
     mPopupManager.addButton({
         .text = "Accept",
         .callback = [this]{
+
             GUIEvents::DrawAccept evnt{};
             mGuiEventPublisher.pub(evnt);
+
+            mPopupManager.startNewPopup("you have accepted the draw", false);
+            addRematchAndUnpairPopupButtons();
+
             return true;
         }
     });
@@ -751,8 +756,17 @@ void ChessRenderer::onOpponentHasResignedEvent()
     addRematchAndUnpairPopupButtons();
 }
 
+void ChessRenderer::onDrawAcceptedEvent()
+{
+    mPopupManager.startNewPopup("your opponent has accepted your draw offer", false);
+    addRematchAndUnpairPopupButtons();
+}
+
 void ChessRenderer::subToEvents()
 {
+    mNetworkSubManager.sub<NetworkEvents::DrawAccept>(NetworkSubscriptions::DRAW_ACCEPTED,
+        [this](Event const&){ onDrawAcceptedEvent(); });
+
     mNetworkSubManager.sub<NetworkEvents::OpponentHasResigned>(NetworkSubscriptions::OPPONENT_RESIGNED,
         [this](Event const&){ onOpponentHasResignedEvent(); });
 
