@@ -158,12 +158,13 @@ void ConnectionManager::handlePairDeclineMessage(NetworkMessage const& msg)
 
 void ConnectionManager::handleIDNotInLobbyMessage(NetworkMessage const& msg)
 {
+    mIsThereAPotentialOpponent = false;
+
     uint32_t invalidID{0};
     std::memcpy(&invalidID, msg.data() + 2, sizeof(invalidID));
+    invalidID = ntohl(invalidID);
 
-    mIsThereAPotentialOpponent = false;
-    
-    pubEvent<NetworkEvents::IDNotInLobby>(ntohl(invalidID));
+    pubEvent<NetworkEvents::IDNotInLobby>(invalidID);
 }
 
 //Helper to reduce processNetworkMessages() size.

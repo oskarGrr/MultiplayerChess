@@ -597,7 +597,10 @@ void ChessRenderer::onDrawDeclinedEvent()
 void ChessRenderer::onIDNotInLobbyEvent(NetworkEvents::IDNotInLobby const& evnt)
 {
     mPopupManager.startNewPopup(
-        std::format("The ID you supplied ({}) was invalid", evnt.ID), true
+        std::format(
+            "The ID you supplied ({}) was not in the server lobby (or it is your ID).", evnt.ID
+        ), 
+        true
     );
 }
 
