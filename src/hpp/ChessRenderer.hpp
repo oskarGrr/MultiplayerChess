@@ -9,6 +9,7 @@
 #include "Window.hpp"
 #include "chessNetworkProtocol.h" //enum Side
 
+class SettingsManager;
 class Board;
 class ConnectionManager;
 
@@ -66,8 +67,12 @@ private:
     void drawPiecesNotOnMouse(Board const&);
     void drawMenuBar(Board const&, ConnectionManager const&);
 
-    //methods to reduce ctor size
+    //methods to reduce ctor/dtor size
+    std::string getLightSquareColorAsString();
+    std::string getDarkSquareColorAsString();
+    void generateNewSquareColorDataTextFile(SettingsManager const& settingsManager);
     void initSquareColorData();
+    void serializeSquareColorData();
     void subToEvents();
     
     enum struct NetworkSubscriptions

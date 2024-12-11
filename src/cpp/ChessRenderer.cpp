@@ -24,6 +24,8 @@
 #include "SDL.h"
 #include "SDL_image.h"
 
+static auto const squareColorDataFname {"squareColorData.txt"};
+
 //board width, height and square size are initialized with their setters later
 ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys, 
     BoardEventSystem::Subscriber& boardEventSubscriber, GUIEventSystem::Publisher const& guiEventPublisher) 
@@ -40,8 +42,35 @@ ChessRenderer::~ChessRenderer()
 {
     mBoardSubscriber.unsub<BoardEvents::GameOver>(mGameOverSubID);
     mBoardSubscriber.unsub<BoardEvents::PromotionBegin>(mPromotionBeginEventID);
-
     //mNetworkSubManager will automatically unsub from the rest of the events...
+
+    serializeSquareColorData();
+}
+
+void ChessRenderer::serializeSquareColorData()
+{
+    SettingsManager squareColorDataManager {squareColorDataFname};
+
+    if(auto maybeError {squareColorDataManager.setValue("L", getLightSquareColorAsString())} )
+    {
+
+        if(maybeError->code == SettingsManager::Error::Code::FILE_NOT_FOUND)
+        {
+            generateNewSquareColorDataTextFile(squareColorDataManager);
+        }
+        else
+        {
+            FileErrorLogger::get().log(maybeError->msg);
+        }
+
+        return;
+    }
+
+    if(auto maybeError {squareColorDataManager.setValue("D", getDarkSquareColorAsString())} )
+    {
+        if(maybeError->code != SettingsManager::Error::Code::FILE_NOT_FOUND)
+            FileErrorLogger::get().log(maybeError->msg);
+    }
 }
 
 void ChessRenderer::initSquareColorData()
@@ -78,7 +107,7 @@ void ChessRenderer::initSquareColorData()
 
     //initialize the light/dark square colors with the data found in squareColorData.txt
     //otherwise the light and dark squares will be the default color.
-    SettingsManager squareColorDataManager{"squareColorData.txt"};
+    SettingsManager squareColorDataManager{squareColorDataFname};
     auto maybeLightSquareStr {squareColorDataManager.getValue("L")};
     auto maybeDarkSquareStr  {squareColorDataManager.getValue("D")};
     
@@ -94,6 +123,46 @@ void ChessRenderer::initSquareColorData()
     mLightSquareColor = *maybeLightSquareColor;
     mDarkSquareColor  = *maybeDarkSquareColor;
 }
+
+std::string ChessRenderer::getLightSquareColorAsString()
+{
+    std::string lightSquareStr;
+    for(auto const& val : mLightSquareColor)
+        lightSquareStr.append(std::to_string(val)).append(" ");
+
+    return lightSquareStr;
+}
+
+std::string ChessRenderer::getDarkSquareColorAsString()
+{
+    std::string darkSquareStr;
+    for(auto const& val : mDarkSquareColor)
+        darkSquareStr.append(std::to_string(val)).append(" ");
+
+    return darkSquareStr;
+}
+
+void ChessRenderer::generateNewSquareColorDataTextFile(SettingsManager const& settingsManager)
+{
+    std::string const lightSquareStr { getLightSquareColorAsString() };
+    std::string const darkSquareStr  { getDarkSquareColorAsString() };
+
+    std::array<std::string, 3> const comments
+    {
+        "This is the RGBA color data (0 - 255) for the light squares (L) and the dark squares (d).",
+        "If you accidentally mess this file up, just delete it and it will",
+        "auto generate when you close the chess game next."
+    };
+    
+    std::array const kvPairs
+    {
+        SettingsManager::KVPair{"L", lightSquareStr},
+        SettingsManager::KVPair{"D", darkSquareStr}
+    };
+    
+    settingsManager.generateNewFile(comments, kvPairs);
+}
+
 
 void ChessRenderer::drawSquares()
 {
@@ -369,7 +438,7 @@ void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& 
 
     mPopupManager.drawPopup();
 
-    //ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
 
     if(mIsColorEditorWindowOpen) [[unlikely]]
         drawColorEditor();
@@ -485,13 +554,13 @@ void ChessRenderer::drawColorEditor()
     
     ImGui::ColorPicker3("light squares", &f_lightSquares[0]);
 
-    if(ImGui::SmallButton("default light squares"))
+    if(ImGui::SmallButton("reset light squares"))
         for(int i = 0; i < 4; ++i)
             f_lightSquares[i] = mDefaultLightSquareColor[i] / 255.0f;
 
     ImGui::Separator();
 
-    ImGui::TextUnformatted("dark squares");
+    ImGui::TextUnformatted("reset dark squares");
     ImGui::ColorPicker3("dark squares", &f_darkSquares[0]);
     
     if(ImGui::SmallButton("default dark squares"))

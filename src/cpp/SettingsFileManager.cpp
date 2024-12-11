@@ -18,7 +18,7 @@ auto SettingsManager::generateNewFile(std::span<std::string const> comments,
             return maybeError;
     }
 
-    std::ofstream ofs {mFileName};
+    std::ofstream ofs {mFileName, std::ios::app};
     ofs << std::endl;
     ofs.close();
 
