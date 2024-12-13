@@ -58,27 +58,35 @@ auto TextureManager::getTexture(WhichTexture whichTexture)
 void TextureManager::initCircleTexture(int radius, Uint8 RR, Uint8 GG, Uint8 BB,
     Uint8 AA, SDL_Texture** toInit, SDL_Renderer* renderer)
 {
-//make sure the ordering of the RGBA bytes will be the same
-//regarless of endianess of the target platform
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    Uint32 rMask = 0xFF000000;
-    Uint32 gMask = 0x00FF0000;
-    Uint32 bMask = 0x0000FF00;
-    Uint32 aMask = 0x000000FF;
-    Uint32 circleColor = (RR << 24) + (GG << 16) + (BB << 8) + AA;
+    uint32_t rMask = 0xFF000000;
+    uint32_t gMask = 0x00FF0000;
+    uint32_t bMask = 0x0000FF00;
+    uint32_t aMask = 0x000000FF;
+    uint32_t const circleColor = (RR << 24) + (GG << 16) + (BB << 8) + AA;
 #else
     uint32_t rMask = 0x000000FF;
     uint32_t gMask = 0x0000FF00;
     uint32_t bMask = 0x00FF0000;
     uint32_t aMask = 0xFF000000;
-    uint32_t circleColor = (AA << 24) + (BB << 16) + (GG << 8) + RR;
+    uint32_t const circleColor = (AA << 24) + (BB << 16) + (GG << 8) + RR;
 #endif
-    auto const diameter { radius * 2 };
-    SDL_Rect const boundingBox{-radius, -radius, diameter, diameter};
-    uint32_t const pixelCount = diameter * diameter;
-    auto pixels = std::make_unique<uint32_t[]>(pixelCount);
 
-    auto radiusSquared { radius * radius };
+    int const diameter { radius * 2 };
+    SDL_Rect const boundingBox {-radius, -radius, diameter, diameter};
+    std::size_t const pixelCount { static_cast<std::size_t>(diameter * diameter) };
+
+    SDL_Surface* surface { SDL_CreateRGBSurface(0, diameter, diameter, 32, rMask, gMask, bMask, aMask) };
+
+    if( ! surface )
+    {
+        FileErrorLogger::get().log(SDL_GetError());
+        return;
+    }
+
+    SDL_LockSurface(surface);
+
+    auto const radiusSquared { radius * radius };
     int xOffset = -radius, yOffset = -radius;
     for(int x = 0; x < diameter; ++x)
     {
@@ -86,22 +94,12 @@ void TextureManager::initCircleTexture(int radius, Uint8 RR, Uint8 GG, Uint8 BB,
         {
             if((x-radius)*(x-radius) + (y-radius)*(y-radius) <= radiusSquared)
             {
-                pixels[x + y * diameter] = circleColor;
+                reinterpret_cast<uint32_t*>(surface->pixels)[x + y * diameter] = circleColor;
             }
         }
     }
 
-    SDL_Surface* surface = SDL_CreateRGBSurfaceFrom
-    (
-         pixels.get(), 
-         diameter, 
-         diameter,
-         32, 
-         diameter * sizeof(uint32_t), 
-         rMask, gMask, bMask, aMask
-    );
-   
-    if(!surface) { FileErrorLogger::get().log(SDL_GetError()); }
+    SDL_UnlockSurface(surface);
 
     *toInit = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);

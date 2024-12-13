@@ -438,7 +438,7 @@ void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& 
 
     mPopupManager.drawPopup();
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
 
     if(mIsColorEditorWindowOpen) [[unlikely]]
         drawColorEditor();
