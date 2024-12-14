@@ -1,7 +1,7 @@
 #include "PopupManager.hpp"
 #include "imgui.h"
 
-void PopupManager::drawPopup()
+void PopupManager::draw()
 {
     if( ! mIsPopupOpen ) { return; }
 

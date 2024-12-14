@@ -36,6 +36,10 @@ ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys,
     subToEvents();
     ImGui::StyleColorsLight();
     initSquareColorData();
+
+    //instead of drawing to the whole screen, draw to the board texture.
+    auto boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE).getTexture() };
+    SDL_SetRenderTarget(mWindow.renderer, boardTex.get());
 }
 
 ChessRenderer::~ChessRenderer()
@@ -163,7 +167,6 @@ void ChessRenderer::generateNewSquareColorDataTextFile(SettingsManager const& se
     settingsManager.generateNewFile(comments, kvPairs);
 }
 
-
 void ChessRenderer::drawSquares()
 {
     SDL_Rect square{0, static_cast<int>(mMenuBarSize.y), 
@@ -175,7 +178,6 @@ void ChessRenderer::drawSquares()
         {
             if( ! (i + j & 1) )//if light square
             {
-                //scale up the colors from 0-1 to 0-255 and draw
                 SDL_SetRenderDrawColor
                 (
                     mWindow.renderer,
@@ -430,15 +432,45 @@ void ChessRenderer::drawMoveIndicatorCircles(Board const& b)
     }
 }
 
+void ChessRenderer::drawToTheBoardTexture(Board const& b)
+{
+     auto boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE).getTexture() };
+     SDL_SetRenderTarget(mWindow.renderer, boardTex.get());
+    
+     drawSquares();
+     drawPiecesNotOnMouse(b);
+     if( ! mIsPromotionWindowOpen ) [[likely]]
+     {
+         drawMoveIndicatorCircles(b);
+         drawPieceOnMouse();
+     }
+    
+     SDL_SetRenderTarget(mWindow.renderer, nullptr);
+}
+
+void ChessRenderer::drawMainWindow()
+{
+    if(ImGui::Begin("##", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
+        ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
+
+        ImGui::End();
+    }
+}
+
 void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& cm)
 {
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    mPopupManager.drawPopup();
+    mPopupManager.draw();
 
     //ImGui::ShowDemoWindow();
+    //ImGui::ShowMetricsWindow();
+
+    drawMainWindow();
 
     if(mIsColorEditorWindowOpen) [[unlikely]]
         drawColorEditor();
@@ -447,21 +479,13 @@ void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& 
         drawConnectionWindow();
 
     if(mIsPromotionWindowOpen)   [[unlikely]]
-        drawPromotionPopup();
+        drawPromotionWindow();
 
     drawMenuBar(b, cm);
+    drawToTheBoardTexture(b);
 
     ImGui::Render();
     SDL_RenderClear(mWindow.renderer);
-
-    drawSquares();
-    drawPiecesNotOnMouse(b);
-    if( ! mIsPromotionWindowOpen ) [[likely]]
-    {
-        drawMoveIndicatorCircles(b);
-        drawPieceOnMouse();
-    }
-
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(mWindow.renderer);
 }
@@ -478,7 +502,7 @@ struct PromotionImguiStyles //RAII style imgui styles for the promotion popup
     ~PromotionImguiStyles() { ImGui::PopStyleVar(4); }
 };
 
-void ChessRenderer::drawPromotionPopup()
+void ChessRenderer::drawPromotionWindow()
 {
     PromotionImguiStyles raiiStyles;
     

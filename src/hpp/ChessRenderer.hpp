@@ -58,10 +58,12 @@ private:
     void onOpponentHasResignedEvent();
     void onDrawAcceptedEvent();
 
-    void drawPromotionPopup();
+    void drawPromotionWindow();
     void drawColorEditor();
     void drawConnectionWindow();
     void drawMoveIndicatorCircles(Board const&);
+    void drawToTheBoardTexture(Board const&);
+    void drawMainWindow();
     void drawPieceOnMouse();
     void drawSquares();
     void drawPiecesNotOnMouse(Board const&);
@@ -115,8 +117,11 @@ private:
     inline static uint32_t sWindowHeight {sWindowWidth};
 
     ImVec2 mMenuBarSize {};
-    Window mWindow {static_cast<int>(sWindowWidth), static_cast<int>(sWindowHeight), 
-        "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0u};
+    Window mWindow
+    {
+        static_cast<int>(sWindowWidth), static_cast<int>(sWindowHeight), 
+        "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0
+    };
 
     Side mViewingPerspective {Side::WHITE};
 

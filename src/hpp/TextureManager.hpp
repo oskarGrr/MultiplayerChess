@@ -34,6 +34,8 @@ public:
     {
         INVALID = -1,
 
+        BOARD_TEXTURE,
+
         BLACK_QUEEN,
         BLACK_KING,
         BLACK_KNIGHT,

@@ -16,7 +16,7 @@ struct Event
     auto const& unpack() const
     {
 #ifdef NDEBUG
-        return static_cast<EventType const&>(e);
+        return static_cast<EventType const&>(*this);
 #else
         EventType const* downCastPtr { dynamic_cast<EventType const*>(this) };
         assert(downCastPtr && "trying to do an invalid downcast");

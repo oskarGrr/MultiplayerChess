@@ -11,7 +11,7 @@ class PopupManager
 {
 public:
 
-    void drawPopup();
+    void draw();
 
     //if shouldHaveOkayButton is true, then the popup will have a button 
     //that says "Okay" and simply closes the popup.
