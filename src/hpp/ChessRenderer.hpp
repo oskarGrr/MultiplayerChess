@@ -22,8 +22,6 @@ public:
 
     ~ChessRenderer();
 
-    auto static getSquareSize() {return sSquareSize;}
-
     bool isScreenPositionOnBoard(Vec2i) const;
     void renderAllTheThings(Board const& b, ConnectionManager const& cm);
     Vec2i screen2ChessPos(Vec2i) const;
@@ -62,7 +60,7 @@ private:
     void drawColorEditor();
     void drawConnectionWindow();
     void drawMoveIndicatorCircles(Board const&);
-    void drawToTheBoardTexture(Board const&);
+    void renderToBoardTexture(Board const&);
     void drawMainWindow();
     void drawPieceOnMouse();
     void drawSquares();
@@ -112,20 +110,21 @@ private:
 
 private:
 
-    inline static uint32_t sSquareSize   {112U};
-    inline static uint32_t sWindowWidth  {sSquareSize * 8};
-    inline static uint32_t sWindowHeight {sWindowWidth};
+    float mBoardScalingFactor {.8};
+    int const mInitialSquareSize {112};
+    int mSquareSize {static_cast<int>(mInitialSquareSize * mBoardScalingFactor)};
+    int mWindowWidth  {1600};
+    int mWindowHeight {900};
 
-    ImVec2 mMenuBarSize {};
     Window mWindow
     {
-        static_cast<int>(sWindowWidth), static_cast<int>(sWindowHeight), 
+        mWindowWidth, mWindowHeight,
         "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0
     };
 
     Side mViewingPerspective {Side::WHITE};
 
-    TextureManager mTextureManager {mWindow.renderer};
+    TextureManager mTextureManager {mWindow.renderer, mSquareSize};
     PopupManager mPopupManager;
 
     GUIEventSystem::Publisher const& mGuiEventPublisher;
@@ -139,7 +138,11 @@ private:
     std::array<uint32_t, 4> mLightSquareColor {mDefaultLightSquareColor};
     std::array<uint32_t, 4> mDarkSquareColor  {mDefaultDarkSquareColor};
 
-    PromotionWindowContext mPromotionContext {Side::INVALID, INVALID_VEC2I};
+    PromotionWindowContext mPromotionContext 
+    {
+        .promotingSide = Side::INVALID, 
+        .promotingSquare = INVALID_VEC2I
+    };
 
 public:
     ChessRenderer(ChessRenderer const&)=delete;

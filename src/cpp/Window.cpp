@@ -12,8 +12,11 @@ Window::Window(int const width, int const height,
     if(SDL_Init(SDL_subsystemFlags)) 
         throw std::exception(SDL_GetError());
 
-    if(SDL_CreateWindowAndRenderer(width, height, SDL_windowFlags, &window, &renderer)) 
-        throw std::exception(SDL_GetError());
+    window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_windowFlags);
+    if( ! window ) { throw std::exception(SDL_GetError()); }
+
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if( ! renderer ) { throw std::exception(SDL_GetError()); }
 
     SDL_SetWindowTitle(window, title);
 

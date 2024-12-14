@@ -9,7 +9,8 @@
 class TextureManager
 {
 public:
-    TextureManager(SDL_Renderer* renderer);
+
+    TextureManager(SDL_Renderer* renderer, int initialSquareSize);
 
     class Texture
     {

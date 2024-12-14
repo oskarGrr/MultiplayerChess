@@ -33,6 +33,8 @@ ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys,
       mNetworkSubManager{networkEventSys}, 
       mBoardSubscriber{boardEventSubscriber}
 {
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");//bilinear texture filtering
+
     subToEvents();
     ImGui::StyleColorsLight();
     initSquareColorData();
@@ -169,12 +171,11 @@ void ChessRenderer::generateNewSquareColorDataTextFile(SettingsManager const& se
 
 void ChessRenderer::drawSquares()
 {
-    SDL_Rect square{0, static_cast<int>(mMenuBarSize.y), 
-        static_cast<int>(sSquareSize), static_cast<int>(sSquareSize)};
+    SDL_Rect square{0, 0, static_cast<int>(mSquareSize), static_cast<int>(mSquareSize)};
 
-    for(int i = 0; i < 8; ++i, square.x += sSquareSize)
+    for(int i = 0; i < 8; ++i, square.x += mSquareSize)
     {
-        for(int j = 0; j < 8; ++j, square.y += sSquareSize)
+        for(int j = 0; j < 8; ++j, square.y += mSquareSize)
         {
             if( ! (i + j & 1) )//if light square
             {
@@ -202,7 +203,7 @@ void ChessRenderer::drawSquares()
             SDL_RenderFillRect(mWindow.renderer, &square);
         }
 
-        square.y = static_cast<int>(mMenuBarSize.y);
+        square.y = 0;
     }
 }
 
@@ -329,14 +330,6 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
         auto whosTurn {b.getWhosTurnItIs() == Side::WHITE ? "it's white's turn" : "it's black's turn"};
         ImGui::TextUnformatted(whosTurn);
 
-        static bool firstPass {true};
-        if(firstPass) [[unlikely]]
-        {
-            mMenuBarSize = ImGui::GetWindowSize();
-            SDL_SetWindowSize(mWindow.window, static_cast<int>(sWindowWidth), 
-                static_cast<int>(sWindowHeight + mMenuBarSize.y));
-        }
-
         ImGui::EndMainMenuBar();
     }
 }
@@ -360,13 +353,13 @@ void ChessRenderer::drawPiecesNotOnMouse(Board const& b)
             //from the screen position figure out the destination rectangle
             SDL_Rect destination
             {
-                .x = screenPosition.x - textureSize.x / 2,
-                .y = screenPosition.y - textureSize.y / 2,
-                .w = textureSize.x, 
-                .h = textureSize.y
+                .x = screenPosition.x - static_cast<int>(textureSize.x * mBoardScalingFactor) / 2,
+                .y = screenPosition.y - static_cast<int>(textureSize.y * mBoardScalingFactor) / 2,
+                .w = static_cast<int>(textureSize.x * mBoardScalingFactor), 
+                .h = static_cast<int>(textureSize.y * mBoardScalingFactor)
             };
             
-            SDL_RenderCopy(mWindow.renderer,texture.getTexture().get(), nullptr, &destination);
+            SDL_RenderCopy(mWindow.renderer, texture.getTexture().get(), nullptr, &destination);
         }
     }
 }
@@ -385,10 +378,10 @@ void ChessRenderer::drawPieceOnMouse()
 
         SDL_Rect destination
         {
-            .x = mousePosition.x - pieceTexSize.x / 2,
-            .y = mousePosition.y - pieceTexSize.y / 2,
-            .w = pieceTexSize.x, 
-            .h = pieceTexSize.y
+            .x = mousePosition.x - static_cast<int>(pieceTexSize.x * mBoardScalingFactor) / 2,
+            .y = mousePosition.y - static_cast<int>(pieceTexSize.y * mBoardScalingFactor) / 2,
+            .w = static_cast<int>(pieceTexSize.x * mBoardScalingFactor), 
+            .h = static_cast<int>(pieceTexSize.y * mBoardScalingFactor)
         };
 
         SDL_RenderCopy(mWindow.renderer, pieceTex.getTexture().get(), nullptr, &destination);
@@ -432,11 +425,11 @@ void ChessRenderer::drawMoveIndicatorCircles(Board const& b)
     }
 }
 
-void ChessRenderer::drawToTheBoardTexture(Board const& b)
+void ChessRenderer::renderToBoardTexture(Board const& b)
 {
      auto boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE).getTexture() };
      SDL_SetRenderTarget(mWindow.renderer, boardTex.get());
-    
+
      drawSquares();
      drawPiecesNotOnMouse(b);
      if( ! mIsPromotionWindowOpen ) [[likely]]
@@ -444,13 +437,13 @@ void ChessRenderer::drawToTheBoardTexture(Board const& b)
          drawMoveIndicatorCircles(b);
          drawPieceOnMouse();
      }
-    
+
      SDL_SetRenderTarget(mWindow.renderer, nullptr);
 }
 
 void ChessRenderer::drawMainWindow()
 {
-    if(ImGui::Begin("##", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    if(ImGui::Begin("##", nullptr))
     {
         auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
         ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
@@ -482,9 +475,10 @@ void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& 
         drawPromotionWindow();
 
     drawMenuBar(b, cm);
-    drawToTheBoardTexture(b);
+    renderToBoardTexture(b);
 
     ImGui::Render();
+    SDL_SetRenderDrawColor(mWindow.renderer, 0, 0, 0, 0);
     SDL_RenderClear(mWindow.renderer);
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(mWindow.renderer);
@@ -512,13 +506,13 @@ void ChessRenderer::drawPromotionWindow()
         ImGuiWindowFlags_NoBackground);
 
     Vec2i promoScreenPos {chess2ScreenPos(mPromotionContext.promotingSquare)};
-    promoScreenPos.x -= sSquareSize / 2;
-    promoScreenPos.y -= sSquareSize / 2;
+    promoScreenPos.x -= mSquareSize / 2;
+    promoScreenPos.y -= mSquareSize / 2;
 
     Side const promoSide {mPromotionContext.promotingSide}; //shorter name
 
     if(promoSide != mViewingPerspective)
-        promoScreenPos.y -= sSquareSize * 3;
+        promoScreenPos.y -= mSquareSize * 3;
         
     using enum TextureManager::WhichTexture;
     auto const& queenTex  {mTextureManager.getTexture(promoSide == Side::WHITE ? WHITE_QUEEN  : BLACK_QUEEN)};
@@ -602,12 +596,7 @@ void ChessRenderer::drawColorEditor()
 
 bool ChessRenderer::isScreenPositionOnBoard(Vec2i const screenPos) const
 {
-    //ImGui::IsWindowHovered() should handle this. There seems to be a bug in their code.
-    //It does not work in the case where I click on the options menu bar 
-    //drop down, and then click again on it while the drop down is open.
-    bool const belowMenuBar{screenPos.y > static_cast<int>(mMenuBarSize.y)};
-
-    return ! ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && belowMenuBar;
+    return ! ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
 }
 
 static bool isIDStringValid(std::string_view opponentID)
@@ -926,17 +915,12 @@ Vec2i ChessRenderer::chess2ScreenPos(Vec2i const pos)
         ret.x = 7 - ret.x;
 
     //scale up to board size
-    ret.x *= sSquareSize;
-    ret.y *= sSquareSize;
+    ret.x *= mSquareSize;
+    ret.y *= mSquareSize;
 
     //move from top left to middle of square
-    ret.y += static_cast<int>(sSquareSize / 2);
-    ret.x += static_cast<int>(sSquareSize / 2);
-
-    //move down to account for the menu bar.
-    //will only work after the first frame since the first imgui frame
-    //needs to be started to measure the menu bar
-    ret.y += static_cast<int>(mMenuBarSize.y);
+    ret.y += static_cast<int>(mSquareSize / 2);
+    ret.x += static_cast<int>(mSquareSize / 2);
 
     return ret;
 }
@@ -944,13 +928,7 @@ Vec2i ChessRenderer::chess2ScreenPos(Vec2i const pos)
 //Will not check if pos is on the chess board.
 Vec2i ChessRenderer::screen2ChessPos(Vec2i const pos) const
 {
-    auto const menuBarHeight = static_cast<int>(mMenuBarSize.y);
-
-    Vec2i ret
-    {
-        static_cast<int>(pos.x / sSquareSize),
-        static_cast<int>((pos.y - menuBarHeight) / sSquareSize)
-    };
+    Vec2i ret {pos.x / mSquareSize, pos.y / mSquareSize};
 
     if(mViewingPerspective == Side::WHITE) { ret.y = 7 - ret.y; }
     else { ret.x = 7 - ret.x; }

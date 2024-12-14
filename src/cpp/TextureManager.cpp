@@ -4,12 +4,12 @@
 #include "SDL.h"
 #include "errorLogger.hpp"
 
-TextureManager::TextureManager(SDL_Renderer* renderer)
+TextureManager::TextureManager(SDL_Renderer* renderer, int initialSquareSize)
 {
-    int const boardTexWidthAndHeight { static_cast<int>(ChessRenderer::getSquareSize()) * 8 };
+    int initialBoardSize = initialSquareSize * 8;
 
     SDL_Texture* boardTexure { SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
-        SDL_TEXTUREACCESS_TARGET, boardTexWidthAndHeight, boardTexWidthAndHeight) };
+        SDL_TEXTUREACCESS_TARGET, initialBoardSize, initialBoardSize) };
 
     mTextures.try_emplace(WhichTexture::BOARD_TEXTURE, boardTexure);
 
@@ -27,7 +27,7 @@ TextureManager::TextureManager(SDL_Renderer* renderer)
     mTextures.try_emplace(WhichTexture::WHITE_PAWN,    "textures/wPawn.png",   renderer);
     mTextures.try_emplace(WhichTexture::WHITE_BISHOP,  "textures/wBishop.png", renderer);
 
-    int const radius { boardTexWidthAndHeight / 6 };
+    int const radius { initialSquareSize / 6 };
 
     //Initialize the gray circle texture.
     SDL_Texture* greyCircleTex {nullptr};
