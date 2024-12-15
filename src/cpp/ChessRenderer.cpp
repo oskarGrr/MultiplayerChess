@@ -232,9 +232,9 @@ void ChessRenderer::addRematchAndUnpairPopupButtons()
 
 struct MenuBarStyles //RAII style push and pop imgui styles
 {
-    MenuBarStyles() 
+    MenuBarStyles()
     {
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {9,5});
+        //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {9,5});
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
         ImGui::PushStyleColor(ImGuiCol_Separator, {0,0,0,1});
@@ -251,9 +251,10 @@ struct MenuBarStyles //RAII style push and pop imgui styles
 
 void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
 {
-    [[maybe_unused]] MenuBarStyles styles; //RAII style push and pop imgui styles
+    //RAII style push and pop imgui styles
+    [[maybe_unused]] MenuBarStyles styles;
     
-    if(ImGui::BeginMainMenuBar()) [[unlikely]]
+    if(ImGui::BeginMenuBar()) [[unlikely]]
     {
         if(ImGui::BeginMenu("options"))
         {
@@ -330,7 +331,7 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
         auto whosTurn {b.getWhosTurnItIs() == Side::WHITE ? "it's white's turn" : "it's black's turn"};
         ImGui::TextUnformatted(whosTurn);
 
-        ImGui::EndMainMenuBar();
+        ImGui::EndMenuBar();
     }
 }
 
@@ -441,10 +442,15 @@ void ChessRenderer::renderToBoardTexture(Board const& b)
      SDL_SetRenderTarget(mWindow.renderer, nullptr);
 }
 
-void ChessRenderer::drawMainWindow()
+void ChessRenderer::drawMainWindow(Board const& b, ConnectionManager const& cm)
 {
-    if(ImGui::Begin("##", nullptr))
+    ImGui::SetNextWindowSize({static_cast<float>(mWindowWidth), static_cast<float>(mWindowHeight)});
+    ImGui::SetNextWindowPos({0.0f, 0.0f});
+
+    if(ImGui::Begin("##", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar))
     {
+        drawMenuBar(b, cm);
+
         auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
         ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
 
@@ -463,7 +469,7 @@ void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& 
     //ImGui::ShowDemoWindow();
     //ImGui::ShowMetricsWindow();
 
-    drawMainWindow();
+    drawMainWindow(b, cm);
 
     if(mIsColorEditorWindowOpen) [[unlikely]]
         drawColorEditor();
@@ -474,7 +480,6 @@ void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& 
     if(mIsPromotionWindowOpen)   [[unlikely]]
         drawPromotionWindow();
 
-    drawMenuBar(b, cm);
     renderToBoardTexture(b);
 
     ImGui::Render();

@@ -61,7 +61,7 @@ private:
     void drawConnectionWindow();
     void drawMoveIndicatorCircles(Board const&);
     void renderToBoardTexture(Board const&);
-    void drawMainWindow();
+    void drawMainWindow(Board const& b, ConnectionManager const& cm);
     void drawPieceOnMouse();
     void drawSquares();
     void drawPiecesNotOnMouse(Board const&);
@@ -110,11 +110,11 @@ private:
 
 private:
 
-    float mBoardScalingFactor {.8};
+    float mBoardScalingFactor {1};
     int const mInitialSquareSize {112};
     int mSquareSize {static_cast<int>(mInitialSquareSize * mBoardScalingFactor)};
-    int mWindowWidth  {1600};
-    int mWindowHeight {900};
+    int mWindowWidth  {1366};
+    int mWindowHeight {768};
 
     Window mWindow
     {
