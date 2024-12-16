@@ -380,11 +380,13 @@ void ChessRenderer::drawPieceOnMouse()
 
         auto const& pieceTex { mTextureManager.getTexture(pom->getWhichTexture()) };
         auto const pieceTexSize { pieceTex.getSize() };
+        auto const texSizeHalfX = static_cast<int>(pieceTexSize.x * mBoardScalingFactor) / 2;
+        auto const texSizeHalfY = static_cast<int>(pieceTexSize.y * mBoardScalingFactor) / 2;
 
         SDL_Rect destination
         {
-            .x = mousePosition.x - static_cast<int>(pieceTexSize.x * mBoardScalingFactor) / 2,
-            .y = mousePosition.y - static_cast<int>(pieceTexSize.y * mBoardScalingFactor) / 2,
+            .x = mousePosition.x - texSizeHalfX - mBoardPos.x,
+            .y = mousePosition.y - texSizeHalfY - mBoardPos.y,
             .w = static_cast<int>(pieceTexSize.x * mBoardScalingFactor), 
             .h = static_cast<int>(pieceTexSize.y * mBoardScalingFactor)
         };
