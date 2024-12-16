@@ -379,19 +379,18 @@ void ChessRenderer::drawPieceOnMouse()
         SDL_GetMouseState(&mousePosition.x, &mousePosition.y);
 
         auto const& pieceTex { mTextureManager.getTexture(pom->getWhichTexture()) };
-        auto const pieceTexSize { pieceTex.getSize() };
-        auto const texSizeHalfX = static_cast<int>(pieceTexSize.x * mBoardScalingFactor) / 2;
-        auto const texSizeHalfY = static_cast<int>(pieceTexSize.y * mBoardScalingFactor) / 2;
+        auto const pieceTexSize { pieceTex.getSize() * mBoardScalingFactor };
+        auto const texSizeHalfX = pieceTexSize.x / 2;
+        auto const texSizeHalfY = pieceTexSize.y / 2;
 
-        SDL_Rect destination
+        ImVec2 const drawPos
         {
-            .x = mousePosition.x - texSizeHalfX - mBoardPos.x,
-            .y = mousePosition.y - texSizeHalfY - mBoardPos.y,
-            .w = static_cast<int>(pieceTexSize.x * mBoardScalingFactor), 
-            .h = static_cast<int>(pieceTexSize.y * mBoardScalingFactor)
+            ImGui::GetIO().MousePos.x - texSizeHalfX,
+            ImGui::GetIO().MousePos.y - texSizeHalfY
         };
 
-        SDL_RenderCopy(mWindow.renderer, pieceTex.getTexture().get(), nullptr, &destination);
+        ImGui::SetCursorPos(drawPos);
+        ImGui::Image(pieceTex.getTexture().get(), pieceTexSize);
     }
 }
 
@@ -439,11 +438,9 @@ void ChessRenderer::renderToBoardTexture(Board const& b)
 
      drawSquares();
      drawPiecesNotOnMouse(b);
+
      if( ! mIsPromotionWindowOpen ) [[likely]]
-     {
          drawMoveIndicatorCircles(b);
-         drawPieceOnMouse();
-     }
 
      SDL_SetRenderTarget(mWindow.renderer, nullptr);
 }
@@ -466,9 +463,13 @@ void ChessRenderer::drawMainWindow(Board const& b, ConnectionManager const& cm)
 
         auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
         ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
+
         mIsBoardHovered = ImGui::IsItemHovered();
         mBoardPos.x = ImGui::GetItemRectMin().x;
         mBoardPos.y = ImGui::GetItemRectMin().y;
+
+        if( ! mIsPromotionWindowOpen ) [[likely]]
+            drawPieceOnMouse();
 
         ImGui::End();
     }
