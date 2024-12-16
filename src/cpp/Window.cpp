@@ -30,9 +30,6 @@ Window::Window(int const width, int const height,
     auto& io = ImGui::GetIO();
     io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0); 
 
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 9.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 9.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
     auto& style = ImGui::GetStyle();
     style.FramePadding = {5.0f, 3.0f};
     style.DisplaySafeAreaPadding = {0.0f, 5.0f};

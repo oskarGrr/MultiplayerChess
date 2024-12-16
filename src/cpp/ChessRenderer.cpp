@@ -239,7 +239,8 @@ struct MenuBarStyles //RAII style push and pop imgui styles
     MenuBarStyles()
     {
         //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {9,5});
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
         ImGui::PushStyleColor(ImGuiCol_Separator, {0,0,0,1});
         ImGui::PushStyleColor(ImGuiCol_MenuBarBg, {183/255.f, 189/255.f, 188/255.f, 1});
@@ -249,7 +250,7 @@ struct MenuBarStyles //RAII style push and pop imgui styles
     ~MenuBarStyles()
     {
         ImGui::PopStyleColor(4);
-        ImGui::PopStyleVar();
+        ImGui::PopStyleVar(2);
     }
 };
 
@@ -447,6 +448,8 @@ void ChessRenderer::renderToBoardTexture(Board const& b)
 
 void ChessRenderer::drawMainWindow(Board const& b, ConnectionManager const& cm)
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
+
     ImGui::SetNextWindowSize({static_cast<float>(mWindowWidth), static_cast<float>(mWindowHeight)});
     ImGui::SetNextWindowPos({0.0f, 0.0f});
 
@@ -454,7 +457,8 @@ void ChessRenderer::drawMainWindow(Board const& b, ConnectionManager const& cm)
     {
         ImGuiWindowFlags_MenuBar |
         ImGuiWindowFlags_AlwaysAutoResize |
-        ImGuiWindowFlags_NoTitleBar
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoScrollbar
     };
 
     if(ImGui::Begin("##", nullptr, windowFlags))
@@ -473,6 +477,8 @@ void ChessRenderer::drawMainWindow(Board const& b, ConnectionManager const& cm)
 
         ImGui::End();
     }
+
+    ImGui::PopStyleVar();
 }
 
 void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
@@ -496,7 +502,7 @@ void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
 
     renderToBoardTexture(b);
 
-    //ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
     //ImGui::ShowMetricsWindow();
 
     ImGui::Render();
