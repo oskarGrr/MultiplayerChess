@@ -28,10 +28,14 @@ static auto const squareColorDataFname {"squareColorData.txt"};
 
 //board width, height and square size are initialized with their setters later
 ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys, 
-    BoardEventSystem::Subscriber& boardEventSubscriber, GUIEventSystem::Publisher const& guiEventPublisher) 
+    BoardEventSystem::Subscriber& boardEventSubscriber, 
+    GUIEventSystem::Publisher const& guiEventPublisher,
+    AppEventSystem::Subscriber& appEventSubscriber) 
+
     : mGuiEventPublisher{guiEventPublisher}, 
       mNetworkSubManager{networkEventSys}, 
-      mBoardSubscriber{boardEventSubscriber}
+      mBoardSubscriber{boardEventSubscriber},
+      mAppEventSubscriber{appEventSubscriber}
 {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");//bilinear texture filtering
 
@@ -47,7 +51,7 @@ ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys,
 ChessRenderer::~ChessRenderer()
 {
     mBoardSubscriber.unsub<BoardEvents::GameOver>(mGameOverSubID);
-    mBoardSubscriber.unsub<BoardEvents::PromotionBegin>(mPromotionBeginEventID);
+    mBoardSubscriber.unsub<BoardEvents::PromotionBegin>(mPromotionBeginEventSubID);
     //mNetworkSubManager will automatically unsub from the rest of the events...
 
     serializeSquareColorData();
@@ -235,7 +239,7 @@ struct MenuBarStyles //RAII style push and pop imgui styles
     MenuBarStyles()
     {
         //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {9,5});
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
         ImGui::PushStyleColor(ImGuiCol_Separator, {0,0,0,1});
         ImGui::PushStyleColor(ImGuiCol_MenuBarBg, {183/255.f, 189/255.f, 188/255.f, 1});
@@ -245,7 +249,7 @@ struct MenuBarStyles //RAII style push and pop imgui styles
     ~MenuBarStyles()
     {
         ImGui::PopStyleColor(4);
-        ImGui::PopStyleVar(2);
+        ImGui::PopStyleVar();
     }
 };
 
@@ -447,27 +451,34 @@ void ChessRenderer::drawMainWindow(Board const& b, ConnectionManager const& cm)
     ImGui::SetNextWindowSize({static_cast<float>(mWindowWidth), static_cast<float>(mWindowHeight)});
     ImGui::SetNextWindowPos({0.0f, 0.0f});
 
-    if(ImGui::Begin("##", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar))
+    auto const windowFlags
+    {
+        ImGuiWindowFlags_MenuBar |
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoTitleBar
+    };
+
+    if(ImGui::Begin("##", nullptr, windowFlags))
     {
         drawMenuBar(b, cm);
 
         auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
         ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
+        mIsBoardHovered = ImGui::IsItemHovered();
+        mBoardPos.x = ImGui::GetItemRectMin().x;
+        mBoardPos.y = ImGui::GetItemRectMin().y;
 
         ImGui::End();
     }
 }
 
-void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& cm)
+void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
 {
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
     mPopupManager.draw();
-
-    //ImGui::ShowDemoWindow();
-    //ImGui::ShowMetricsWindow();
 
     drawMainWindow(b, cm);
 
@@ -481,6 +492,9 @@ void ChessRenderer::renderAllTheThings(Board const& b, ConnectionManager const& 
         drawPromotionWindow();
 
     renderToBoardTexture(b);
+
+    //ImGui::ShowDemoWindow();
+    //ImGui::ShowMetricsWindow();
 
     ImGui::Render();
     SDL_SetRenderDrawColor(mWindow.renderer, 0, 0, 0, 0);
@@ -597,11 +611,6 @@ void ChessRenderer::drawColorEditor()
     }
 
     ImGui::End();
-}
-
-bool ChessRenderer::isScreenPositionOnBoard(Vec2i const screenPos) const
-{
-    return ! ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
 }
 
 static bool isIDStringValid(std::string_view opponentID)
@@ -852,8 +861,20 @@ void ChessRenderer::onDrawAcceptedEvent()
     addRematchAndUnpairPopupButtons();
 }
 
+void ChessRenderer::onLeftClickEvent(AppEvents::LeftClickPress const& evnt)
+{
+    if(auto maybeChessPos {screen2ChessPos(evnt.mousePos)})
+    {
+        GUIEvents::PiecePickUp evnt {*maybeChessPos};
+        mGuiEventPublisher.pub(evnt);
+    }
+}
+
 void ChessRenderer::subToEvents()
 {
+    mLeftClickEventSubID = mAppEventSubscriber.sub<AppEvents::LeftClickPress>(
+        [this](Event const& e){ onLeftClickEvent(e.unpack<AppEvents::LeftClickPress>()); });
+
     mNetworkSubManager.sub<NetworkEvents::DrawAccept>(NetworkSubscriptions::DRAW_ACCEPTED,
         [this](Event const&){ onDrawAcceptedEvent(); });
 
@@ -903,7 +924,7 @@ void ChessRenderer::subToEvents()
          onGameOverEventWhileNotPaired(e.unpack<BoardEvents::GameOver>());
     });
 
-    mPromotionBeginEventID = mBoardSubscriber.sub<BoardEvents::PromotionBegin>([this](Event const& e){
+    mPromotionBeginEventSubID = mBoardSubscriber.sub<BoardEvents::PromotionBegin>([this](Event const& e){
         onPromotionBeginEvent(e.unpack<BoardEvents::PromotionBegin>() );
     });
 }
@@ -930,13 +951,16 @@ Vec2i ChessRenderer::chess2ScreenPos(Vec2i const pos)
     return ret;
 }
 
-//Will not check if pos is on the chess board.
-Vec2i ChessRenderer::screen2ChessPos(Vec2i const pos) const
+//if the input coords on on the board, then return the corresponding chess square
+std::optional<Vec2i> ChessRenderer::screen2ChessPos(Vec2i const pos) const
 {
-    Vec2i ret {pos.x / mSquareSize, pos.y / mSquareSize};
+    if( ! mIsBoardHovered )
+        return std::nullopt;
 
-    if(mViewingPerspective == Side::WHITE) { ret.y = 7 - ret.y; }
-    else { ret.x = 7 - ret.x; }
+    Vec2i chessPos { (pos.x - mBoardPos.x) / mSquareSize, (pos.y - mBoardPos.y) / mSquareSize };
 
-    return ret;
+    if(Side::WHITE == mViewingPerspective) { chessPos.y = 7 - chessPos.y; }
+    else { chessPos.x = 7 - chessPos.x; }
+
+    return std::make_optional(chessPos);
 }

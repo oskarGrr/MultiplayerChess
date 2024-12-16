@@ -22,7 +22,8 @@ class Board
 {
 public:
 
-    Board(BoardEventSystem::Publisher const&, GUIEventSystem::Subscriber&, NetworkEventSystem::Subscriber&);
+    Board(BoardEventSystem::Publisher const&, GUIEventSystem::Subscriber&, 
+        NetworkEventSystem::Subscriber&, AppEventSystem::Subscriber& appEventSubscriber);
 
     //factory method for placing a piece at the specified location on the board
     //these should only be called in the boards constructor ideally to follow RAII.
@@ -73,6 +74,7 @@ private:
 
     enum struct SubscriptionTypes
     {
+        PIECE_PICK_UP,
         RESET_BOARD,
         PROMOTION_END,
         PAIRING_COMPLETE,
@@ -86,6 +88,9 @@ private:
 
     SubscriptionManager<SubscriptionTypes,
         NetworkEventSystem::Subscriber> mNetworkSubManager;
+
+    AppEventSystem::Subscriber& mAppEventSubscriber;
+    SubscriptionID mLeftClickReleaseSubID {INVALID_SUBSCRIPTION_ID};
 
     std::array<std::shared_ptr<Piece>, 64> m_pieces {};
     std::shared_ptr<Piece> m_lastCapturedPiece {nullptr};

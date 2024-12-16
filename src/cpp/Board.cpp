@@ -30,10 +30,13 @@ static Vec2i index2ChessPos(int const index)
 
 Board::Board(BoardEventSystem::Publisher const& boardEventPublisher, 
     GUIEventSystem::Subscriber& guiEventSubscriber, 
-    NetworkEventSystem::Subscriber& networkEventSubscriber) 
+    NetworkEventSystem::Subscriber& networkEventSubscriber,
+    AppEventSystem::Subscriber& appEventSubscriber)
+
     : mBoardEventPublisher {boardEventPublisher},
       mGuiSubManager{guiEventSubscriber},
-      mNetworkSubManager{networkEventSubscriber}
+      mNetworkSubManager{networkEventSubscriber},
+      mAppEventSubscriber{appEventSubscriber}
 {
     subToEvents();
 
@@ -46,6 +49,12 @@ Board::Board(BoardEventSystem::Publisher const& boardEventPublisher,
 //Helper function to reduce constructor size.
 void Board::subToEvents()
 {
+    mLeftClickReleaseSubID = mAppEventSubscriber.sub<AppEvents::LeftClickRelease>(
+        [this](Event const& e){ putPieceDown(e.unpack<AppEvents::LeftClickRelease>().chessPos); });
+
+    mGuiSubManager.sub<GUIEvents::PiecePickUp>(SubscriptionTypes::PIECE_PICK_UP,
+        [this](Event const& e){ pickUpPiece(e.unpack<GUIEvents::PiecePickUp>().chessPos); });
+
     mNetworkSubManager.sub<NetworkEvents::RematchAccept>(SubscriptionTypes::REMATCH_ACCEPT,
         [this](Event const&){ resetBoard(); });
 

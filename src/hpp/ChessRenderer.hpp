@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <optional>
 #include "SDL.h"
 #include "Vector2i.hpp"
 #include "PopupManager.hpp"
@@ -18,13 +19,15 @@ class ChessRenderer
 public:
 
     ChessRenderer(NetworkEventSystem::Subscriber&,
-        BoardEventSystem::Subscriber&, GUIEventSystem::Publisher const&);
+        BoardEventSystem::Subscriber&, GUIEventSystem::Publisher const&,
+        AppEventSystem::Subscriber& appEventSubscriber);
 
     ~ChessRenderer();
 
-    bool isScreenPositionOnBoard(Vec2i) const;
-    void renderAllTheThings(Board const& b, ConnectionManager const& cm);
-    Vec2i screen2ChessPos(Vec2i) const;
+    void render(Board const& b, ConnectionManager const& cm);
+
+    //if the input coords are on the board, then return the corresponding chess square
+    std::optional<Vec2i> screen2ChessPos(Vec2i) const;
 
     struct PromotionWindowContext
     {
@@ -55,6 +58,7 @@ private:
     void onRematchAcceptEvent();
     void onOpponentHasResignedEvent();
     void onDrawAcceptedEvent();
+    void onLeftClickEvent(AppEvents::LeftClickPress const&);
 
     void drawPromotionWindow();
     void drawColorEditor();
@@ -101,8 +105,10 @@ private:
         NetworkEventSystem::Subscriber> mNetworkSubManager;
 
     BoardEventSystem::Subscriber& mBoardSubscriber;
+    AppEventSystem::Subscriber& mAppEventSubscriber;
     SubscriptionID mGameOverSubID {INVALID_SUBSCRIPTION_ID};
-    SubscriptionID mPromotionBeginEventID {INVALID_SUBSCRIPTION_ID};
+    SubscriptionID mPromotionBeginEventSubID {INVALID_SUBSCRIPTION_ID};
+    SubscriptionID mLeftClickEventSubID {INVALID_SUBSCRIPTION_ID};
 
     //Takes a chess position, and returns the pixel screen coords
     //of where that is (the middle of the square).
@@ -113,8 +119,8 @@ private:
     float mBoardScalingFactor {1};
     int const mInitialSquareSize {112};
     int mSquareSize {static_cast<int>(mInitialSquareSize * mBoardScalingFactor)};
-    int mWindowWidth  {1366};
-    int mWindowHeight {768};
+    int mWindowWidth  {1340};
+    int mWindowHeight {980};
 
     Window mWindow
     {
@@ -132,6 +138,10 @@ private:
     bool mIsColorEditorWindowOpen {false};
     bool mIsConnectionWindowOpen  {false};
     bool mIsPromotionWindowOpen   {false};
+
+    //updated every frame in main imgui window
+    bool mIsBoardHovered {false};
+    Vec2i mBoardPos {}; //top left corner of where the board is on the screen
 
     std::array<uint32_t, 4> const mDefaultLightSquareColor {214, 235, 225, 255};
     std::array<uint32_t, 4> const mDefaultDarkSquareColor  {43, 86, 65, 255};

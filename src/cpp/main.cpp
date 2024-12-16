@@ -33,24 +33,29 @@ int main(int argumentCount, char** argumentVector)
     return EXIT_SUCCESS;
 }
 
-void handleLeftClickPressEvent(Board&, ConnectionManager const&, ChessRenderer const&);
-void handleLeftClickReleaseEvent(Board&, ChessRenderer const&);
+void handleLeftClickPressSDLEvent(Board&, ConnectionManager const&, 
+    AppEventSystem::Publisher const& appEventPublisher);
+
+void handleLeftClickReleaseSDLEvent(Board&, ChessRenderer const&, 
+    AppEventSystem::Publisher const& appEventPublisher);
 
 static void runApplication()
 {
     NetworkEventSystem networkEventSys;
     GUIEventSystem guiEventSys;
     BoardEventSystem boardEventSys;
+    AppEventSystem appEventSys;
 
     ConnectionManager connectionManager {networkEventSys.getPublisher(), guiEventSys.getSubscriber(), 
         boardEventSys.getSubscriber()};
 
     ChessRenderer chessRenderer {networkEventSys.getSubscriber(), boardEventSys.getSubscriber(), 
-        guiEventSys.getPublisher()};
+        guiEventSys.getPublisher(), appEventSys.getSubscriber()};
 
     SoundManager soundManager {boardEventSys.getSubscriber()};
 
-    Board board {boardEventSys.getPublisher(), guiEventSys.getSubscriber(), networkEventSys.getSubscriber()};
+    Board board {boardEventSys.getPublisher(), guiEventSys.getSubscriber(), 
+        networkEventSys.getSubscriber(), appEventSys.getSubscriber()};
 
     bool appRunning {true};
     //double deltaTime {0.0};//unused for now
@@ -76,19 +81,19 @@ static void runApplication()
             case SDL_MOUSEBUTTONDOWN: 
             {
                 if(evnt.button.button == SDL_BUTTON_LEFT)
-                    handleLeftClickPressEvent(board, connectionManager, chessRenderer);
+                    handleLeftClickPressSDLEvent(board, connectionManager, appEventSys.getPublisher());
 
                 break;
             }
             case SDL_MOUSEBUTTONUP:
             {
                 if(evnt.button.button == SDL_BUTTON_LEFT)
-                    handleLeftClickReleaseEvent(board, chessRenderer);
+                    handleLeftClickReleaseSDLEvent(board, chessRenderer, appEventSys.getPublisher());
             }
             }
         }
 
-        chessRenderer.renderAllTheThings(board, connectionManager);
+        chessRenderer.render(board, connectionManager);
         SDL_Delay(10);
 
         //auto const end { std::chrono::steady_clock::now() };
@@ -96,25 +101,30 @@ static void runApplication()
     }
 }
 
-static void handleLeftClickReleaseEvent(Board& board, ChessRenderer const& chessRenderer)
+static void handleLeftClickReleaseSDLEvent(Board& board, ChessRenderer const& chessRenderer, 
+    AppEventSystem::Publisher const& appEventPublisher)
 {
     int mx{}, my{};
     SDL_GetMouseState(&mx, &my);
-    board.putPieceDown(chessRenderer.screen2ChessPos({mx, my}));
+
+    if(auto maybeChessPos { chessRenderer.screen2ChessPos({mx, my}) })
+    {
+        AppEvents::LeftClickRelease evnt {*maybeChessPos};
+        appEventPublisher.pub(evnt);
+    }
 }
 
-static void handleLeftClickPressEvent(Board& board, ConnectionManager const& connectionManager, 
-    ChessRenderer const& chessRenderer)
+static void handleLeftClickPressSDLEvent(Board& board, ConnectionManager const& connectionManager, 
+    AppEventSystem::Publisher const& appEventPublisher)
 {
-    int x, y;
-    SDL_GetMouseState(&x, &y);
-
-    if( ! chessRenderer.isScreenPositionOnBoard({x, y}) )
-        return;
-
-    //If we are still waiting for the online opponent to make a move
+    //if we are playing online and it is not our turn
     if(connectionManager.isPairedOnline() && board.getSideUserIsPlayingAs() != board.getWhosTurnItIs())
         return;
 
-    board.pickUpPiece(chessRenderer.screen2ChessPos({x, y}));
+    int x{0}, y{0};
+    SDL_GetMouseState(&x, &y);
+
+    //post a left click event indicating that we are attempting to grab a chess piece
+    AppEvents::LeftClickPress evnt(x, y);
+    appEventPublisher.pub(evnt);
 }

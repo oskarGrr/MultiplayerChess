@@ -262,10 +262,17 @@ namespace GUIEvents
         PromotionEnd(ChessMove::PromoTypes promoType_) : promoType{promoType_} {}
         ChessMove::PromoTypes promoType;
     };
+
+    struct PiecePickUp : Event
+    {
+        PiecePickUp(Vec2i chessPos_) : chessPos{chessPos_} {}
+        Vec2i chessPos {};
+    };
 }
 
 using GUIEventSystem = EventSystem
 <
+    GUIEvents::PiecePickUp,
     GUIEvents::ResetBoard,
     GUIEvents::DrawAccept,
     GUIEvents::DrawDecline,
@@ -384,4 +391,32 @@ using NetworkEventSystem = EventSystem
     NetworkEvents::OpponentHasResigned,
     NetworkEvents::DisconnectedFromServer,
     NetworkEvents::ConnectedToServer
+>;
+
+namespace AppEvents
+{
+    struct LeftClickRelease : Event
+    {
+        LeftClickRelease(Vec2i chessPos_) : chessPos{chessPos_} {}
+        Vec2i chessPos{};
+    };
+
+    struct LeftClickPress : Event
+    {
+        LeftClickPress(int x, int y) : mousePos{x, y} {} 
+        Vec2i mousePos{};
+    };
+
+    struct RightClick : Event
+    {
+        RightClick(int x, int y) : mousePos{x, y} {} 
+        Vec2i mousePos{};
+    };
+}
+
+using AppEventSystem = EventSystem
+<
+    AppEvents::LeftClickRelease,
+    AppEvents::LeftClickPress,
+    AppEvents::RightClick
 >;
