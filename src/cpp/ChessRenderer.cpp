@@ -40,7 +40,6 @@ ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys,
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");//bilinear texture filtering
 
     subToEvents();
-    ImGui::StyleColorsLight();
     initSquareColorData();
 
     //instead of drawing to the whole screen, draw to the board texture.
@@ -238,13 +237,13 @@ struct MenuBarStyles //RAII style push and pop imgui styles
 {
     MenuBarStyles()
     {
-        //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {9,5});
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {10, 4});
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
         ImGui::PushStyleColor(ImGuiCol_Separator, {0,0,0,1});
-        ImGui::PushStyleColor(ImGuiCol_MenuBarBg, {183/255.f, 189/255.f, 188/255.f, 1});
         ImGui::PushStyleColor(ImGuiCol_Button, {.2f, 0.79f, 0.8f, 0.70f});
+        ImGui::PushStyleColor(ImGuiCol_Text, {0,0,0,1});
     }
 
     ~MenuBarStyles()
@@ -254,12 +253,52 @@ struct MenuBarStyles //RAII style push and pop imgui styles
     }
 };
 
-void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
+static bool isPointInCircle(ImVec2 const p, ImVec2 const circleCenter, float const radius)
+{
+    ImVec2 const point2Circle { circleCenter.x - p.x , circleCenter.y - p.y };
+    float const squaredDistance { point2Circle.x * point2Circle.x + point2Circle.y * point2Circle.y };
+    return squaredDistance <= (radius * radius);
+}
+
+//returns true if the button was clicked
+static bool closeButton(ImVec2 circleCenter, float const radius)
+{
+    bool const isMouseOverCloseButton { isPointInCircle(ImGui::GetMousePos(), circleCenter, radius) };
+
+    ImU32 const closeBtnColor
+    {
+        isMouseOverCloseButton ?
+        ImGui::GetColorU32({ .85f, .1f, .1f, .7f }) :
+        ImGui::GetColorU32({ .7f, .1f, .1f, .7f })
+    };
+
+    int const segmentCount { 36 };
+    auto* const wndDrawList { ImGui::GetWindowDrawList() };
+    wndDrawList->AddCircleFilled(circleCenter, radius, closeBtnColor, segmentCount);
+    //ImGui::GetWindowDrawList()->AddCircle(circleCenter, radius, ImGui::GetColorU32({0,0,0,.6f}), segmentCount);
+
+    float const crossSize { radius * .7071f * .8f };
+    ImU32 crossColor { ImGui::GetColorU32({ 0, 0, 0, .7f }) };
+
+    ImVec2 const bottomRight { circleCenter.x + crossSize,  circleCenter.y + crossSize };
+    ImVec2 const topLeft     { circleCenter.x - crossSize,  circleCenter.y - crossSize };
+    wndDrawList->AddLine(bottomRight, topLeft, crossColor);
+
+    ImVec2 const bottomLeft { circleCenter.x - crossSize,  circleCenter.y + crossSize };
+    ImVec2 const topRight   { circleCenter.x + crossSize,  circleCenter.y - crossSize };
+    wndDrawList->AddLine(bottomLeft, topRight, crossColor);
+
+    return isMouseOverCloseButton && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+}
+
+float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
 {
     //RAII style push and pop imgui styles
     [[maybe_unused]] MenuBarStyles styles;
     
-    if(ImGui::BeginMenuBar()) [[unlikely]]
+    float menuBarHeight {0.0f};
+
+    if(ImGui::BeginMainMenuBar()) [[unlikely]]
     {
         if(ImGui::BeginMenu("options"))
         {
@@ -336,8 +375,18 @@ void ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
         auto whosTurn {b.getWhosTurnItIs() == Side::WHITE ? "it's white's turn" : "it's black's turn"};
         ImGui::TextUnformatted(whosTurn);
 
-        ImGui::EndMenuBar();
+        menuBarHeight = ImGui::GetWindowHeight();
+
+        float const closeBtnRadius { menuBarHeight * .4f };
+        if(closeButton({ImGui::GetWindowWidth() - closeBtnRadius - 4, menuBarHeight / 2}, menuBarHeight * .4f))
+        {
+            ImGui::TextUnformatted("closed");
+        }
+
+        ImGui::EndMainMenuBar();
     }
+
+    return menuBarHeight;
 }
 
 void ChessRenderer::drawPiecesNotOnMouse(Board const& b)
@@ -446,16 +495,15 @@ void ChessRenderer::renderToBoardTexture(Board const& b)
      SDL_SetRenderTarget(mWindow.renderer, nullptr);
 }
 
-void ChessRenderer::drawMainWindow(Board const& b, ConnectionManager const& cm)
+void ChessRenderer::drawMainWindow(float const menuBarHeight)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 
     ImGui::SetNextWindowSize({static_cast<float>(mWindowWidth), static_cast<float>(mWindowHeight)});
-    ImGui::SetNextWindowPos({0.0f, 0.0f});
+    ImGui::SetNextWindowPos({0.0f, menuBarHeight});
 
     auto const windowFlags
     {
-        ImGuiWindowFlags_MenuBar |
         ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar
@@ -463,8 +511,6 @@ void ChessRenderer::drawMainWindow(Board const& b, ConnectionManager const& cm)
 
     if(ImGui::Begin("##", nullptr, windowFlags))
     {
-        drawMenuBar(b, cm);
-
         auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
         ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
 
@@ -489,7 +535,8 @@ void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
 
     mPopupManager.draw();
 
-    drawMainWindow(b, cm);
+    float const menuBarHeight { drawMenuBar(b, cm) };
+    drawMainWindow(menuBarHeight);
 
     if(mIsColorEditorWindowOpen) [[unlikely]]
         drawColorEditor();

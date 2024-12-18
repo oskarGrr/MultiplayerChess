@@ -65,11 +65,11 @@ private:
     void drawConnectionWindow();
     void drawMoveIndicatorCircles(Board const&);
     void renderToBoardTexture(Board const&);
-    void drawMainWindow(Board const& b, ConnectionManager const& cm);
+    void drawMainWindow(float menuBarHeight);
     void drawPieceOnMouse();
     void drawSquares();
     void drawPiecesNotOnMouse(Board const&);
-    void drawMenuBar(Board const&, ConnectionManager const&);
+    float drawMenuBar(Board const&, ConnectionManager const&);//returns menu bar height
 
     //methods to reduce ctor/dtor size
     std::string getLightSquareColorAsString();

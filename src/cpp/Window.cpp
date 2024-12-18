@@ -22,17 +22,19 @@ Window::Window(int const width, int const height,
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui::StyleColorsDark();
+    ImGui::StyleColorsLight();
+    
+    auto& style { ImGui::GetStyle() };
+    style.Colors[ImGuiCol_WindowBg]  = {0.11f, 0.11f, 0.12f, 1.00f};
+    style.Colors[ImGuiCol_Text]      = {0.94f, 0.94f, 0.94f, 1.00f};
+    style.Colors[ImGuiCol_MenuBarBg] = {0.58f, 0.61f, 0.61f, 1.00f};
+
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer_Init(renderer);
 
     //add the font from the fonts folder
     auto& io = ImGui::GetIO();
     io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0); 
-
-    auto& style = ImGui::GetStyle();
-    style.FramePadding = {5.0f, 3.0f};
-    style.DisplaySafeAreaPadding = {0.0f, 5.0f};
 }
 
 //cleanup SDL and imGui
