@@ -268,10 +268,13 @@ namespace GUIEvents
         PiecePickUp(Vec2i chessPos_) : chessPos{chessPos_} {}
         Vec2i chessPos {};
     };
+
+    struct CloseButtonClicked : Event {};
 }
 
 using GUIEventSystem = EventSystem
 <
+    GUIEvents::CloseButtonClicked,
     GUIEvents::PiecePickUp,
     GUIEvents::ResetBoard,
     GUIEvents::DrawAccept,

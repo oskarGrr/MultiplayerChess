@@ -264,13 +264,18 @@ static bool isPointInCircle(ImVec2 const p, ImVec2 const circleCenter, float con
 static bool closeButton(ImVec2 circleCenter, float const radius)
 {
     bool const isMouseOverCloseButton { isPointInCircle(ImGui::GetMousePos(), circleCenter, radius) };
+    bool const isMouseButtonDown { ImGui::IsMouseDown(ImGuiMouseButton_Left) };
 
-    ImU32 const closeBtnColor
+    ImU32 closeBtnColor {};
+    if(isMouseOverCloseButton)
     {
-        isMouseOverCloseButton ?
-        ImGui::GetColorU32({ .85f, .1f, .1f, .7f }) :
-        ImGui::GetColorU32({ .7f, .1f, .1f, .7f })
-    };
+        closeBtnColor = isMouseButtonDown ? ImGui::GetColorU32({ .85f, .1f, .1f, .7f }) :
+            ImGui::GetColorU32({ 1, .18f, .18f, .7f });
+    }
+    else
+    { 
+        closeBtnColor = ImGui::GetColorU32({ .7f, .1f, .1f, .7f }); 
+    }
 
     int const segmentCount { 36 };
     auto* const wndDrawList { ImGui::GetWindowDrawList() };
@@ -288,7 +293,7 @@ static bool closeButton(ImVec2 circleCenter, float const radius)
     ImVec2 const topRight   { circleCenter.x + crossSize,  circleCenter.y - crossSize };
     wndDrawList->AddLine(bottomLeft, topRight, crossColor);
 
-    return isMouseOverCloseButton && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+    return isMouseOverCloseButton && ImGui::GetIO().MouseReleased[ImGuiMouseButton_Left];
 }
 
 float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
@@ -380,7 +385,8 @@ float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
         float const closeBtnRadius { menuBarHeight * .4f };
         if(closeButton({ImGui::GetWindowWidth() - closeBtnRadius - 4, menuBarHeight / 2}, menuBarHeight * .4f))
         {
-            ImGui::TextUnformatted("closed");
+            GUIEvents::CloseButtonClicked evnt;
+            mGuiEventPublisher.pub(evnt);
         }
 
         ImGui::EndMainMenuBar();

@@ -58,6 +58,10 @@ static void runApplication()
         networkEventSys.getSubscriber(), appEventSys.getSubscriber()};
 
     bool appRunning {true};
+
+    (void)guiEventSys.getSubscriber().sub<GUIEvents::CloseButtonClicked>( 
+        [&appRunning](Event const&){ appRunning = false; } );
+
     //double deltaTime {0.0};//unused for now
 
     while(appRunning)
