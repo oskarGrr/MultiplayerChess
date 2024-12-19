@@ -1,9 +1,51 @@
 #include "PopupManager.hpp"
 #include "imgui.h"
 
+struct RAIIPopupstyles
+{
+    RAIIPopupstyles()
+    {
+        pushColor(ImGuiCol_Text, {0,0,0,1});
+        pushColor(ImGuiCol_Button, {.2f, 0.79f, 0.8f, 0.70f});
+        pushColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
+        pushColor(ImGuiCol_PopupBg, {.9, .9, .9, .95});
+    }
+
+    ~RAIIPopupstyles()
+    {
+        ImGui::PopStyleColor(numColors);
+        ImGui::PopStyleVar(numStyles);
+    }
+
+private:
+
+    void pushColor(ImGuiCol colorIdx, ImVec4 const& color)
+    {
+        ImGui::PushStyleColor(colorIdx, color);
+        ++numColors;
+    }
+
+    void pushStyle(ImGuiStyleVar styleVar, float val)
+    {
+        ImGui::PushStyleVar(styleVar, val);
+        ++numStyles;
+    }
+
+    void pushStyle(ImGuiStyleVar styleVar, ImVec2 const& val)
+    {
+        ImGui::PushStyleVar(styleVar, val);
+        ++numStyles;
+    }
+
+    int numColors {0};
+    int numStyles {0};
+};
+
 void PopupManager::draw()
 {
     if( ! mIsPopupOpen ) { return; }
+
+    [[maybe_unused]] RAIIPopupstyles styles; //RAII style push and pop imgui colors and styles
 
     //returns true if the popup should close
     auto const checkButtons = [this]() -> bool
@@ -34,7 +76,14 @@ void PopupManager::draw()
 
     ImGui::OpenPopup(mCurrentPopup.text.c_str());
 
-    if(ImGui::BeginPopup(mCurrentPopup.text.c_str()))
+    auto const windowFlags 
+    {
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize   |
+        ImGuiWindowFlags_AlwaysAutoResize
+    };
+
+    if(ImGui::BeginPopupModal(mCurrentPopup.text.c_str(), nullptr, windowFlags))
     {
         ImGui::TextUnformatted(mCurrentPopup.text.c_str());
 
