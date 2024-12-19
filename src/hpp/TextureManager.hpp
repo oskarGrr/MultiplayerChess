@@ -51,8 +51,8 @@ public:
         WHITE_PAWN,
         WHITE_BISHOP,
 
-        GRAY_CIRCLE,
-        RED_CIRCLE
+        //GRAY_CIRCLE,
+        //RED_CIRCLE
     };
 
     Texture const& getTexture(WhichTexture) const;
@@ -60,6 +60,6 @@ public:
 private:
     std::unordered_map<WhichTexture, Texture> mTextures;
 
-    static void initCircleTexture(int radius, Uint8 RR, Uint8 GG, 
-        Uint8 BB, Uint8 AA, SDL_Texture** toInit, SDL_Renderer* renderer);
+    /*static void initCircleTexture(int radius, Uint8 RR, Uint8 GG, 
+        Uint8 BB, Uint8 AA, SDL_Texture** toInit, SDL_Renderer* renderer);*/
 };

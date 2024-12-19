@@ -437,6 +437,12 @@ void ChessRenderer::drawPiecesNotOnMouse(Board const& b)
             //figure out where on the screen the piece is (the middle of the square)
             Vec2i screenPosition { chess2ScreenPos(piece->getChessPosition()) };
 
+            //chess2ScreenPos takes into account where the board is on the imgui window.
+            //when rendering to the SDL board texture 0,0 is the top left of the texture 
+            //not the window, so subtract the board position
+            screenPosition.x -= mBoardPos.x;
+            screenPosition.y -= mBoardPos.y;
+
             auto const& texture { mTextureManager.getTexture(piece->getWhichTexture()) };
 
             //get the width and height of whichever texture the piece on the mouse is
@@ -486,35 +492,21 @@ void ChessRenderer::drawMoveIndicatorCircles(Board const& b)
     auto const pom = Piece::getPieceOnMouse();
     if( ! pom ) return;
 
-    auto const& redCircleTex   {mTextureManager.getTexture(TextureManager::WhichTexture::RED_CIRCLE)};
-    auto const& grayCircleTex  {mTextureManager.getTexture(TextureManager::WhichTexture::GRAY_CIRCLE)};
-    auto const  redCircleSize  {redCircleTex.getSize()};
-    auto const  grayCircleSize {grayCircleTex.getSize()};
+    auto* const wdl { ImGui::GetWindowDrawList() };
+    float const radius { mSquareSize / 6.0f };
+    ImU32 const redColor  { ImGui::GetColorU32({.87f, .192f, .388f, .498f}) };
+    ImU32 const greyColor { ImGui::GetColorU32( {.43f, .43f, .43f, .62f} ) };
+    int const segmentCount { 40 };
 
     for(auto const& move : pom->getLegalMoves())
     {
-        Vec2i const circlePos{chess2ScreenPos(move.dest)};
-
-        SDL_Rect const redCircleDest
-        {
-            static_cast<int>(circlePos.x - redCircleSize.x / 2),
-            static_cast<int>(circlePos.y - redCircleSize.x / 2),
-            static_cast<int>(redCircleSize.x),
-            static_cast<int>(redCircleSize.y)
-        };
-        SDL_Rect const grayCircleDest
-        {
-            static_cast<int>(circlePos.x - grayCircleSize.x / 2),
-            static_cast<int>(circlePos.y - grayCircleSize.x / 2),
-            static_cast<int>(grayCircleSize.x),
-            static_cast<int>(grayCircleSize.y)
-        };
+        ImVec2 const circlePos { chess2ScreenPos(move.dest) };
 
         //If this legal move is a capture of another piece draw a red circle, otherwise draw a gray circle.
         if(move.wasCapture)
-            SDL_RenderCopy(mWindow.renderer, redCircleTex.getTexture().get(), nullptr, &redCircleDest);
+            wdl->AddCircleFilled(circlePos, radius, redColor, segmentCount);
         else 
-            SDL_RenderCopy(mWindow.renderer, grayCircleTex.getTexture().get(), nullptr, &grayCircleDest);
+            wdl->AddCircleFilled(circlePos, radius, greyColor, segmentCount);
     }
 }
 
@@ -526,13 +518,10 @@ void ChessRenderer::renderToBoardTexture(Board const& b)
      drawSquares();
      drawPiecesNotOnMouse(b);
 
-     if( ! mIsPromotionWindowOpen ) [[likely]]
-         drawMoveIndicatorCircles(b);
-
      SDL_SetRenderTarget(mWindow.renderer, nullptr);
 }
 
-void ChessRenderer::drawMainWindow(float const menuBarHeight)
+void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 
@@ -556,7 +545,10 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight)
         mBoardPos.y = ImGui::GetItemRectMin().y;
 
         if( ! mIsPromotionWindowOpen ) [[likely]]
+        {
+            drawMoveIndicatorCircles(b);
             drawPieceOnMouse();
+        }
 
         ImGui::End();
     }
@@ -573,7 +565,7 @@ void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
     mPopupManager.draw();
 
     float const menuBarHeight { drawMenuBar(b, cm) };
-    drawMainWindow(menuBarHeight);
+    drawMainWindow(menuBarHeight, b);
 
     if(mIsColorEditorWindowOpen) [[unlikely]]
         drawColorEditor();
@@ -617,7 +609,7 @@ void ChessRenderer::drawPromotionWindow()
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoBackground);
 
-    Vec2i promoScreenPos {chess2ScreenPos(mPromotionContext.promotingSquare)};
+    Vec2i promoScreenPos { chess2ScreenPos(mPromotionContext.promotingSquare) };
     promoScreenPos.x -= mSquareSize / 2;
     promoScreenPos.y -= mSquareSize / 2;
 
@@ -1040,6 +1032,10 @@ Vec2i ChessRenderer::chess2ScreenPos(Vec2i const pos)
     //move from top left to middle of square
     ret.y += static_cast<int>(mSquareSize / 2);
     ret.x += static_cast<int>(mSquareSize / 2);
+
+    //account for where the board location offset in the window
+    ret.x += mBoardPos.x;
+    ret.y += mBoardPos.y;
 
     return ret;
 }

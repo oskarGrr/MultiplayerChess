@@ -65,7 +65,7 @@ private:
     void drawConnectionWindow();
     void drawMoveIndicatorCircles(Board const&);
     void renderToBoardTexture(Board const&);
-    void drawMainWindow(float menuBarHeight);
+    void drawMainWindow(float menuBarHeight, Board const&);
     void drawPieceOnMouse();
     void drawSquares();
     void drawPiecesNotOnMouse(Board const&);
