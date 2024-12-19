@@ -329,8 +329,8 @@ void Board::handleDoublePushMove()
 {
     Vec2i const newEnPassantTarget
     {
-        .x = mLastMoveMade.dest.x, 
-        .y = mLastMoveMade.dest.y == 3 ? 2 : 5
+        mLastMoveMade.dest.x, 
+        mLastMoveMade.dest.y == 3 ? 2 : 5
     };
 
     updateEnPassant(newEnPassantTarget);
@@ -344,9 +344,9 @@ void Board::handleCastleMove()
 
     //where is the rook (before we put it on the other side of the king)
     Vec2i const preCastleRookPos
-    {   
-        .x = wasLongCastle ? (mLastMoveMade.dest.x - 2) : (mLastMoveMade.dest.x + 1),
-        .y = mLastMoveMade.dest.y
+    {
+        wasLongCastle ? (mLastMoveMade.dest.x - 2) : (mLastMoveMade.dest.x + 1),
+        mLastMoveMade.dest.y
     };
 
     auto rookToBeMoved = getPieceAt(preCastleRookPos);
@@ -354,8 +354,8 @@ void Board::handleCastleMove()
 
     Vec2i const postCastleRookPos
     {
-        .x = mLastMoveMade.dest.x + (wasLongCastle ? 1 : -1),
-        .y = mLastMoveMade.dest.y
+        mLastMoveMade.dest.x + (wasLongCastle ? 1 : -1),
+        mLastMoveMade.dest.y
     };
 
     //Move the rook to the other side of the king.

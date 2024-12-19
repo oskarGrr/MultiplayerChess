@@ -467,7 +467,7 @@ void ChessRenderer::drawPiecesNotOnMouse(Board const& b)
     }
 }
 
-void ChessRenderer::drawPieceOnMouse(float const menuBarHeight)
+void ChessRenderer::drawPieceOnMouse()
 {
     auto const pom { Piece::getPieceOnMouse() };
 
@@ -478,11 +478,8 @@ void ChessRenderer::drawPieceOnMouse(float const menuBarHeight)
         auto const texSizeHalfX = pieceTexSize.x / 2;
         auto const texSizeHalfY = pieceTexSize.y / 2;
 
-        ImVec2 const drawPos
-        {
-            ImGui::GetIO().MousePos.x - texSizeHalfX ,
-            ImGui::GetIO().MousePos.y - texSizeHalfY - menuBarHeight
-        };
+        ImVec2 const localMousePos { getMousePosRelativeToMainImGuiWIndow() };
+        ImVec2 const drawPos{localMousePos.x - texSizeHalfX, localMousePos.y - texSizeHalfY};
 
         ImGui::SetCursorPos(drawPos);
         ImGui::Image(pieceTex.getTexture().get(), pieceTexSize);
@@ -539,17 +536,20 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 
     if(ImGui::Begin("##", nullptr, windowFlags))
     {
+        mMainImGuiWindowPos = ImGui::GetWindowPos();
+
+        //ImGui::SetCursorPosX()
+
         auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
         ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
 
         mIsBoardHovered = ImGui::IsItemHovered();
-        mBoardPos.x = ImGui::GetItemRectMin().x;
-        mBoardPos.y = ImGui::GetItemRectMin().y;
+        mBoardPos = ImGui::GetItemRectMin();
 
         if( ! mIsPromotionWindowOpen ) [[likely]]
         {
             drawMoveIndicatorCircles(b);
-            drawPieceOnMouse(menuBarHeight);
+            drawPieceOnMouse();
         }
 
         ImGui::End();
@@ -1040,6 +1040,14 @@ Vec2i ChessRenderer::chess2ScreenPos(Vec2i const pos)
     ret.y += mBoardPos.y;
 
     return ret;
+}
+
+//returns where the mouse pos is relative to the main imgui 
+//window (the one where the board is drawn)
+Vec2i ChessRenderer::getMousePosRelativeToMainImGuiWIndow()
+{
+    Vec2i const globalMousePos { ImGui::GetMousePos() };
+    return globalMousePos - mMainImGuiWindowPos;
 }
 
 //if the input coords on on the board, then return the corresponding chess square

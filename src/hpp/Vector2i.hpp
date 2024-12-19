@@ -5,7 +5,11 @@
 //inline vector2 struct used for chess positions (0-7)
 struct Vec2i
 {
-    int x = 0, y = 0;
+    int x{0}, y{0};
+
+    constexpr Vec2i() = default;
+    constexpr Vec2i(int x_, int y_) : x{x_}, y{y_} {}
+    constexpr Vec2i(ImVec2 imVec2) : x{static_cast<int>(imVec2.x)}, y{static_cast<int>(imVec2.y)} {}
 
     //Defaulted c++20 spaceship operator allows compiler 
     //to supply default comparison operators for this struct.

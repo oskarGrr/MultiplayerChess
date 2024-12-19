@@ -66,7 +66,7 @@ private:
     void drawMoveIndicatorCircles(Board const&);
     void renderToBoardTexture(Board const&);
     void drawMainWindow(float menuBarHeight, Board const&);
-    void drawPieceOnMouse(float menuBarHeight);
+    void drawPieceOnMouse();
     void drawSquares();
     void drawPiecesNotOnMouse(Board const&);
     float drawMenuBar(Board const&, ConnectionManager const&);//returns menu bar height
@@ -114,6 +114,10 @@ private:
     //of where that is (the middle of the square).
     Vec2i chess2ScreenPos(Vec2i);
 
+    //returns where the mouse pos is relative to the main imgui 
+    //window (the one where the board is drawn)
+    Vec2i getMousePosRelativeToMainImGuiWIndow();
+
 private:
 
     float mBoardScalingFactor {1};
@@ -142,6 +146,7 @@ private:
     //updated every frame in main imgui window
     bool mIsBoardHovered {false};
     Vec2i mBoardPos {}; //top left corner of where the board is on the screen
+    Vec2i mMainImGuiWindowPos {}; //top left corner of main imgui window
 
     bool mIsHoveringDragableMenuBarRegion {false};
 
