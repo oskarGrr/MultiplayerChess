@@ -459,15 +459,12 @@ void ChessRenderer::drawPiecesNotOnMouse(Board const& b)
     }
 }
 
-void ChessRenderer::drawPieceOnMouse()
+void ChessRenderer::drawPieceOnMouse(float const menuBarHeight)
 {
     auto const pom { Piece::getPieceOnMouse() };
 
     if(pom)
     {
-        Vec2i mousePosition{};
-        SDL_GetMouseState(&mousePosition.x, &mousePosition.y);
-
         auto const& pieceTex { mTextureManager.getTexture(pom->getWhichTexture()) };
         auto const pieceTexSize { pieceTex.getSize() * mBoardScalingFactor };
         auto const texSizeHalfX = pieceTexSize.x / 2;
@@ -475,8 +472,8 @@ void ChessRenderer::drawPieceOnMouse()
 
         ImVec2 const drawPos
         {
-            ImGui::GetIO().MousePos.x - texSizeHalfX,
-            ImGui::GetIO().MousePos.y - texSizeHalfY
+            ImGui::GetIO().MousePos.x - texSizeHalfX ,
+            ImGui::GetIO().MousePos.y - texSizeHalfY - menuBarHeight
         };
 
         ImGui::SetCursorPos(drawPos);
@@ -544,7 +541,7 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
         if( ! mIsPromotionWindowOpen ) [[likely]]
         {
             drawMoveIndicatorCircles(b);
-            drawPieceOnMouse();
+            drawPieceOnMouse(menuBarHeight);
         }
 
         ImGui::End();

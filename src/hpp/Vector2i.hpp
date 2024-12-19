@@ -53,6 +53,11 @@ struct Vec2i
         *this = *this * scaler;
         return *this;
     }
+
+    inline Vec2i operator/(float const divisor)
+    {
+        return {static_cast<int>(x / divisor), static_cast<int>(y / divisor)};
+    }
 };
 
 //used for various things such as an invalid/null chess position
