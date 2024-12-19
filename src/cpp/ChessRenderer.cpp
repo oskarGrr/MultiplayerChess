@@ -30,6 +30,8 @@ static SDL_HitTestResult hitTestCallback(SDL_Window *win, const SDL_Point *area,
 {
     if( *reinterpret_cast<bool*>(data) )
         return SDL_HITTEST_DRAGGABLE;
+
+    return SDL_HITTEST_NORMAL;
 }
 
 //board width, height and square size are initialized with their setters later
@@ -373,11 +375,17 @@ float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
                     addRematchAndUnpairPopupButtons();
                 }
 
+                if( ! anyMenuBarButtonHovered )
+                    anyMenuBarButtonHovered = ImGui::IsItemHovered();//check if hovering the resign button
+
                 if(ImGui::SmallButton("draw"))
                 {
                     GUIEvents::DrawOffer evnt{};
                     mGuiEventPublisher.pub(evnt);
                 }
+
+                if( ! anyMenuBarButtonHovered )
+                    anyMenuBarButtonHovered = ImGui::IsItemHovered();//check if hovering the draw button
             }
 
             ImGui::Separator();
