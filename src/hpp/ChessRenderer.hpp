@@ -125,7 +125,7 @@ private:
     Window mWindow
     {
         mWindowWidth, mWindowHeight,
-        "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, 0
+        "Chess", SDL_INIT_VIDEO | SDL_INIT_AUDIO, SDL_WINDOW_BORDERLESS
     };
 
     Side mViewingPerspective {Side::WHITE};
@@ -142,6 +142,8 @@ private:
     //updated every frame in main imgui window
     bool mIsBoardHovered {false};
     Vec2i mBoardPos {}; //top left corner of where the board is on the screen
+
+    bool mIsHoveringDragableMenuBarRegion {false};
 
     std::array<uint32_t, 4> const mDefaultLightSquareColor {214, 235, 225, 255};
     std::array<uint32_t, 4> const mDefaultDarkSquareColor  {43, 86, 65, 255};

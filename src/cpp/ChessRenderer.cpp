@@ -26,6 +26,12 @@
 
 static auto const squareColorDataFname {"squareColorData.txt"};
 
+static SDL_HitTestResult hitTestCallback(SDL_Window *win, const SDL_Point *area, void *data)
+{
+    if( *reinterpret_cast<bool*>(data) )
+        return SDL_HITTEST_DRAGGABLE;
+}
+
 //board width, height and square size are initialized with their setters later
 ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys, 
     BoardEventSystem::Subscriber& boardEventSubscriber, 
@@ -37,6 +43,10 @@ ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys,
       mBoardSubscriber{boardEventSubscriber},
       mAppEventSubscriber{appEventSubscriber}
 {
+    //this is reset in dtor so that hitTestCallback can't be 
+    //passed the dangling pointer to mIsHoveringDragableMenuBarRegion
+    SDL_SetWindowHitTest(mWindow.window, &hitTestCallback, &mIsHoveringDragableMenuBarRegion);
+
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");//bilinear texture filtering
 
     subToEvents();
@@ -49,6 +59,8 @@ ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys,
 
 ChessRenderer::~ChessRenderer()
 {
+    SDL_SetWindowHitTest(mWindow.window, nullptr, nullptr);
+
     mBoardSubscriber.unsub<BoardEvents::GameOver>(mGameOverSubID);
     mBoardSubscriber.unsub<BoardEvents::PromotionBegin>(mPromotionBeginEventSubID);
     //mNetworkSubManager will automatically unsub from the rest of the events...
@@ -261,7 +273,7 @@ static bool isPointInCircle(ImVec2 const p, ImVec2 const circleCenter, float con
 }
 
 //returns true if the button was clicked
-static bool closeButton(ImVec2 circleCenter, float const radius)
+static bool closeButton(ImVec2 circleCenter, float const radius, bool& out_isHovered)
 {
     bool const isMouseOverCloseButton { isPointInCircle(ImGui::GetMousePos(), circleCenter, radius) };
     bool const isMouseButtonDown { ImGui::IsMouseDown(ImGuiMouseButton_Left) };
@@ -271,10 +283,14 @@ static bool closeButton(ImVec2 circleCenter, float const radius)
     {
         closeBtnColor = isMouseButtonDown ? ImGui::GetColorU32({ .85f, .1f, .1f, .7f }) :
             ImGui::GetColorU32({ 1, .18f, .18f, .7f });
+
+        out_isHovered = true;
     }
     else
     { 
         closeBtnColor = ImGui::GetColorU32({ .7f, .1f, .1f, .7f }); 
+
+        out_isHovered = false;
     }
 
     int const segmentCount { 36 };
@@ -288,7 +304,7 @@ static bool closeButton(ImVec2 circleCenter, float const radius)
     ImVec2 const bottomRight { circleCenter.x + crossSize,  circleCenter.y + crossSize };
     ImVec2 const topLeft     { circleCenter.x - crossSize,  circleCenter.y - crossSize };
     wndDrawList->AddLine(bottomRight, topLeft, crossColor);
-
+    SDL_HitTestResult ;
     ImVec2 const bottomLeft { circleCenter.x - crossSize,  circleCenter.y + crossSize };
     ImVec2 const topRight   { circleCenter.x + crossSize,  circleCenter.y - crossSize };
     wndDrawList->AddLine(bottomLeft, topRight, crossColor);
@@ -302,6 +318,7 @@ float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
     [[maybe_unused]] MenuBarStyles styles;
     
     float menuBarHeight {0.0f};
+    bool anyMenuBarButtonHovered {false};
 
     if(ImGui::BeginMainMenuBar()) [[unlikely]]
     {
@@ -316,10 +333,15 @@ float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
             ImGui::EndMenu();
         }
 
+        anyMenuBarButtonHovered = ImGui::IsItemHovered();//check if options tab is hovered
+
         if(ImGui::SmallButton("flip board"))
         {
             mViewingPerspective = mViewingPerspective == Side::WHITE ? Side::BLACK : Side::WHITE;
         }
+
+        if( ! anyMenuBarButtonHovered )
+            anyMenuBarButtonHovered = ImGui::IsItemHovered();//check if flip board button is hovered
 
         if(ImGui::SmallButton("reset board"))
         {
@@ -337,6 +359,9 @@ float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
                 mGuiEventPublisher.pub(evnt);
             }
         }
+
+        if( ! anyMenuBarButtonHovered )
+            anyMenuBarButtonHovered = ImGui::IsItemHovered();//check if reset board button is hovered
 
         if(cm.isConnectedToServer())
         {
@@ -359,7 +384,7 @@ float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
             }
 
             ImGui::Separator();
-            ImGui::Text("connected to server");
+            ImGui::TextUnformatted("connected to server");
             ImGui::Separator();
             ImGui::Text("your ID: %u", cm.getUniqueID());
             ImGui::Separator();
@@ -383,11 +408,17 @@ float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
         menuBarHeight = ImGui::GetWindowHeight();
 
         float const closeBtnRadius { menuBarHeight * .4f };
-        if(closeButton({ImGui::GetWindowWidth() - closeBtnRadius - 4, menuBarHeight / 2}, menuBarHeight * .4f))
+        bool isCloseButtonHovered {false};
+        if(closeButton({ImGui::GetWindowWidth() - closeBtnRadius - 4, menuBarHeight / 2}, menuBarHeight * .4f, isCloseButtonHovered))
         {
             GUIEvents::CloseButtonClicked evnt;
             mGuiEventPublisher.pub(evnt);
         }
+
+        if(isCloseButtonHovered && ! anyMenuBarButtonHovered)
+            anyMenuBarButtonHovered = true;
+
+        mIsHoveringDragableMenuBarRegion = ! anyMenuBarButtonHovered && ImGui::IsWindowHovered();
 
         ImGui::EndMainMenuBar();
     }
@@ -555,7 +586,7 @@ void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
 
     renderToBoardTexture(b);
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
     //ImGui::ShowMetricsWindow();
 
     ImGui::Render();
