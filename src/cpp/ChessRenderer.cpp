@@ -276,39 +276,36 @@ static bool isPointInCircle(ImVec2 const p, ImVec2 const circleCenter, float con
 static bool closeButton(ImVec2 circleCenter, float const radius, bool& out_isHovered)
 {
     bool const isMouseOverCloseButton { isPointInCircle(ImGui::GetMousePos(), circleCenter, radius) };
-    bool const isMouseButtonDown { ImGui::IsMouseDown(ImGuiMouseButton_Left) };
-
-    ImU32 closeBtnColor {};
+    auto* const wndDrawList { ImGui::GetWindowDrawList() };
+ 
+    //draw the circle if the mouse is over the button
     if(isMouseOverCloseButton)
     {
-        closeBtnColor = isMouseButtonDown ? ImGui::GetColorU32({ .85f, .1f, .1f, .7f }) :
-            ImGui::GetColorU32({ 1, .18f, .18f, .7f });
+        ImVec4 buttonColor { ImGui::GetStyle().Colors[ImGuiCol_Button] };
 
-        out_isHovered = true;
+        if(ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            buttonColor.w *= .6f; //reduce alpha value
+        
+        int const segmentCount { 36 };
+        wndDrawList->AddCircleFilled(circleCenter, radius, ImGui::GetColorU32(buttonColor), segmentCount);
+
+        //ImGui::GetWindowDrawList()->AddCircle(circleCenter, radius,
+            //ImGui::GetColorU32({0,0,0,.6f}), segmentCount);
     }
-    else
-    { 
-        closeBtnColor = ImGui::GetColorU32({ .7f, .1f, .1f, .7f }); 
 
-        out_isHovered = false;
-    }
-
-    int const segmentCount { 36 };
-    auto* const wndDrawList { ImGui::GetWindowDrawList() };
-    wndDrawList->AddCircleFilled(circleCenter, radius, closeBtnColor, segmentCount);
-    //ImGui::GetWindowDrawList()->AddCircle(circleCenter, radius, ImGui::GetColorU32({0,0,0,.6f}), segmentCount);
-
+    //draw the X
     float const crossSize { radius * .7071f * .8f };
     ImU32 crossColor { ImGui::GetColorU32({ 0, 0, 0, .7f }) };
 
     ImVec2 const bottomRight { circleCenter.x + crossSize,  circleCenter.y + crossSize };
     ImVec2 const topLeft     { circleCenter.x - crossSize,  circleCenter.y - crossSize };
-    wndDrawList->AddLine(bottomRight, topLeft, crossColor);
-    SDL_HitTestResult ;
+    wndDrawList->AddLine(bottomRight, topLeft, crossColor, 1.3);
+
     ImVec2 const bottomLeft { circleCenter.x - crossSize,  circleCenter.y + crossSize };
     ImVec2 const topRight   { circleCenter.x + crossSize,  circleCenter.y - crossSize };
-    wndDrawList->AddLine(bottomLeft, topRight, crossColor);
+    wndDrawList->AddLine(bottomLeft, topRight, crossColor, 1.3);
 
+    out_isHovered = isMouseOverCloseButton;
     return isMouseOverCloseButton && ImGui::GetIO().MouseReleased[ImGuiMouseButton_Left];
 }
 
