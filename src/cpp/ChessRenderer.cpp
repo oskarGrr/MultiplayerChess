@@ -357,6 +357,8 @@ float ChessRenderer::drawMenuBar(Board const& b, ConnectionManager const& cm)
             {
                 GUIEvents::ResetBoard evnt{};
                 mGuiEventPublisher.pub(evnt);
+
+                clearArrows();
             }
         }
 
@@ -569,7 +571,7 @@ void ChessRenderer::drawArrow(ImVec2 const& arrowStart, ImVec2 const& arrowEnd, 
     auto* wdl { ImGui::GetWindowDrawList() };
 
     //draw the head of the arrow
-    wdl->AddTriangle(triVertex0, triVertex1, arrowEnd, ImGui::GetColorU32(arrowColor), 5);
+    wdl->AddTriangle(triVertex0, triVertex1, arrowEnd, ImGui::GetColorU32(arrowColor), 4);
 
     wdl->AddLine(arrowStart, triangleBaseMidpoint, ImGui::GetColorU32(arrowColor), 10);
 }
