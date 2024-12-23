@@ -36,6 +36,12 @@ struct Vec2i
         return {x - rhs.x, y - rhs.y};
     }
 
+    inline Vec2i& operator-=(Vec2i const& rhs)
+    {
+        *this = *this - rhs;
+        return *this;
+    }
+
     inline Vec2i operator+(Vec2i const& rhs) const
     {
         return {x + rhs.x, y + rhs.y};
@@ -58,9 +64,14 @@ struct Vec2i
         return *this;
     }
 
-    inline Vec2i operator/(float const divisor)
+    inline Vec2i operator/(float const rhs)
     {
-        return {static_cast<int>(x / divisor), static_cast<int>(y / divisor)};
+        return {static_cast<int>(x / rhs), static_cast<int>(y / rhs)};
+    }
+
+    inline Vec2i operator%(int const rhs)
+    {
+        return {x % rhs, y % rhs};
     }
 };
 

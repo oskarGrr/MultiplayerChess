@@ -65,6 +65,7 @@ private:
     void drawConnectionWindow();
     void drawMoveIndicatorCircles(Board const&);
     void renderToBoardTexture(Board const&);
+    void drawArrow(ImVec2 arrowStart, ImVec2 arrowEnd);
     void drawMainWindow(float menuBarHeight, Board const&);
     void drawPieceOnMouse();
     void drawSquares();
@@ -78,7 +79,25 @@ private:
     void initSquareColorData();
     void serializeSquareColorData();
     void subToEvents();
-    
+
+    void addRematchAndUnpairPopupButtons();
+
+    //takes a screen position on the board (assumed to be on the board) 
+    //and returns a vector in the middle of the square that it is in
+    Vec2i moveToMiddleOfSquare(Vec2i boardScreenPos);
+
+    //Takes a chess position, and returns the pixel screen coords
+    //of where that is (the middle of the square).
+    Vec2i chess2ScreenPos(Vec2i);
+
+    //returns where the mouse pos is relative to the main imgui 
+    //window (the one where the board is drawn)
+    Vec2i getMousePosRelativeToMainImGuiWIndow();
+
+    bool calcStartAndEndDrag(Vec2i& out_startSquare, Vec2i& out_endSquare);
+
+private:
+
     enum struct NetworkSubscriptions
     {
         DRAW_ACCEPTED,
@@ -99,32 +118,20 @@ private:
         NEW_ID
     };
 
-    void addRematchAndUnpairPopupButtons();
-
-    SubscriptionManager<NetworkSubscriptions,
-        NetworkEventSystem::Subscriber> mNetworkSubManager;
-
+    SubscriptionManager<NetworkSubscriptions, NetworkEventSystem::Subscriber> mNetworkSubManager;
     BoardEventSystem::Subscriber& mBoardSubscriber;
     AppEventSystem::Subscriber& mAppEventSubscriber;
     SubscriptionID mGameOverSubID {INVALID_SUBSCRIPTION_ID};
     SubscriptionID mPromotionBeginEventSubID {INVALID_SUBSCRIPTION_ID};
     SubscriptionID mLeftClickEventSubID {INVALID_SUBSCRIPTION_ID};
 
-    //Takes a chess position, and returns the pixel screen coords
-    //of where that is (the middle of the square).
-    Vec2i chess2ScreenPos(Vec2i);
-
-    //returns where the mouse pos is relative to the main imgui 
-    //window (the one where the board is drawn)
-    Vec2i getMousePosRelativeToMainImGuiWIndow();
-
-private:
-
     float mBoardScalingFactor {1};
     int const mInitialSquareSize {112};
     int mSquareSize {static_cast<int>(mInitialSquareSize * mBoardScalingFactor)};
-    int mWindowWidth  {1340};
-    int mWindowHeight {980};
+
+    //for now, the window is not resizable so these cant change
+    int const mWindowWidth  {1340};
+    int const mWindowHeight {980};
 
     Window mWindow
     {

@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <ConnectionManager.hpp>
 #include <optional>
+#include <cmath>//atan2, cos, sin
 
 #include "ChessEvents.hpp"
 #include "Board.hpp"
@@ -520,6 +521,61 @@ void ChessRenderer::renderToBoardTexture(Board const& b)
      SDL_SetRenderTarget(mWindow.renderer, nullptr);
 }
 
+//is point in axis aligned rectangle
+static bool isPointInRect(ImVec2 const& p, ImVec2 const& topLeft, ImVec2 const& bottomRight)
+{
+    return p.x > topLeft.x && p.y > topLeft.y && p.x < bottomRight.x && p.y < bottomRight.y; 
+}
+
+//takes a screen position on the board (assumed to be on the board) 
+//and returns a vector in the middle of the square that it is in
+Vec2i ChessRenderer::moveToMiddleOfSquare(Vec2i screenPosOnBoard)
+{
+    screenPosOnBoard -= mBoardPos;
+    Vec2i const modValues { screenPosOnBoard % mSquareSize };
+
+    screenPosOnBoard.x += (mSquareSize / 2) - modValues.x;
+    screenPosOnBoard.y += (mSquareSize / 2) - modValues.y;
+    
+    return screenPosOnBoard += mBoardPos;
+}
+
+static ImVec2 rotatePointAroundOrigin(ImVec2 p, float radians)
+{
+    ImVec2 rotatedPos;
+    float cosineOfAngle { std::cos(radians) }, sineOfAngle { std::sin(radians) };
+    rotatedPos.x = (p.x * cosineOfAngle) - (p.y * sineOfAngle);
+    rotatedPos.y = (p.x * sineOfAngle)   + (p.y * cosineOfAngle);
+    return rotatedPos;
+}
+
+void ChessRenderer::drawArrow(ImVec2 arrowStart, ImVec2 arrowEnd)
+{
+    ImVec2 arrowArm { arrowStart.x - arrowEnd.x,  arrowStart.y - arrowEnd.y };
+    float const angleOfArrowArm { std::atan2(arrowArm.y, arrowArm.x) };
+    float const isoscelesLength { mSquareSize * 0.4f };
+
+    ImVec2 triVertex0 { rotatePointAroundOrigin({isoscelesLength, 0}, angleOfArrowArm + 0.5f) };
+    ImVec2 triVertex1 { rotatePointAroundOrigin({isoscelesLength, 0}, angleOfArrowArm - 0.5f) };
+    ImVec2 triangleBaseMidpoint { (triVertex1.x - triVertex0.x) / 2, (triVertex1.y - triVertex0.y) / 2 };
+
+    triVertex0.x += arrowEnd.x;
+    triVertex0.y += arrowEnd.y;
+    triVertex1.x += arrowEnd.x;
+    triVertex1.y += arrowEnd.y;
+    triangleBaseMidpoint.x += triVertex0.x;
+    triangleBaseMidpoint.y += triVertex0.y;
+
+    auto* wdl { ImGui::GetWindowDrawList() };
+
+    ImU32 const arrowColor { ImGui::GetColorU32({.792f, .988f, .011f, .8f})};
+
+    //draw the head of the arrow
+    wdl->AddTriangle(triVertex0, triVertex1, arrowEnd, arrowColor, 3);
+
+    wdl->AddLine(arrowStart, triangleBaseMidpoint, arrowColor, 13);
+}
+
 void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
@@ -541,15 +597,30 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
         //ImGui::SetCursorPosX()
 
         auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
+        
         ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
 
         mIsBoardHovered = ImGui::IsItemHovered();
         mBoardPos = ImGui::GetItemRectMin();
+        ImVec2 boardBottomRight { ImGui::GetItemRectMax() };
 
         if( ! mIsPromotionWindowOpen ) [[likely]]
         {
             drawMoveIndicatorCircles(b);
             drawPieceOnMouse();
+        }
+
+        ImVec2 const lastRightClickScreenPos { ImGui::GetIO().MouseClickedPos[ImGuiMouseButton_Right] };
+        bool const wasLastRightClickOnBoard { 
+            isPointInRect(lastRightClickScreenPos, mBoardPos, boardBottomRight)
+        };
+
+        if(ImGui::IsMouseDragging(ImGuiMouseButton_Right) && mIsBoardHovered && wasLastRightClickOnBoard)
+        {
+            Vec2i lastRightClickMiddleSquarePos { moveToMiddleOfSquare(lastRightClickScreenPos) };
+            Vec2i mousePosMiddleSquare { moveToMiddleOfSquare(ImGui::GetMousePos()) };
+
+            drawArrow(lastRightClickMiddleSquarePos, mousePosMiddleSquare);
         }
 
         ImGui::End();
@@ -580,7 +651,7 @@ void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
 
     renderToBoardTexture(b);
 
-    //ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
     //ImGui::ShowMetricsWindow();
 
     ImGui::Render();
