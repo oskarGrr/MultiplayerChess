@@ -549,7 +549,7 @@ static ImVec2 rotatePointAroundOrigin(ImVec2 p, float radians)
     return rotatedPos;
 }
 
-void ChessRenderer::drawArrow(ImVec2 arrowStart, ImVec2 arrowEnd)
+void ChessRenderer::drawArrow(ImVec2 const& arrowStart, ImVec2 const& arrowEnd, ImVec4 const& arrowColor)
 {
     ImVec2 arrowArm { arrowStart.x - arrowEnd.x,  arrowStart.y - arrowEnd.y };
     float const angleOfArrowArm { std::atan2(arrowArm.y, arrowArm.x) };
@@ -568,12 +568,10 @@ void ChessRenderer::drawArrow(ImVec2 arrowStart, ImVec2 arrowEnd)
 
     auto* wdl { ImGui::GetWindowDrawList() };
 
-    ImU32 const arrowColor { ImGui::GetColorU32({.792f, .988f, .011f, .8f})};
-
     //draw the head of the arrow
-    wdl->AddTriangle(triVertex0, triVertex1, arrowEnd, arrowColor, 3);
+    wdl->AddTriangle(triVertex0, triVertex1, arrowEnd, ImGui::GetColorU32(arrowColor), 5);
 
-    wdl->AddLine(arrowStart, triangleBaseMidpoint, arrowColor, 13);
+    wdl->AddLine(arrowStart, triangleBaseMidpoint, ImGui::GetColorU32(arrowColor), 10);
 }
 
 void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
@@ -615,14 +613,39 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
             isPointInRect(lastRightClickScreenPos, mBoardPos, boardBottomRight)
         };
 
+        static bool wasDrawingArrowLastFrame {false};
+
+        Vec2i lastRightClickMiddleSquarePos { moveToMiddleOfSquare(lastRightClickScreenPos) };
+        Vec2i mousePosMiddleSquare { moveToMiddleOfSquare(ImGui::GetMousePos()) };
         if(ImGui::IsMouseDragging(ImGuiMouseButton_Right) && mIsBoardHovered && wasLastRightClickOnBoard)
         {
-            Vec2i lastRightClickMiddleSquarePos { moveToMiddleOfSquare(lastRightClickScreenPos) };
-            Vec2i mousePosMiddleSquare { moveToMiddleOfSquare(ImGui::GetMousePos()) };
-
-            drawArrow(lastRightClickMiddleSquarePos, mousePosMiddleSquare);
+            if(lastRightClickMiddleSquarePos != mousePosMiddleSquare)
+            {
+                drawArrow(lastRightClickMiddleSquarePos, mousePosMiddleSquare, mArrowColor);
+                wasDrawingArrowLastFrame = true;
+            }
         }
 
+        //This will not trigger the same frame as we release right click. The next frame the static bool
+        //will still be true though, and this will trigger. This is because
+        //ImGui::IsMouseDragging and ImGui::isMouseReleased can't both be true durring the same frame
+        if(wasDrawingArrowLastFrame && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+        {
+            addArrow(lastRightClickMiddleSquarePos, mousePosMiddleSquare);
+
+            //reset this to false so only 1 arrow gets added to the arrow buff
+            wasDrawingArrowLastFrame = false;
+        }
+
+        for(int i = 0; i < mArrowCount; ++i)
+        {
+            //when drawing arrows that are already set, lower their opacity
+            ImVec4 color {mArrowColor};
+            color.w *= .4f;
+
+            drawArrow(mArrowBuffer[i].arrowBasePos, mArrowBuffer[i].arrowHeadPos, color);
+        }
+           
         ImGui::End();
     }
 
@@ -1021,10 +1044,13 @@ void ChessRenderer::onDrawAcceptedEvent()
 
 void ChessRenderer::onLeftClickEvent(AppEvents::LeftClickPress const& evnt)
 {
+    //was the left click on the board
     if(auto maybeChessPos {screen2ChessPos(evnt.mousePos)})
     {
         GUIEvents::PiecePickUp evnt {*maybeChessPos};
         mGuiEventPublisher.pub(evnt);
+
+        clearArrows();
     }
 }
 
@@ -1113,12 +1139,26 @@ Vec2i ChessRenderer::chess2ScreenPos(Vec2i const pos)
     return ret;
 }
 
-//returns where the mouse pos is relative to the main imgui 
+//returns where the mouse pos is relative to the main imgui
 //window (the one where the board is drawn)
 Vec2i ChessRenderer::getMousePosRelativeToMainImGuiWIndow()
 {
     Vec2i const globalMousePos { ImGui::GetMousePos() };
     return globalMousePos - mMainImGuiWindowPos;
+}
+
+void ChessRenderer::addArrow(Vec2i const& arrowBasePos, Vec2i const& arrowHeadPos)
+{
+    if(mArrowCount == mMaxArrows)
+        return;
+
+    mArrowBuffer[mArrowCount] = {arrowBasePos, arrowHeadPos};
+    ++mArrowCount;
+}
+
+void ChessRenderer::clearArrows()
+{
+    mArrowCount = 0;
 }
 
 //if the input coords on on the board, then return the corresponding chess square

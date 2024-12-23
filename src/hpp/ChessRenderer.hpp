@@ -65,7 +65,7 @@ private:
     void drawConnectionWindow();
     void drawMoveIndicatorCircles(Board const&);
     void renderToBoardTexture(Board const&);
-    void drawArrow(ImVec2 arrowStart, ImVec2 arrowEnd);
+    void drawArrow(ImVec2 const& arrowStart, ImVec2 const& arrowEnd, ImVec4 const& arrowColor);
     void drawMainWindow(float menuBarHeight, Board const&);
     void drawPieceOnMouse();
     void drawSquares();
@@ -93,8 +93,6 @@ private:
     //returns where the mouse pos is relative to the main imgui 
     //window (the one where the board is drawn)
     Vec2i getMousePosRelativeToMainImGuiWIndow();
-
-    bool calcStartAndEndDrag(Vec2i& out_startSquare, Vec2i& out_endSquare);
 
 private:
 
@@ -160,7 +158,15 @@ private:
     std::array<uint32_t, 4> const mDefaultLightSquareColor {214, 235, 225, 255};
     std::array<uint32_t, 4> const mDefaultDarkSquareColor  {43, 86, 65, 255};
     std::array<uint32_t, 4> mLightSquareColor {mDefaultLightSquareColor};
-    std::array<uint32_t, 4> mDarkSquareColor  {mDefaultDarkSquareColor};
+    std::array<uint32_t, 4> mDarkSquareColor  {mDefaultDarkSquareColor}; 
+
+    struct Arrow { Vec2i arrowBasePos {}, arrowHeadPos {}; };
+    constexpr static std::size_t mMaxArrows {32};
+    std::size_t mArrowCount {0};
+    std::array<Arrow, mMaxArrows> mArrowBuffer {};
+    ImVec4 mArrowColor {.792f, .988f, .011f, .8f};
+    void addArrow(Vec2i const& arrowBasePos, Vec2i const& arrowHeadPos);
+    void clearArrows();
 
     PromotionWindowContext mPromotionContext 
     {
