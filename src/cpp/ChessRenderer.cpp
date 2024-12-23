@@ -551,8 +551,9 @@ static ImVec2 rotatePointAroundOrigin(ImVec2 p, float radians)
     return rotatedPos;
 }
 
-void ChessRenderer::drawArrow(ImVec2 const& arrowStart, ImVec2 const& arrowEnd, ImVec4 const& arrowColor)
+void ChessRenderer::drawArrow(ImVec2 const& arrowStart, ImVec2 const& arrowEnd, ImVec4 const& color)
 {
+    ImU32 u32Color {ImGui::GetColorU32(color)};
     ImVec2 arrowArm { arrowStart.x - arrowEnd.x,  arrowStart.y - arrowEnd.y };
     float const angleOfArrowArm { std::atan2(arrowArm.y, arrowArm.x) };
     float const isoscelesLength { mSquareSize * 0.4f };
@@ -571,9 +572,9 @@ void ChessRenderer::drawArrow(ImVec2 const& arrowStart, ImVec2 const& arrowEnd, 
     auto* wdl { ImGui::GetWindowDrawList() };
 
     //draw the head of the arrow
-    wdl->AddTriangle(triVertex0, triVertex1, arrowEnd, ImGui::GetColorU32(arrowColor), 4);
+    wdl->AddTriangle(triVertex0, triVertex1, arrowEnd, u32Color, 4);
 
-    wdl->AddLine(arrowStart, triangleBaseMidpoint, ImGui::GetColorU32(arrowColor), 10);
+    wdl->AddLine(arrowStart, triangleBaseMidpoint, u32Color, 10);
 }
 
 void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
