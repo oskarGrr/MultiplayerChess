@@ -67,6 +67,8 @@ private:
     void renderToBoardTexture(Board const&);
     void drawArrow(ImVec2 const& arrowStart, ImVec2 const& arrowEnd, ImVec4 const& arrowColor);
     void drawMainWindow(float menuBarHeight, Board const&);
+    ImVec2 mainWindowDrawRankIndicators();//saves space in drawMainWindow() returns where to draw the board tex
+    void mainWindowDrawFileIndicatiors();//saves space in drawMainWindow()
     void drawPieceOnMouse();
     void drawSquares();
     void drawPiecesNotOnMouse(Board const&);

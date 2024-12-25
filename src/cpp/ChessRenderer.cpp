@@ -577,6 +577,51 @@ void ChessRenderer::drawArrow(ImVec2 const& arrowStart, ImVec2 const& arrowEnd, 
     wdl->AddLine(arrowStart, triangleBaseMidpoint, u32Color, 10);
 }
 
+ImVec2 ChessRenderer::mainWindowDrawRankIndicators()
+{
+    float preRankIndicatorYPos { ImGui::GetCursorPosY() };
+    
+    char rankChar[2] {(Side::WHITE ==  mViewingPerspective) ? '8' : '1', '\0'};
+
+    //draw dummy text (zero opacity) so I can query for the size of the font
+    ImGui::TextColored({0,0,0,0}, rankChar);
+    float const halfTextHeight { ImGui::GetItemRectSize().y / 2 };
+    
+    float spacing { (ImGui::GetStyle().WindowPadding.y + mSquareSize / 2) - halfTextHeight };
+    ImGui::SetCursorPosY(spacing);
+    for(int i = 0; i < 8; ++i)
+    {
+        ImGui::TextUnformatted(rankChar);
+
+        rankChar[0] += (Side::WHITE == mViewingPerspective) ? -1 : 1;
+        spacing += mSquareSize;
+        ImGui::SetCursorPosY(spacing);
+    }
+
+    float textWidth { ImGui::GetItemRectMax().x };
+
+    return {textWidth + ImGui::GetStyle().WindowPadding.x, preRankIndicatorYPos};
+}
+
+void ChessRenderer::mainWindowDrawFileIndicatiors()
+{
+    char fileChar[2] {'a', '\0'};
+
+    float halfCharSize { ImGui::CalcTextSize(fileChar).x / 2 };
+    float spacing {mBoardPos.x + (mSquareSize / 2.0f) - halfCharSize};
+    ImGui::SetCursorPosX(spacing);
+
+    for(int i = 0; i < 8; ++i)
+    {
+        ImGui::TextUnformatted(fileChar);
+
+        ++fileChar[0];
+        spacing += mSquareSize;
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(spacing);
+    }
+}
+
 void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
@@ -595,15 +640,21 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
     {
         mMainImGuiWindowPos = ImGui::GetWindowPos();
 
-        //ImGui::SetCursorPosX()
+        //set the cursor position where the board texture should be drawn to
+        ImGui::SetCursorPos(mainWindowDrawRankIndicators());
 
+        //draw the board texture
         auto const& boardTex { mTextureManager.getTexture(TextureManager::WhichTexture::BOARD_TEXTURE) };
-        
         ImGui::Image(boardTex.getTexture().get(), boardTex.getSize());
 
         mIsBoardHovered = ImGui::IsItemHovered();
         mBoardPos = ImGui::GetItemRectMin();
         ImVec2 boardBottomRight { ImGui::GetItemRectMax() };
+
+        
+        //ImGui::Text("%f, %f", ImGui::GetMousePos().x, ImGui::GetMousePos().y);
+
+        mainWindowDrawFileIndicatiors();
 
         if( ! mIsPromotionWindowOpen ) [[likely]]
         {
@@ -634,9 +685,10 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
         //ImGui::IsMouseDragging and ImGui::isMouseReleased can't both be true durring the same frame
         if(wasDrawingArrowLastFrame && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
         {
-            addArrow(lastRightClickMiddleSquarePos, mousePosMiddleSquare);
+            if(lastRightClickMiddleSquarePos != mousePosMiddleSquare)
+                addArrow(lastRightClickMiddleSquarePos, mousePosMiddleSquare);
 
-            //reset this to false so only 1 arrow gets added to the arrow buff
+            //reset this to false so only 1 arrow gets added to the arrow buffer
             wasDrawingArrowLastFrame = false;
         }
 
