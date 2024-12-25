@@ -605,7 +605,7 @@ ImVec2 ChessRenderer::mainWindowDrawRankIndicators()
 
 void ChessRenderer::mainWindowDrawFileIndicatiors()
 {
-    char fileChar[2] {'a', '\0'};
+    char fileChar[2] {'A', '\0'};
 
     float halfCharSize { ImGui::CalcTextSize(fileChar).x / 2 };
     float spacing {mBoardPos.x + (mSquareSize / 2.0f) - halfCharSize};
@@ -671,7 +671,9 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 
         Vec2i lastRightClickMiddleSquarePos { moveToMiddleOfSquare(lastRightClickScreenPos) };
         Vec2i mousePosMiddleSquare { moveToMiddleOfSquare(ImGui::GetMousePos()) };
-        if(ImGui::IsMouseDragging(ImGuiMouseButton_Right) && mIsBoardHovered && wasLastRightClickOnBoard)
+
+        if(ImGui::IsMouseDragging(ImGuiMouseButton_Right) && mIsBoardHovered 
+            && wasLastRightClickOnBoard && ! Piece::getPieceOnMouse() )
         {
             if(lastRightClickMiddleSquarePos != mousePosMiddleSquare)
             {

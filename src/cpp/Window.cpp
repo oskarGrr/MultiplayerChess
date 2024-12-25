@@ -28,6 +28,7 @@ Window::Window(int const width, int const height,
     style.Colors[ImGuiCol_WindowBg]  = {0.11f, 0.11f, 0.12f, 1.0f};
     style.Colors[ImGuiCol_Text]      = {0.94f, 0.94f, 0.94f, 1.0f};
     style.Colors[ImGuiCol_MenuBarBg] = {0.58f, 0.61f, 0.61f, 1.0f};
+    style.Colors[ImGuiCol_FrameBg]   = {0.423f, 0.474f, 0.470f, 1.0f};
 
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer_Init(renderer);
