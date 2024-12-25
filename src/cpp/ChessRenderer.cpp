@@ -672,8 +672,10 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
         Vec2i lastRightClickMiddleSquarePos { moveToMiddleOfSquare(lastRightClickScreenPos) };
         Vec2i mousePosMiddleSquare { moveToMiddleOfSquare(ImGui::GetMousePos()) };
 
+        bool const isPieceOnMouse { Piece::getPieceOnMouse() };
+
         if(ImGui::IsMouseDragging(ImGuiMouseButton_Right) && mIsBoardHovered 
-            && wasLastRightClickOnBoard && ! Piece::getPieceOnMouse() )
+            && wasLastRightClickOnBoard && ! isPieceOnMouse )
         {
             if(lastRightClickMiddleSquarePos != mousePosMiddleSquare)
             {
@@ -687,7 +689,7 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
         //ImGui::IsMouseDragging and ImGui::isMouseReleased can't both be true durring the same frame
         if(wasDrawingArrowLastFrame && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
         {
-            if(lastRightClickMiddleSquarePos != mousePosMiddleSquare && mIsBoardHovered)
+            if(lastRightClickMiddleSquarePos != mousePosMiddleSquare && mIsBoardHovered && ! isPieceOnMouse )
                 addArrow(lastRightClickMiddleSquarePos, mousePosMiddleSquare);
 
             //reset this to false so only 1 arrow gets added to the arrow buffer
