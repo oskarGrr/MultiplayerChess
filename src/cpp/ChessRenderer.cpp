@@ -605,7 +605,7 @@ ImVec2 ChessRenderer::mainWindowDrawRankIndicators()
 
 void ChessRenderer::mainWindowDrawFileIndicatiors()
 {
-    char fileChar[2] {'A', '\0'};
+    char fileChar[2] {(Side::WHITE ==  mViewingPerspective) ? 'A' : 'H', '\0'};
 
     float halfCharSize { ImGui::CalcTextSize(fileChar).x / 2 };
     float spacing {mBoardPos.x + (mSquareSize / 2.0f) - halfCharSize};
@@ -615,7 +615,7 @@ void ChessRenderer::mainWindowDrawFileIndicatiors()
     {
         ImGui::TextUnformatted(fileChar);
 
-        ++fileChar[0];
+        fileChar[0] += (Side::WHITE ==  mViewingPerspective) ? 1 : -1;
         spacing += mSquareSize;
         ImGui::SameLine();
         ImGui::SetCursorPosX(spacing);
@@ -704,7 +704,7 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 
             drawArrow(mArrowBuffer[i].arrowBasePos, mArrowBuffer[i].arrowHeadPos, color);
         }
-           
+
         ImGui::End();
     }
 
