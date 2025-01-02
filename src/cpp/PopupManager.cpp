@@ -5,10 +5,10 @@ struct RAIIPopupstyles
 {
     RAIIPopupstyles()
     {
-        pushColor(ImGuiCol_Text, {0,0,0,1});
+        pushColor(ImGuiCol_Text, {0.0f, 0.0f, 0.0f, 1.0f});
         pushColor(ImGuiCol_Button, {.2f, 0.79f, 0.8f, 0.70f});
         pushColor(ImGuiCol_ButtonHovered, {.011f, 0.615f, 0.988f, .75f});
-        pushColor(ImGuiCol_PopupBg, {.9, .9, .9, .95});
+        pushColor(ImGuiCol_PopupBg, {.9f, .9f, .9f, .95f});
     }
 
     ~RAIIPopupstyles()

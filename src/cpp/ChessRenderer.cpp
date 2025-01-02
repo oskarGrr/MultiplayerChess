@@ -302,11 +302,11 @@ static bool closeButton(ImVec2 circleCenter, float const radius, bool& out_isHov
 
     ImVec2 const bottomRight { circleCenter.x + crossSize,  circleCenter.y + crossSize };
     ImVec2 const topLeft     { circleCenter.x - crossSize,  circleCenter.y - crossSize };
-    wndDrawList->AddLine(bottomRight, topLeft, crossColor, 1.3);
+    wndDrawList->AddLine(bottomRight, topLeft, crossColor, 1.3f);
 
     ImVec2 const bottomLeft { circleCenter.x - crossSize,  circleCenter.y + crossSize };
     ImVec2 const topRight   { circleCenter.x + crossSize,  circleCenter.y - crossSize };
-    wndDrawList->AddLine(bottomLeft, topRight, crossColor, 1.3);
+    wndDrawList->AddLine(bottomLeft, topRight, crossColor, 1.3f);
 
     out_isHovered = isMouseOverCloseButton;
     return isMouseOverCloseButton && ImGui::GetIO().MouseReleased[ImGuiMouseButton_Left];

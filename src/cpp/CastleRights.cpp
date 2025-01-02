@@ -72,5 +72,5 @@ void CastleRights::addRights(CastleRights const& rightsToAdd)
 
 unsigned char CastleRights::getRights() const
 {
-    return mCastleRightsBits.to_ulong();
+    return static_cast<unsigned char>(mCastleRightsBits.to_ulong());
 }
