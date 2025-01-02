@@ -622,10 +622,20 @@ void ChessRenderer::mainWindowDrawFileIndicatiors()
     }
 }
 
+void ChessRenderer::drawSidePanelWindow(Vec2i const& pos)
+{
+    //ImGui::SetNextWindowPos(pos);
+
+    //if(ImGui::Begin("##sidePanel", nullptr, 0))
+    //{
+    //    
+
+    //    ImGui::End();
+    //}
+}
+
 void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
-
     ImGui::SetNextWindowSize({static_cast<float>(mWindowWidth), static_cast<float>(mWindowHeight)});
     ImGui::SetNextWindowPos({0.0f, menuBarHeight});
 
@@ -650,9 +660,6 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
         mIsBoardHovered = ImGui::IsItemHovered();
         mBoardPos = ImGui::GetItemRectMin();
         ImVec2 boardBottomRight { ImGui::GetItemRectMax() };
-
-        
-        //ImGui::Text("%f, %f", ImGui::GetMousePos().x, ImGui::GetMousePos().y);
 
         mainWindowDrawFileIndicatiors();
 
@@ -707,8 +714,6 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 
         ImGui::End();
     }
-
-    ImGui::PopStyleVar();
 }
 
 void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
