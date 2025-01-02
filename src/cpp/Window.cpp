@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#include "errorLogger.hpp"
 #include <exception>
 
 Window::Window(int const width, int const height,
@@ -37,7 +38,8 @@ Window::Window(int const width, int const height,
 
     //add the font from the fonts folder
     auto& io = ImGui::GetIO();
-    io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0); 
+    if( ! io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0) )
+        FileErrorLogger::get().log("failed to load fonts/DroidSans.ttf");
 }
 
 //cleanup SDL and imGui
