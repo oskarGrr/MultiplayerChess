@@ -38,8 +38,8 @@ Window::Window(int const width, int const height,
 
     //add the font from the fonts folder
     auto& io = ImGui::GetIO();
-    if( ! io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0) )
-        FileErrorLogger::get().log("failed to load fonts/DroidSans.ttf");
+    if( ! io.Fonts->AddFontFromFileTTF("resources/fonts/DroidSans.ttf", 16.0) )
+        FileErrorLogger::get().log("failed to load resources/fonts/DroidSans.ttf");
 }
 
 //cleanup SDL and imGui

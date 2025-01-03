@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/../buildOutput/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/../buildOutput/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/../buildOutput/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/buildOutput/bin)
 
 #I am using vcpkg (in manifest mode) to obtain SDL2 and ImGui libraries.
 if(EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
@@ -98,20 +96,8 @@ else(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
     )
 endif()
 
-add_custom_target(copy_fonts
+add_custom_target(copy_resources
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-	"${CMAKE_SOURCE_DIR}/fonts" "${CMAKE_CURRENT_BINARY_DIR}/fonts"
+	"${CMAKE_SOURCE_DIR}/resources" "${CMAKE_CURRENT_BINARY_DIR}/resources"
 )
-add_dependencies(${PROJECT_NAME} copy_fonts)
-
-add_custom_target(copy_sounds
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-	"${CMAKE_SOURCE_DIR}/sounds" "${CMAKE_CURRENT_BINARY_DIR}/sounds"
-)
-add_dependencies(${PROJECT_NAME} copy_sounds)
-
-add_custom_target(copy_textures
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-	"${CMAKE_SOURCE_DIR}/textures" "${CMAKE_CURRENT_BINARY_DIR}/textures"
-)
-add_dependencies(${PROJECT_NAME} copy_textures)
+add_dependencies(${PROJECT_NAME} copy_resources)

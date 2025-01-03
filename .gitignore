@@ -1,5 +1,5 @@
-squareColorData.txt
 reminders.txt
-chessErrorLog.txt
+resources/
 build/
+buildOutput/
 vcpkg_installed/

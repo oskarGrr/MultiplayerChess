@@ -37,9 +37,9 @@ private:
         WavSound& operator=(WavSound&&)=delete;
     };
 
-    WavSound mNormalMoveSound  {"sounds/woodChessMove.wav"};
-    WavSound mCastleMoveSound  {"sounds/woodChessCastle.wav"};
-    WavSound mCaptureMoveSound {"sounds/woodCaptureMove.wav"};
+    WavSound mNormalMoveSound  {"resources/sounds/woodChessMove.wav"};
+    WavSound mCastleMoveSound  {"resources/sounds/woodChessCastle.wav"};
+    WavSound mCaptureMoveSound {"resources/sounds/woodCaptureMove.wav"};
 
 public:
     

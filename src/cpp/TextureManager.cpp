@@ -14,18 +14,18 @@ TextureManager::TextureManager(SDL_Renderer* renderer, int initialSquareSize)
     mTextures.try_emplace(WhichTexture::BOARD_TEXTURE, boardTexure);
 
     //Load the chess piece textures.
-    mTextures.try_emplace(WhichTexture::BLACK_QUEEN,   "textures/bQueen.png",  renderer);
-    mTextures.try_emplace(WhichTexture::BLACK_KING,    "textures/bKing.png",   renderer);
-    mTextures.try_emplace(WhichTexture::BLACK_KNIGHT,  "textures/bKnight.png", renderer);
-    mTextures.try_emplace(WhichTexture::BLACK_ROOK,    "textures/bRook.png",   renderer);
-    mTextures.try_emplace(WhichTexture::BLACK_PAWN,    "textures/bPawn.png",   renderer);
-    mTextures.try_emplace(WhichTexture::BLACK_BISHOP,  "textures/bBishop.png", renderer);
-    mTextures.try_emplace(WhichTexture::WHITE_QUEEN,   "textures/wQueen.png",  renderer);
-    mTextures.try_emplace(WhichTexture::WHITE_KING,    "textures/wKing.png",   renderer);
-    mTextures.try_emplace(WhichTexture::WHITE_KNIGHT,  "textures/wKnight.png", renderer);
-    mTextures.try_emplace(WhichTexture::WHITE_ROOK,    "textures/wRook.png",   renderer);
-    mTextures.try_emplace(WhichTexture::WHITE_PAWN,    "textures/wPawn.png",   renderer);
-    mTextures.try_emplace(WhichTexture::WHITE_BISHOP,  "textures/wBishop.png", renderer);
+    mTextures.try_emplace(WhichTexture::BLACK_QUEEN,   "resources/textures/bQueen.png",  renderer);
+    mTextures.try_emplace(WhichTexture::BLACK_KING,    "resources/textures/bKing.png",   renderer);
+    mTextures.try_emplace(WhichTexture::BLACK_KNIGHT,  "resources/textures/bKnight.png", renderer);
+    mTextures.try_emplace(WhichTexture::BLACK_ROOK,    "resources/textures/bRook.png",   renderer);
+    mTextures.try_emplace(WhichTexture::BLACK_PAWN,    "resources/textures/bPawn.png",   renderer);
+    mTextures.try_emplace(WhichTexture::BLACK_BISHOP,  "resources/textures/bBishop.png", renderer);
+    mTextures.try_emplace(WhichTexture::WHITE_QUEEN,   "resources/textures/wQueen.png",  renderer);
+    mTextures.try_emplace(WhichTexture::WHITE_KING,    "resources/textures/wKing.png",   renderer);
+    mTextures.try_emplace(WhichTexture::WHITE_KNIGHT,  "resources/textures/wKnight.png", renderer);
+    mTextures.try_emplace(WhichTexture::WHITE_ROOK,    "resources/textures/wRook.png",   renderer);
+    mTextures.try_emplace(WhichTexture::WHITE_PAWN,    "resources/textures/wPawn.png",   renderer);
+    mTextures.try_emplace(WhichTexture::WHITE_BISHOP,  "resources/textures/wBishop.png", renderer);
 
     //int const radius { initialSquareSize / 6 };
 
