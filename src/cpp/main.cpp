@@ -1,6 +1,6 @@
 #include <chrono>
 #include <exception>
-#include "imgui_impl_sdl.h"
+#include "imgui_impl_sdl2.h"
 #include "SDL.h"
 #include "ChessEvents.hpp"
 #include "errorLogger.hpp"

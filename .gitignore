@@ -1,11 +1,5 @@
-.vs
-chess.vcxproj.filters
-chess.vcxproj.user
-*.obj
-imgui.ini
-src.zip
-x64/
-log.txt
 squareColorData.txt
 reminders.txt
 chessErrorLog.txt
+build/
+vcpkg_installed/

@@ -19,8 +19,8 @@
 #include "chessNetworkProtocol.h" //enum Side
 
 #include "imgui.h"
-#include "imgui_impl_sdl.h"
-#include "imgui_impl_sdlrenderer.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_sdlrenderer2.h"
 
 #include "SDL.h"
 #include "SDL_image.h"
@@ -29,7 +29,7 @@ static auto const squareColorDataFname {"squareColorData.txt"};
 
 static SDL_HitTestResult hitTestCallback(SDL_Window *win, const SDL_Point *area, void *data)
 {
-    if( *reinterpret_cast<bool*>(data) )
+    if( *static_cast<bool*>(data) )
         return SDL_HITTEST_DRAGGABLE;
 
     return SDL_HITTEST_NORMAL;
@@ -718,7 +718,7 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 
 void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
 {
-    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
@@ -738,13 +738,13 @@ void ChessRenderer::render(Board const& b, ConnectionManager const& cm)
 
     renderToBoardTexture(b);
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
     //ImGui::ShowMetricsWindow();
 
     ImGui::Render();
     SDL_SetRenderDrawColor(mWindow.renderer, 0, 0, 0, 0);
     SDL_RenderClear(mWindow.renderer);
-    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), mWindow.renderer);
     SDL_RenderPresent(mWindow.renderer);
 }
 
@@ -828,33 +828,46 @@ void ChessRenderer::drawColorEditor()
     
     ImVec4 f_lightSquares{};//a float (0-1) version of the light squares
     ImVec4 f_darkSquares{};//a float (0-1) version of the dark squares
-    for(int i = 0; i < 4; ++i)
-    {
-        f_lightSquares[i] = mLightSquareColor[i] / 255.0f;
-        f_darkSquares[i]  = mDarkSquareColor[i]  / 255.0f;
-    }
+
+    f_lightSquares.x = mLightSquareColor[0] / 255.0f; f_darkSquares.x = mDarkSquareColor[0] / 255.0f;
+    f_lightSquares.y = mLightSquareColor[1] / 255.0f; f_darkSquares.y = mDarkSquareColor[1] / 255.0f;
+    f_lightSquares.z = mLightSquareColor[2] / 255.0f; f_darkSquares.z = mDarkSquareColor[2] / 255.0f;
+    f_lightSquares.w = mLightSquareColor[3] / 255.0f; f_darkSquares.w = mDarkSquareColor[3] / 255.0f;
     
-    ImGui::ColorPicker3("light squares", &f_lightSquares[0]);
+    ImGui::ColorPicker3("light squares", &f_lightSquares.x);
 
     if(ImGui::SmallButton("reset light squares"))
-        for(int i = 0; i < 4; ++i)
-            f_lightSquares[i] = mDefaultLightSquareColor[i] / 255.0f;
+    {
+        f_lightSquares.x = mDefaultLightSquareColor[0] / 255.0f;
+        f_lightSquares.y = mDefaultLightSquareColor[1] / 255.0f;
+        f_lightSquares.z = mDefaultLightSquareColor[2] / 255.0f;
+        f_lightSquares.w = mDefaultLightSquareColor[3] / 255.0f;
+    }
 
     ImGui::Separator();
 
-    ImGui::TextUnformatted("reset dark squares");
-    ImGui::ColorPicker3("dark squares", &f_darkSquares[0]);
+    ImGui::TextUnformatted("dark squares");
+    ImGui::ColorPicker3("dark squares", &f_darkSquares.x);
     
-    if(ImGui::SmallButton("default dark squares"))
-        for(int i = 0; i < 4; ++i)
-            f_darkSquares[i] = mDefaultDarkSquareColor[i] / 255.0f;
-
-    for(int i = 0; i < 4; ++i)
+    if(ImGui::SmallButton("reset  dark squares"))
     {
-        mLightSquareColor[i] = static_cast<Uint8>(f_lightSquares[i] * 255);
-        mDarkSquareColor[i] = static_cast<Uint8>(f_darkSquares[i] * 255);
+        f_darkSquares.x = mDefaultDarkSquareColor[0] / 255.0f;
+        f_darkSquares.y = mDefaultDarkSquareColor[1] / 255.0f;
+        f_darkSquares.z = mDefaultDarkSquareColor[2] / 255.0f;
+        f_darkSquares.w = mDefaultDarkSquareColor[3] / 255.0f;
     }
 
+
+    mLightSquareColor[0] = static_cast<uint8_t>(f_lightSquares.x * 255);
+    mLightSquareColor[1] = static_cast<uint8_t>(f_lightSquares.y * 255);
+    mLightSquareColor[2] = static_cast<uint8_t>(f_lightSquares.z * 255);
+    mLightSquareColor[3] = static_cast<uint8_t>(f_lightSquares.w * 255);
+
+    mDarkSquareColor[0] = static_cast<uint8_t>(f_darkSquares.x * 255);
+    mDarkSquareColor[1] = static_cast<uint8_t>(f_darkSquares.y * 255);
+    mDarkSquareColor[2] = static_cast<uint8_t>(f_darkSquares.z * 255);
+    mDarkSquareColor[3] = static_cast<uint8_t>(f_darkSquares.w * 255);
+    
     ImGui::End();
 }
 
