@@ -643,7 +643,8 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
     {
         ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoScrollbar
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoBringToFrontOnFocus
     };
 
     if(ImGui::Begin("##", nullptr, windowFlags))
