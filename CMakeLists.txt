@@ -72,8 +72,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG_BUILD
 if(CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
 endif()
+#todo... link with linux socket libraries (and modify the minimal winsock code to work with linux too)
 
-set(CMAKE_FIND_DEBUG_MODE True)
+#set(CMAKE_FIND_DEBUG_MODE True)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 
 find_package(imgui CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE imgui::imgui)
@@ -98,6 +101,6 @@ endif()
 
 add_custom_target(copy_resources
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-	"${CMAKE_SOURCE_DIR}/resources" "${CMAKE_CURRENT_BINARY_DIR}/resources"
+	"${CMAKE_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/resources"
 )
 add_dependencies(${PROJECT_NAME} copy_resources)
