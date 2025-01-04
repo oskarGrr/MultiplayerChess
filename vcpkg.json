@@ -1,11 +1,21 @@
 {
-    "name": "chess",
-    "dependencies": [
-        "sdl2",
-        "sdl2-image",
-        {
-            "name": "imgui",
-            "features": [ "sdl2-binding", "sdl2-renderer-binding" ]
-        }
-    ]
+  "name": "chess",
+  "dependencies": [
+    "sdl2",
+    "sdl2-image",
+    {
+      "name": "imgui",
+      "features": [
+        "sdl2-binding",
+        "sdl2-renderer-binding"
+      ]
+    }
+  ],
+  "builtin-baseline": "0f88ecb8528605f91980b90a2c5bad88e3cb565f",
+  "overrides": [
+    {
+      "name": "imgui",
+      "version": "1.91.0"
+    }
+  ]
 }
