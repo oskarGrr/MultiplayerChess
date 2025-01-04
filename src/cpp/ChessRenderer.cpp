@@ -46,7 +46,7 @@ ChessRenderer::ChessRenderer(NetworkEventSystem::Subscriber& networkEventSys,
       mBoardSubscriber{boardEventSubscriber},
       mAppEventSubscriber{appEventSubscriber}
 {
-    std::cout << ImGui::GetVersion();
+    //std::cout << ImGui::GetVersion();
 
     //this is reset in dtor so that hitTestCallback can't be 
     //passed the dangling pointer to mIsHoveringDragableMenuBarRegion
