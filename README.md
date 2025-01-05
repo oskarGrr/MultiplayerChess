@@ -11,7 +11,7 @@ The server source:\
 I'm an avid chess player and programmer, so creating a chess app seemed like a natural choice.\
 This chess app goes a above and beyond a lot of other chess desktop applications in a few ways:
 
-* Learned TCP socket programming to add online capabilities, allowing players to compete against others over the internet.
+* Taught myself TCP socket programming to add online capabilities, allowing players to compete against others over the internet.
 * Wrote a multithreaded [server](https://github.com/oskarGrr/chessServer) in C that can handle serveral games/clients at once.
 * Used the [Dear ImGui](https://github.com/ocornut/imgui) GUI library to create a more visually appealing experience with a menu bar, Arrow drawing like on chess.com and lichess, a way to edit the colors of the squares, flipping the board to view it from the other players perspective, an aesthetically pleasing pawn promotion selection popup and more.
 * My own file serializer/deserializer to save settings in simple txt files
