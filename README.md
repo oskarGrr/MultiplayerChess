@@ -11,12 +11,12 @@ The server source:\
 I'm an avid chess player and programmer, so creating a chess app seemed like a natural choice.\
 This chess app goes a above and beyond a lot of other chess desktop applications in a few ways:
 
-* I taught myself TCP socket programming to add online capabilities, allowing players to compete against others over the internet.
-* I wrote a multithreaded [server](https://github.com/oskarGrr/chessServer) in C that can handle serveral games/clients at once.
-* I have used the [Dear ImGui](https://github.com/ocornut/imgui) GUI library to create a more visually appealing experience with a menu bar, Arrow drawing like on chess.com and lichess, a way to edit the colors of the squares, flipping the board to view it from the other players perspective, an aesthetically pleasing pawn promotion selection popup and more.
-* I Implemented my own file serializer/deserializer to save settings in simple txt files
+* Learned TCP socket programming to add online capabilities, allowing players to compete against others over the internet.
+* Wrote a multithreaded [server](https://github.com/oskarGrr/chessServer) in C that can handle serveral games/clients at once.
+* Used the [Dear ImGui](https://github.com/ocornut/imgui) GUI library to create a more visually appealing experience with a menu bar, Arrow drawing like on chess.com and lichess, a way to edit the colors of the squares, flipping the board to view it from the other players perspective, an aesthetically pleasing pawn promotion selection popup and more.
+* My own file serializer/deserializer to save settings in simple txt files
 * The ability to request and reply to chess draw offers, resign and request a rematch against your online opponent.
-* I Implemented [my own publisher subscriber event system](https://github.com/oskarGrr/EventSystem) to allow for code decoupling between different modules of the code (like between the core game logic and the GUI code). This helps to decouple the code but also enable easier extendability of different systems.
+* Implemented [my own publisher subscriber event system](https://github.com/oskarGrr/EventSystem) to allow for code decoupling between different modules of the code (like between the core game logic and the GUI code). This helps to decouple the code but also enable easier extensibility of different systems.
 * A lot of thought went into the architecture of this code, resulting in numerous rounds of refactoring to enhance its readability and extensibility. For me, building projects with a focus on learning involves more than just creating lots of portfolio pieces. It also includes revisiting old projects and applying new insights to improve their code quality. For me, it's about quality more than quantity.
 
 ## Some future additions:
