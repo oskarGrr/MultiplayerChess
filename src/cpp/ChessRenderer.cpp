@@ -498,7 +498,7 @@ void ChessRenderer::drawMoveIndicatorCircles(Board const& b)
     auto* const wdl { ImGui::GetWindowDrawList() };
     float const radius { mSquareSize / 6.0f };
     ImU32 const redColor  { ImGui::GetColorU32({.87f, .192f, .388f, .498f}) };
-    ImU32 const greyColor { ImGui::GetColorU32( {.43f, .43f, .43f, .62f} ) };
+    ImU32 const greyColor { ImGui::GetColorU32( {.33f, .33f, .33f, .65f} ) };
     int const segmentCount { 40 };
 
     for(auto const& move : pom->getLegalMoves())
