@@ -133,7 +133,7 @@ private:
 
     //for now, the window is not resizable so these cant change
     int const mWindowWidth  {1340};
-    int const mWindowHeight {980};
+    int const mWindowHeight {956};
 
     Window mWindow
     {
