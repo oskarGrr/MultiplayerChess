@@ -69,7 +69,7 @@ private:
     void drawMainWindow(float menuBarHeight, Board const&);
     ImVec2 mainWindowDrawRankIndicators();//saves space in drawMainWindow() returns where to draw the board tex
     void mainWindowDrawFileIndicatiors();
-    void drawSidePanelWindow(Vec2i const& pos);
+    void drawSidePanel(ImVec2 const& pos, ImVec2 const& size);
     //saves space in drawMainWindow()
     void drawPieceOnMouse();
     void drawSquares();

@@ -79,7 +79,6 @@ void ChessRenderer::serializeSquareColorData()
 
     if(auto maybeError {squareColorDataManager.setValue("L", getLightSquareColorAsString())} )
     {
-
         if(maybeError->code == SettingsManager::Error::Code::FILE_NOT_FOUND)
         {
             generateNewSquareColorDataTextFile(squareColorDataManager);
@@ -624,16 +623,28 @@ void ChessRenderer::mainWindowDrawFileIndicatiors()
     }
 }
 
-void ChessRenderer::drawSidePanelWindow(Vec2i const& pos)
+void ChessRenderer::drawSidePanel(ImVec2 const& pos, ImVec2 const& size)
 {
-    //ImGui::SetNextWindowPos(pos);
+    ImGui::SetNextWindowPos(pos);
+    ImGui::SetNextWindowSize(size);
 
-    //if(ImGui::Begin("##sidePanel", nullptr, 0))
-    //{
-    //    
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2);
 
-    //    ImGui::End();
-    //}
+    auto const wndFlags 
+    {
+        ImGuiWindowFlags_NoTitleBar | 
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove 
+    };
+
+    if(ImGui::Begin("##sidePanel", nullptr, wndFlags))
+    {
+        ImGui::TextWrapped("Extra information will go here in the future like move history and timers");
+
+        ImGui::End();
+    }
+
+    ImGui::PopStyleVar();
 }
 
 void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
@@ -662,7 +673,7 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 
         mIsBoardHovered = ImGui::IsItemHovered();
         mBoardPos = ImGui::GetItemRectMin();
-        ImVec2 boardBottomRight { ImGui::GetItemRectMax() };
+        ImVec2 const boardBottomRight { ImGui::GetItemRectMax() };
 
         mainWindowDrawFileIndicatiors();
 
@@ -714,6 +725,12 @@ void ChessRenderer::drawMainWindow(float const menuBarHeight, Board const& b)
 
             drawArrow(mArrowBuffer[i].arrowBasePos, mArrowBuffer[i].arrowHeadPos, color);
         }
+
+        ImVec2 const sidePanelPos {mBoardPos.x + boardBottomRight.x, static_cast<float>(mBoardPos.y)};
+        ImVec2 const sidePanelSize {ImGui::GetWindowSize().x - sidePanelPos.x - mBoardPos.x, 
+            boardBottomRight.y - mBoardPos.y};
+
+        drawSidePanel(sidePanelPos, sidePanelSize);
 
         ImGui::End();
     }
