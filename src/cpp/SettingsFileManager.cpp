@@ -237,7 +237,8 @@ auto SettingsManager::setValue(std::string_view key, std::string_view newValue) 
     if(auto maybeError{checkStreamOpen(ifs)})
         return maybeError;
 
-    std::vector<std::string> lines{20};//Reserve an estimated 20 lines.
+    std::vector<std::string> lines{};
+    lines.reserve(20);
     for(std::string line; std::getline(ifs, line);)
     {
         //If this line represents a key value pair.
@@ -249,11 +250,13 @@ auto SettingsManager::setValue(std::string_view key, std::string_view newValue) 
 
             if(maybePair->key == key)
             {
-                std::string newLine{maybePair->key};
+                std::string newLine{key};
 
                 newLine.push_back(' ');
                 newLine.push_back(mKVPairSeperatorToken);
                 newLine.push_back(' ');
+
+                newLine.append(newValue);
 
                 lines.push_back(std::move(newLine));
             }
@@ -264,13 +267,13 @@ auto SettingsManager::setValue(std::string_view key, std::string_view newValue) 
 
     ifs.close();
 
-    std::ofstream ofs {mFileName};//Open without ios::app to re write the file.
+    std::ofstream ofs {mFileName};
 
     if(auto maybeError{checkStreamOpen(ofs)})
         return maybeError;
 
     std::for_each(lines.begin(), lines.end(),
-        [&](auto const& line){ofs << line;});
+        [&](auto const& line){ofs << line << std::endl;});
 
     return std::nullopt;//return no error
 }
