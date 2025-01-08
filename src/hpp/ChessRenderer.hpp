@@ -159,8 +159,8 @@ private:
 
     bool mIsHoveringDragableMenuBarRegion {false};
 
-    std::array<uint32_t, 4> const mDefaultLightSquareColor {214, 235, 225, 255};
-    std::array<uint32_t, 4> const mDefaultDarkSquareColor  {43, 86, 65, 255};
+    std::array<uint32_t, 4> const mDefaultLightSquareColor {192, 224, 218, 255};
+    std::array<uint32_t, 4> const mDefaultDarkSquareColor  {65, 110, 131, 255};
     std::array<uint32_t, 4> mLightSquareColor {mDefaultLightSquareColor};
     std::array<uint32_t, 4> mDarkSquareColor  {mDefaultDarkSquareColor}; 
 
