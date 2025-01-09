@@ -639,7 +639,9 @@ void ChessRenderer::drawSidePanel(ImVec2 const& pos, ImVec2 const& size)
 
     if(ImGui::Begin("##sidePanel", nullptr, wndFlags))
     {
-        ImGui::TextWrapped("Extra information will go here in the future like move history and timers");
+        ImGui::TextWrapped("Extra information will go here in the future like move history, timers, "
+            "a chat window, and buttons to go back and forth through the move history."
+            " Try dragging while holding right click on the board to draw arrows!");
 
         ImGui::End();
     }
