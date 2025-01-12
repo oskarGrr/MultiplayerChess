@@ -254,6 +254,7 @@ void Board::loadFENIntoBoard(std::string_view fenString)
         --rank;//rank and file start from zero so decrement is needed here
         mEnPassantLocation = {file, rank};
     }
+    else mEnPassantLocation = INVALID_VEC2I;
 
     //if the FEN string doesnt have the last two fields
     if(it == fenString.cend())
